@@ -2,7 +2,7 @@
 
 The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version is published the agent offers the update; you can also say *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"* (INSTALL §9).
 
-## 1.6.0 — in progress (branch `develop`)
+## 1.6.0 — guest mode: Waymark adapts to whoever arrived first
 Changes accumulate on `develop` and reach `main` in one release, so installs see one update notice per release instead of one per change.
 
 **Guest mode: Waymark adapts to whoever arrived first.** A real install next to gentle-ai showed that 1.5.0's `other-leads` still competed: the same Rule 0 block (only moved below) and Waymark's hooks kept claiming the turn. Waymark is not an orchestrator, so it now fits inside one:
