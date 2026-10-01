@@ -18,10 +18,16 @@ When `skill-registry.md` lists a provider as `missing` with a `source`:
 
 No provider exists, and the capability is **reusable** (it will serve future tasks in this or other projects): create it, do not just work around it. One-off needs: do the work directly and note it in the closing report.
 
-| The capability is… | Create it in | Ask first? |
+**Where it lives — ask the user [ask].** Before writing, ask in one line where they want it, with your recommendation first:
+
+*"No hay skill para `<capability>`. Voy a crear `<name>` (trigger: …). ¿La quieres **global** (todos tus proyectos) o **solo en este proyecto**? Recomiendo <global|proyecto> porque …"*
+
+| Answer | Create it in | Notes |
 |---|---|---|
-| general (any project of a stack, or any stack) | `<skills-dir>/<name>/` — owned tool skill | no; tell the user in one line |
-| specific to one project | `<project>/<project-skills-dir>/<slug>-<topic>/` — project skill | yes (it writes into their repository); offer `.gitignore` |
+| global | `<skills-dir>/<name>/` — owned tool skill | serves every project; recommend when it is not tied to this project's code |
+| this project | `<project>/<project-skills-dir>/<slug>-<topic>/` — project skill | travels with the repository; offer `.gitignore` if it should not be committed |
+
+Skip the question only when the user already said where (in this request, or as a standing rule in `~/.supply-chain/preferences.md` → *Learned preferences*). If they answer "always global" / "always per project", record it there so it is not asked again.
 
 Steps:
 1. **Template.** Copy `templates/tool-skill.template.md` (general) or `templates/project-skill.template.md` (project). Use `skill-creator` if the session has it.

@@ -5,6 +5,7 @@
 | `<skills-dir>` | `~/.config/opencode/skills` (*verify*; OpenCode can also read `~/.claude/skills`) |
 | `<project-skills-dir>` | `.opencode/skills` (*verify*) |
 | `<instructions-file>` | `~/.config/opencode/AGENTS.md` |
+| `<project-instructions-file>` | `AGENTS.md` at the project root |
 | Skill loading | native `skill` tool where available; otherwise via the instructions block |
 | Restart needed | yes |
 

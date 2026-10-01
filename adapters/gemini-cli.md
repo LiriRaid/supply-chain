@@ -5,6 +5,7 @@
 | `<skills-dir>` | `~/.gemini/skills` (*verify*; fallback `~/.agents/skills`) |
 | `<project-skills-dir>` | `.gemini/skills` (*verify*) |
 | `<instructions-file>` | `~/.gemini/GEMINI.md` |
+| `<project-instructions-file>` | `GEMINI.md` at the project root |
 | Skill loading | native Agent Skills support where available; otherwise via the instructions block |
 | Restart needed | yes |
 

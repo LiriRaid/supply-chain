@@ -29,4 +29,9 @@ Signals only say *which* technology it is, not *how this project is built*. Befo
 4. **Reusables:** locate shared components, design tokens/theme, base services, helpers and utilities the task should reuse instead of recreating.
 5. **Record** it in project memory → *Identity*, *Project map* and *Conventions specific to this project*. Later tasks read the map instead of rescanning; extend it when a task explores a new area.
 
+**Project instructions file.** The global instructions block is the same for every project. If the scan finds something this project needs **on every task** and that differs from the general rules (a mandatory convention, a forbidden library, a different language for code or commits, a monorepo layout, how to run it), propose a project instructions file **[ask]**: `<project>/<project-instructions-file>` (`CLAUDE.md` for Claude Code, `AGENTS.md` for most other agents; see `~/.supply-chain/agent.md`).
+- If one already exists, read it and propose only additions; never rewrite the team's content.
+- Keep it short (< ~2,000 characters) and only always-needed, non-personal rules: it is committed and shared with the team, and loaded on every task. Commands, gotchas, maps and decisions stay in project memory.
+- It never repeats or contradicts the supply chain; it may add one line: *"This project uses the supply chain; project memory: `~/.supply-chain/projects/<slug>.md`."*
+
 Then verify the gate commands once (run each, keep the ones that work) and write the project memory file. Then keep the private layer current: add the project's row to `~/.supply-chain/projects.md`, and add any stack, package manager or architecture not yet listed to `~/.supply-chain/profile.md`. **New project from scratch**: run `sc-product` (scope) → `sc-architecture` (choose architecture, write ADR) → owner department, and create the project memory at the end of the first session.

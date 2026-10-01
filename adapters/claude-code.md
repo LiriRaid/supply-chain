@@ -5,6 +5,7 @@
 | `<skills-dir>` | `~/.claude/skills` |
 | `<project-skills-dir>` | `.claude/skills` |
 | `<instructions-file>` | `~/.claude/CLAUDE.md` |
+| `<project-instructions-file>` | `CLAUDE.md` at the project root |
 | Skill loading | native (`Skill` tool, triggered by each skill's `description`) |
 | Restart needed | yes, start a new session after installing |
 

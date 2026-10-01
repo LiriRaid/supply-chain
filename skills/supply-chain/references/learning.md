@@ -13,6 +13,7 @@ After each L1+ task, collect what was **non-obvious and new**: something you had
 | The lesson is about… | Write it to |
 |---|---|
 | this project only (paths, conventions, gotchas, commands) | `~/.supply-chain/projects/<slug>.md` |
+| a project rule that must apply to **every** task there and the team should share | `<project>/<project-instructions-file>` — ask first (see `project-detection.md`) |
 | a stack/framework, valid in any project of that stack | `stacks/<stack>.md` → matching *Conventions* section |
 | how to use a tool skill (ui-build, ui-refine, …) | that skill's `## Learned notes` |
 | a general rule of the department, valid in any stack | the department's `## Learned rules` |

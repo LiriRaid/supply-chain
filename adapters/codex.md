@@ -5,6 +5,7 @@
 | `<skills-dir>` | `~/.codex/skills` (*verify*: some versions read `~/.agents/skills`) |
 | `<project-skills-dir>` | `.agents/skills` (*verify*) |
 | `<instructions-file>` | `~/.codex/AGENTS.md` |
+| `<project-instructions-file>` | `AGENTS.md` at the project root |
 | Skill loading | native Agent Skills support (*verify* in the docs); otherwise read `SKILL.md` as the instructions block says |
 | Restart needed | yes |
 

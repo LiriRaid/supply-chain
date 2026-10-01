@@ -25,7 +25,9 @@ UI code → `sc-frontend` · look & feel, accessibility, motion → `sc-ux-ui` �
 3. Memory MCP available (e.g. engram) → `mem_search` the task's topic before re-reading code.
 4. Print the brief: `Supply chain → L<n> · <dept> (+support) · stack · arch` then *Qué · Para qué · Dónde · Cómo (procedure, skills, docs)*.
 
-**Skills.** Use the skills the department's **Tools** table names for this task. A needed skill does not exist → follow `supply-chain/references/skills.md`: install a known one (ask first) or **create it** with its trigger, register it and use it. Never invent skill or tool names.
+**Skills.** Skills are used through their triggers: use the ones the department's **Tools** table names for this task. A needed skill does not exist → follow `supply-chain/references/skills.md`: install a known one (ask first) or **create it** with its trigger, asking whether it should be **global or for this project**, register it and use it. Never invent skill or tool names.
+
+**Project instructions.** If the project has its own `CLAUDE.md` / `AGENTS.md`, it is loaded too and its rules win for that project. When a project needs a rule on every task that differs from these, propose creating or extending it (ask first; details in `project-detection.md`).
 
 **Exit** (before saying done):
 1. Gates with the commands in project memory: typecheck · lint (changed files) · tests · build (L2+). Real output; never claim done with red gates.

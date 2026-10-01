@@ -7,6 +7,7 @@ Use this when no specific adapter fits.
 | `<skills-dir>` | the agent's documented user skills folder; if none, `~/.agents/skills` (cross-agent convention) |
 | `<project-skills-dir>` | the agent's project skills folder; if none, `.agents/skills` |
 | `<instructions-file>` | the agent's global instructions file; most agents read `AGENTS.md` |
+| `<project-instructions-file>` | the agent's project instructions file; most agents read `AGENTS.md` at the project root |
 | Skill loading | if the agent has no skill tool, the instructions block tells it to read `<skills-dir>/<name>/SKILL.md` |
 
 What changes:
