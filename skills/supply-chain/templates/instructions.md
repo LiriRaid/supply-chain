@@ -16,6 +16,8 @@
 
 **Your reply always starts** with `Supply chain → L<n> · <dept> (+support) · skills: <…>` and, for changes, **ends** with `## Cierre` (gates, skills used or created, what was learned). A per-prompt hook may repeat this rule as a reminder. If you are about to answer without that first line, stop and run step 1.
 
+**Confirmations** (plans, installs, updates, global vs project skill, destructive steps): use your choice window if the agent has one (Claude Code: `AskUserQuestion`), else ask in text. An update notice from the hook is asked the same way, before the task.
+
 ## Index — what loads what (nothing else is preloaded)
 
 | Request about | Department | Default skills / MCP |

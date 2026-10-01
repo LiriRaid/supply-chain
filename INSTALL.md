@@ -2,7 +2,7 @@
 
 > **You are a coding agent (Claude Code, Codex, Cursor, Gemini CLI, OpenCode or similar) and the user asked you to install, update or uninstall this supply chain.** Follow this document step by step. No installer script is needed: you do the work with your own file and shell tools.
 >
-> Talk to the user in their language. Ask before every step marked **[ask]**. Never touch credentials, sessions or files not listed here.
+> Talk to the user in their language. Ask before every step marked **[ask]**, with your choice window if the agent has one (Claude Code: `AskUserQuestion`, options as buttons, recommended first), else in text. Never touch credentials, sessions or files not listed here.
 
 Repository: `https://github.com/LiriRaid/supply-chain`
 
@@ -132,7 +132,7 @@ These files start generic on purpose. **Do not ask the user to fill them**: the 
 
 The stack-specific entries shipped today are **examples** for Angular (`angular-cli`: `npx -y @angular/cli mcp`, `primeng`: `npx -y @primeng/mcp`). On a fresh machine the stack is usually unknown: skip them, and let `sc-devex` propose the right server later, when a project of that stack is detected (`supply-chain` §5).
 
-**7.2 Rule 0 hook (installed by default).** The instructions block can be ignored in long sessions; a per-prompt reminder keeps the supply chain on every request. It runs locally (0 tokens to execute) and adds ~70 tokens of context per prompt; it never blocks or changes the prompt. Include it in the §1.1 plan.
+**7.2 Rule 0 hook (installed by default).** The instructions block can be ignored in long sessions; a per-prompt reminder keeps the supply chain on every request. Once a day it also checks the repository's `VERSION` (1.5 s timeout, silent offline) and, only when a newer version exists, tells the agent to offer the update (§9) at most once a day; commits without a version change never trigger it. It runs locally (0 tokens to execute) and adds ~70 tokens of context per prompt; it never blocks or changes the prompt. Include it in the §1.1 plan.
 
 - **Claude Code:** merge into `~/.claude/settings.json` (keep every existing key and hook; do not duplicate if a hook with `rule0-hook.mjs` already exists):
 

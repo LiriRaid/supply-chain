@@ -32,7 +32,7 @@ There is no installer script. [`INSTALL.md`](INSTALL.md) is written **for the ag
 
 It can configure every agent on the machine in one run (Claude Code, Codex, Cursor…); all of them share the same memory, so you can **start a task in one agent and continue it in another**: project memory keeps a *Work in progress* section (task, done, next, open) rewritten after every task.
 
-**Update** without reinstalling: *"actualiza el supply chain desde https://github.com/LiriRaid/supply-chain siguiendo su INSTALL.md"*. The agent compares `VERSION`, shows the [CHANGELOG](CHANGELOG.md), keeps what your skills learned and replaces the rest. The same sentence with "uninstall" removes it. Node.js 18+ is needed only for `sync.mjs`.
+When a new version is published, the agent tells you (once a day at most) and asks whether to update. **Update** without reinstalling: *"actualiza el supply chain desde https://github.com/LiriRaid/supply-chain siguiendo su INSTALL.md"*. The agent compares `VERSION`, shows the [CHANGELOG](CHANGELOG.md), keeps what your skills learned and replaces the rest. The same sentence with "uninstall" removes it. Node.js 18+ is needed only for `sync.mjs`.
 
 ## Built to save tokens
 
