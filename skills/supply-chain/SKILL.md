@@ -40,7 +40,7 @@ A task usually has one **owner** department plus 1–2 supporting ones (e.g. "cr
 
 ## 3. Entry protocol (every department runs it)
 
-1. **Project memory.** Identify the project root (nearest folder with a manifest: `package.json`, `Gemfile`, `pyproject.toml`, `go.mod`, `pom.xml`, `*.csproj`, `Cargo.toml`, `composer.json`, `pubspec.yaml`). Read `~/.supply-chain/projects/<project-slug>.md`. If it does not exist, read `~/.supply-chain/profile.md` (the user's defaults), run §6 and create the memory from `templates/project-memory.template.md`. Any private-layer file missing (`profile.md`, `preferences.md`, `subagents.md`, `projects.md`, `agent.md`) → create it from `templates/private-layer/` without asking.
+1. **Project memory.** Identify the project root (nearest folder with a manifest: `package.json`, `Gemfile`, `pyproject.toml`, `go.mod`, `pom.xml`, `*.csproj`, `Cargo.toml`, `composer.json`, `pubspec.yaml`). Read `~/.supply-chain/projects/<project-slug>.md`. If it does not exist, read `~/.supply-chain/profile.md` (the user's defaults), run §6 and create the memory from `templates/project-memory.template.md`. If the memory exists but has no *Project map*, run the minimal project scan of §6 once and add it. Any private-layer file missing (`profile.md`, `preferences.md`, `subagents.md`, `projects.md`, `agent.md`) → create it from `templates/private-layer/` without asking.
 2. **Stack profile.** Read `stacks/<stack>.md` (L1: *Commands* + your department's section; L2+: full). Unknown stack → `stacks/generic.md`.
 3. **Architecture profile** (L2+). Read `architectures/<architecture>.md`. Unknown → ask once, record the answer in project memory.
 4. **Learnings.** Read `~/.supply-chain/learnings/<department>.md` if it exists.
@@ -99,6 +99,14 @@ When a capability's provider is marked `missing` in `skill-registry.md`, or is n
 | `domain/` + `application/` + `infrastructure/` | clean |
 | `modules/<a>/`, `modules/<b>/` with public index, or `packs/` | modular-monolith |
 | `controllers/` + `services/` or Rails `app/models` + `app/controllers` | layered |
+
+Signals only say *which* technology it is, not *how this project is built*. Before writing the memory, run a **minimal project scan** (read-only, bounded: config files plus at most ~5 source files):
+
+1. **Config:** manifest, compiler/tsconfig, lint and format config, test config, path aliases, env example (never real secrets).
+2. **Structure:** list folders 2–3 levels deep from the source root; confirm or correct the architecture guessed above.
+3. **Reference examples:** read 1–2 existing files of the same kind as the current task (a component, an endpoint, a migration, a test) to learn naming, file layout, state and error-handling patterns.
+4. **Reusables:** locate shared components, design tokens/theme, base services, helpers and utilities the task should reuse instead of recreating.
+5. **Record** it in project memory → *Identity*, *Project map* and *Conventions specific to this project*. Later tasks read the map instead of rescanning; extend it when a task explores a new area.
 
 Then verify the gate commands once (run each, keep the ones that work) and write the project memory file. Then keep the private layer current: add the project's row to `~/.supply-chain/projects.md`, and add any stack, package manager or architecture not yet listed to `~/.supply-chain/profile.md`. **New project from scratch**: run `sc-product` (scope) → `sc-architecture` (choose architecture, write ADR) → owner department, and create the project memory at the end of the first session.
 

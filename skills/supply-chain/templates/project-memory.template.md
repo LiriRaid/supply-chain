@@ -9,6 +9,14 @@ Updated: <YYYY-MM-DD>
 - Package manager / build tool: <pnpm | bundle | uv | gradle | …>
 - Related projects: <e.g. backend API at ../api>
 
+## Project map
+Filled by the minimal project scan (supply-chain §6); extended when a task explores a new area.
+- Source root and layout: <e.g. src/app/{core,shared,features}>
+- Path aliases: <e.g. @core/* → src/app/core/*>
+- Reusables: <shared components, base services, helpers, tokens/theme — with paths>
+- Reference files: <one exemplary file per kind: component, service, endpoint, test — with paths>
+- Config: <lint/format/test config files worth knowing>
+
 ## Quality gates (verified commands)
 | Gate | Command | Verified |
 |---|---|---|
