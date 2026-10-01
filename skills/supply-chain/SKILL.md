@@ -16,7 +16,7 @@ Paths are relative to this skill's folder. `~/.supply-chain/` is the user's priv
 | Level | Name | Examples | Mandatory |
 |---|---|---|---|
 | L0 | Trivial | a color, a text, a typo, one CSS value | Nothing. Do it directly. No department. |
-| Q | Question | explain, where is, how does | Answer. `library-docs` if library behavior matters. |
+| Q | Question | explain, where is, how does | Consult mode (`references/protocol.md`): route to the topic department, read-only, cite `file:line` or docs. |
 | L1 | Localized | bug in one known file, small addition in 1–2 files | Compact Entry · department Rules + Tools · one procedure section · gates without build |
 | L2 | Feature | new screen, endpoint, component tree, integration, bug touching >2 files | Full Entry (`references/protocol.md`) · department skills · Exit with build + review |
 | L3 | Architectural | refactor, migration, new module, cross-cutting change, new project | L2 + `sc-architecture` + plan before coding + ADR |

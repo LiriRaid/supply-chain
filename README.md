@@ -48,7 +48,7 @@ A small L1 task loads the block plus one department and one procedure. Memory (p
 
 ## How it triggers
 
-There are no hooks. The agent loads a skill when the request matches the skill's `description`. Each department lists the phrases people actually type, and the instructions block makes the department mandatory above L0.
+Three layers keep the agent on track, without an orchestrator: each skill's `description` (the trigger, with the phrases people actually type), the instructions block (Rule 0: every request runs recall → department → skills → verify → learn; questions run in read-only consult mode), and a tiny per-prompt **Rule 0 reminder hook** (`scripts/rule0-hook.mjs`, installed by default where the agent supports hooks). The hook runs locally, adds ~70 tokens per prompt and never blocks anything. Every reply starts with `Supply chain → L<n> · <dept>`, so you can see at a glance that the routine ran.
 
 ```
 "quiero crear un modal"      → sc-frontend → brief → ui-build → browser-verify → gates → learn

@@ -38,7 +38,8 @@ Voy a instalar el supply chain así:
 1. Skills (17)            → ~/.claude/skills/            (respaldo previo si ya existe algo)
 2. Instrucciones generales → ~/.claude/CLAUDE.md          (bloque marcado arriba; el resto no se toca)
 3. Capa privada            → ~/.supply-chain/             (fuera de .claude; sirve para cualquier agente y se completa sola)
-4. Te preguntaré antes de: quitar skills de terceros, mover contenido de tu archivo de instrucciones y registrar MCP.
+4. Hook Rule 0         → ~/.claude/settings.json      (recordatorio por mensaje, ~70 tokens; no bloquea nada)
+5. Te preguntaré antes de: quitar skills de terceros, mover contenido de tu archivo de instrucciones y registrar MCP.
 ¿Continúo?
 ```
 
@@ -129,7 +130,19 @@ These files start generic on purpose. **Do not ask the user to fill them**: the 
 
 The stack-specific entries shipped today are **examples** for Angular (`angular-cli`: `npx -y @angular/cli mcp`, `primeng`: `npx -y @primeng/mcp`). On a fresh machine the stack is usually unknown: skip them, and let `sc-devex` propose the right server later, when a project of that stack is detected (`supply-chain` §5).
 
-**7.2 Sync.** Run:
+**7.2 Rule 0 hook (installed by default).** The instructions block can be ignored in long sessions; a per-prompt reminder keeps the supply chain on every request. It runs locally (0 tokens to execute) and adds ~70 tokens of context per prompt; it never blocks or changes the prompt. Include it in the §1.1 plan.
+
+- **Claude Code:** merge into `~/.claude/settings.json` (keep every existing key and hook; do not duplicate if a hook with `rule0-hook.mjs` already exists):
+
+```json
+{ "hooks": { "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "node \"<skills-dir>/supply-chain/scripts/rule0-hook.mjs\"" } ] } ] } }
+```
+
+  Use the absolute path with forward slashes. Verify: `echo {} | node "<skills-dir>/supply-chain/scripts/rule0-hook.mjs"` prints JSON with `additionalContext`.
+- **Other agents:** if the adapter documents a per-prompt hook, register the same script there; otherwise skip it (the instructions block still applies) and say so in the report.
+- Report it under *Archivos modificados* (`settings.json — hook Rule 0 agregado`).
+
+**7.3 Sync.** Run:
 
 ```bash
 node "<skills-dir>/supply-chain/scripts/sync.mjs"
@@ -164,13 +177,13 @@ It indexes installed skills and MCP servers into `skill-registry.md`, applies th
 1. Get the files (§2) and back up (§3) — always, because installed skills may have learned content.
 2. For each skill folder: copy new and changed files, but **merge** `## Learned rules`, `## Learned notes`, `patterns/`, `rules/` and `facts/`: keep the user's entries, add the repository's.
 3. `~/.supply-chain/`: only create missing files or folders from the templates; never edit existing ones.
-4. Replace the instructions block (§6.2) and run sync (§7.2).
+4. Replace the instructions block (§6.2), make sure the Rule 0 hook is registered (§7.2) and run sync (§7.3).
 5. Report with the same list of modified files as §8.
 
 ## 10. Uninstall **[ask]**
 
 1. Back up (§3).
 2. Remove from `<skills-dir>`: `supply-chain`, `sc-*` and the six tool skills from §5.
-3. Remove the block between the `supply-chain` markers from `<instructions-file>`; leave the rest.
+3. Remove the block between the `supply-chain` markers from `<instructions-file>`; leave the rest. Remove the hook entry that runs `rule0-hook.mjs` from the agent settings.
 4. Ask whether to keep `~/.supply-chain/` (it is the user's memory; default: keep).
 5. MCP servers: list the ones the install registered and ask before removing any.

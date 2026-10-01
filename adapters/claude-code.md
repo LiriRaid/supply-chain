@@ -7,6 +7,7 @@
 | `<instructions-file>` | `~/.claude/CLAUDE.md` |
 | `<project-instructions-file>` | `CLAUDE.md` at the project root |
 | Skill loading | native (`Skill` tool, triggered by each skill's `description`) |
+| Per-prompt hook | `UserPromptSubmit` in `~/.claude/settings.json` → `node "<skills-dir>/supply-chain/scripts/rule0-hook.mjs"` (INSTALL §7.2) |
 | Restart needed | yes, start a new session after installing |
 
 ## MCP registration (user scope)

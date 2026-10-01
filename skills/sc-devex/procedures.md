@@ -10,7 +10,7 @@ Loaded on demand from `SKILL.md` → *Procedures*. Read only the section the tas
 - `~/.supply-chain/` — private layer, self-filling (templates in `../supply-chain/templates/private-layer/`): `agent.md`, `profile.md`, `preferences.md`, `subagents.md`, `projects.md`, `learnings/`, `projects/`. Never shared or published.
 - `<project>/<project-skills-dir>/<slug>-<topic>/` — project skills. `<skills-dir>` / `<project-skills-dir>` per agent: `~/.supply-chain/agent.md`.
 - As a plugin, names are prefixed (`supply-chain:sc-qa`); use the form the session lists.
-- Enforcement is by description triggers and the core protocol only.
+- Enforcement: description triggers + the instructions block (Rule 0) + the per-prompt Rule 0 reminder hook (`scripts/rule0-hook.mjs`) where the agent supports hooks. The hook only reminds; it never blocks or orchestrates.
 
 ### Write a trigger description (any skill)
 1. Single line, double-quoted, inner quotes escaped as `\"`.
