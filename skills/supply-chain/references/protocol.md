@@ -32,3 +32,12 @@ Cómo: procedure "New component" · skills: ui-build → browser-verify · docs:
 6. **Closing report**:
 
 ```
+
+## When stuck (two-strike rule)
+
+The second failed attempt on the same problem means guessing has started. Stop varying the fix and switch method:
+1. **Observe, do not assume.** Get the real state: computed styles and the rule that wins (browser devtools / `browser-verify`), the actual runtime value, the full error and stack, the real request/response, the version installed.
+2. **Re-read the source of truth.** Official docs for the exact API and version (`library-docs`), and the code that actually runs (not the file you think runs: check imports, overrides, themes, generated files).
+3. **Hypotheses.** List 2–3 possible causes; test first the check that rules out the most of them with the least effort. One change at a time.
+4. **Ask once, precisely.** Still unclear → one concrete question to the user (which element / screen / input, a screenshot of the inspector, the exact steps), not a list of guesses.
+5. **Record it.** When solved, project memory → *Solved problems*: symptom, root cause, fix, what did not work and why, cost.

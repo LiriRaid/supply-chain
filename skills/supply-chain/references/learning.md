@@ -12,6 +12,7 @@ After each L1+ task, collect what was **non-obvious and new**: something you had
 
 | The lesson is about… | Write it to |
 |---|---|
+| a problem that took more than one attempt | `~/.supply-chain/projects/<slug>.md` → *Solved problems* (symptom, cause, fix, dead ends) + `mem_save` |
 | this project only (paths, conventions, gotchas, commands) | `~/.supply-chain/projects/<slug>.md` |
 | a project rule that must apply to **every** task there and the team should share | `<project>/<project-instructions-file>` — ask first (see `project-detection.md`) |
 | a stack/framework, valid in any project of that stack | `stacks/<stack>.md` → matching *Conventions* section |
