@@ -55,6 +55,10 @@ A small L1 task loads the block plus one department and one procedure. Memory (p
 
 The bigger saving is not the size of each attempt but the **number of attempts**: a task costs *attempts × cost per attempt*. Waymark's fields (the ask and what each screenshot points at, evidence before the fix, reuse, verified APIs, the two-strike rule) aim at one attempt per task. Large tasks keep their plan as checkpoints in the project memory, so a context compaction does not make the agent guess what was done.
 
+### MCP servers only where their framework is used
+
+A framework's MCP server (Angular, PrimeNG, React, Vue, Tailwind, NestJS…) registered for every project costs context even in projects that never use it. `scripts/mcp-scope.mjs` reads each project's manifests and moves each framework server to the projects that use it (Claude Code local scope, through the official CLI, after your yes); docs and memory servers stay global. In a new project the session hook notices the mismatch and offers it once.
+
 ### Measure it
 
 ```bash
