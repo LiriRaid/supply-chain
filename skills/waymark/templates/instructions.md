@@ -7,6 +7,7 @@ Every request runs this, any size or session length. Only L0 skips it (a color, 
 **First text of the turn, before any tool call or narration:** `Waymark → L<n>|Q · <dept> · skills: <only skills you will invoke>`; then call the owner `dept-*` skill as your first tool.
 **Before the first edit**, once you know them:
 ```
+Pedido: <the ask in one line> · Captura: <what each image shows + the element it points to | sin captura>
 Memoria: leída|creada <~/.waymark/projects/<slug>.md> · Reutiliza: <piece + path | ninguno → patrón de <file>> · Evidencia: observada | hipótesis (check: <one line>) · Procedimiento: <section>
 ```
 **Close every change with:**
@@ -16,16 +17,17 @@ Gates: <commands run after the last edit + result> · Aprendido: <file / Solved 
 L2+: Tests: rojo→verde | sin infra (<check>) · Navegador: verificado | no (<why + check>) · Review: <done | findings>
 ```
 Each field is a step; fill it truthfully:
-- **Memoria** — the session hook already injected this machine's *Environment* and the project's memory digest; obey it (e.g. tools marked missing). Full file: `~/.waymark/projects/<slug>.md`; also `preferences.md` (how to answer); `mem_search` if engram is available. Missing → create it now (`waymark/references/project-detection.md` → *Minimal bootstrap*). This memory fills itself; never ask the user to fill it.
+- **Pedido · Captura** — the request in the user's terms and, per image, the screen, element and state it marks; that is the target. Two readings that change the result → one question before editing.
+- **Memoria** — the session hook already injected this machine's *Environment* and the project's memory digest; obey it (e.g. tools marked missing). Memory points, the code decides: verify an entry before relying on it; code disagrees → fix the entry. Full file: `~/.waymark/projects/<slug>.md`; also `preferences.md`; `mem_search` if engram is available. Missing → create it now (`waymark/references/project-detection.md` → *Minimal bootstrap*); never ask the user to fill it.
 - **Reutiliza** — *Project map → Reusables* before creating anything (components, features, services, utils, models, animations, styles/tokens).
 - **Evidencia** — observe the real state before changing (computed style and its source, actual value, log, response). Cannot (no browser, login) → *hipótesis* with the user's one-line check, given **before** the fix.
 - **Procedimiento** — the one section of the department's `procedures.md` you followed (bugs: `dept-qa` → *Quick bug triage*).
-- **skills** — every skill listed is invoked; a support department is listed only if you read its Quick ref. A library API or internal not verified this session → verify it in official docs (`library-docs`) or in the installed package source (cite the file). Missing skill → `waymark/references/skills.md` (ask global or project).
-- **Gates** — L1: lint or typecheck of changed files (UI: quickest compile check); L2+: + tests, build, review. No spec → add one where the project tests that kind of file, else "sin infraestructura de test" + one-line check. 2nd failed attempt → *When stuck* (`waymark/references/protocol.md`).
-- **Aprendido** — rewrite **your task's** entry in *Work in progress* (keep other tasks' pending items); new facts → `waymark/references/learning.md`; fixed bug → *Solved problems* (symptom, cause, fix, dead ends).
+- **skills** — list only skills you invoke (a support department only if you read its Quick ref). Unverified library API or internal → official docs (`library-docs`) or the installed package source, cited. Missing skill → `waymark/references/skills.md`.
+- **Gates** — L1: lint/typecheck of changed files (UI: quickest compile check); L2+: + tests, build, review. No spec → add one where the project tests that kind of file, else "sin infraestructura de test" + one-line check. 2nd failed attempt → *When stuck* (`waymark/references/protocol.md`).
+- **Aprendido** — rewrite **your task's** entry in *Work in progress* as `decision ← evidence` (keep other tasks' items); L3: the plan's steps live there (`✔1 · ▶2 · 3`, next step + its gate), a step is ✔ only after its gate. New facts → `waymark/references/learning.md`; fixed bug → *Solved problems* (symptom, cause, fix, dead ends).
 - **Coexistence** — another framework installed → obey the injected `~/.waymark/coexistence.md` (*Resolved* wins over this block); never edit its files. Not configured → offer it first (`waymark/references/coexistence.md`).
 
-Questions (Q): same first line, read-only, answer grounded in `file:line` or official docs (`waymark/references/consult.md`), no Cierre. Confirmations (plans, updates, global vs project skill, destructive steps): your choice window if you have one (Claude Code: `AskUserQuestion`); an update notice from the hook is asked that way before the task.
+Questions (Q): same first line, read-only, grounded in `file:line` or official docs (`waymark/references/consult.md`), no Cierre. Confirmations (plans, updates, destructive steps, a hook's update notice): your choice window if you have one (Claude Code: `AskUserQuestion`), before the task.
 
 ## Index
 

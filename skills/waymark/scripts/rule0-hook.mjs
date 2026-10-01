@@ -22,7 +22,7 @@ try { mode = fs.readFileSync(path.join(HOME, 'coexistence.md'), 'utf8').match(/^
 const reminders = {
   '':
     'Waymark Rule 0 — first text: "Waymark → L<n>|Q · <dept> · skills: …"; first tool call: the owner dept-* skill. ' +
-    'Before the first edit: "Memoria · Reutiliza · Evidencia · Procedimiento" (memory digest was injected at session start; obey Environment). ' +
+    'Before the first edit: "Pedido · Captura" (the ask; what each image marks) then "Memoria · Reutiliza · Evidencia · Procedimiento" (memory digest injected at session start: pointers, verify in code; obey Environment). ' +
     'Close changes with "## Cierre" (Gates after the last edit · Aprendido · engram; L2+: Tests · Navegador · Review). User\'s language. Only L0 skips.',
   guest: '',
   'other-leads': '',

@@ -2,7 +2,7 @@
 
 The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version is published the agent offers the update; you can also say *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"* (INSTALL §9).
 
-## 1.6.0 — guest mode: Waymark adapts to whoever arrived first
+## 1.6.0 — in progress (branch `develop`)
 Changes accumulate on `develop` and reach `main` in one release, so installs see one update notice per release instead of one per change.
 
 **Guest mode: Waymark adapts to whoever arrived first.** A real install next to gentle-ai showed that 1.5.0's `other-leads` still competed: the same Rule 0 block (only moved below) and Waymark's hooks kept claiming the turn. Waymark is not an orchestrator, so it now fits inside one:
@@ -10,6 +10,14 @@ Changes accumulate on `develop` and reach `main` in one release, so installs see
 - **Departments work without the block:** each `dept-*` runs a *Guest entry* (recall project memory, apply its rules and one procedure, reply in the orchestrator's format, update memory) when no Waymark block is in context.
 - **Waymark first, orchestrator later → `waymark-leads`:** the session hook asks once whether to keep leading (its skills become *Fallback* via `skill-registry.md`) or step down to guest; when the listed orchestrator's markers disappear it offers the full install back.
 - `other-leads` from 1.5.0 is read as `guest`; updates offer to remove the block and hooks it left.
+
+**One attempt per task, measured.** A task costs *attempts × cost per attempt*; the four real tests went from ~20 messages per task to 1–2. This release closes the gaps that still cost attempts and adds the way to prove it:
+- **Pedido · Captura** (opener): the request in the user's terms and, per image, the screen, element and state it marks; two readings → one question before editing. The one second attempt in the tests was the right fix on a misread target.
+- **Third-party skills are used:** `sync.mjs` indexes other agents' skill folders (`~/.cursor`, `~/.codex`, `~/.agents`, Gemini, OpenCode) and project skill folders, guesses each one's capability, records its path (agents read and follow that `SKILL.md`), lists the six replaced community skills as *Replaced (not used)* and drops uninstalled auto entries. The session hook refreshes the registry in the background when skill folders change.
+- **L3 checkpoints:** the plan lives in the task's *Work in progress* (`✔1 · ▶2 · 3`, next gate, *Descartado*) so a compaction or a new session resumes from disk instead of guessing (`protocol.md` → *L3: plan as checkpoints*).
+- **Memory hygiene:** the injected memory is labelled *pointers, not facts* (the code wins and the entry gets fixed); *Work in progress* older than 14 days is flagged; entries record `decision ← evidence`; stale *Solved problems* are deleted; the project file is the source of truth over engram (`learning.md` §7).
+- **Decision chain:** a fixed hand-off line between departments (`hecho · necesita · evidencia · abierto`, `protocol.md`).
+- **`measure.mjs`:** per prompt, responses, tool calls, images, new vs cached input, output and sub-agent tokens, the fixed context at session start, and attempts for a range of prompts. Responses streamed over several transcript lines are counted once (earlier ad-hoc counts summed them 2–3×).
 
 ## 1.5.0 — coexistence with other agent frameworks
 A real install met gentle-ai (persona, engram protocol, SDD orchestrator, review triggers) and could only offer "skills only" or "full install with conflicting rules". Now Waymark adapts instead of competing:

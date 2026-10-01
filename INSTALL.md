@@ -178,7 +178,7 @@ The stack-specific entries shipped today are **examples** for Angular (`angular-
 node "<skills-dir>/waymark/scripts/sync.mjs"
 ```
 
-It indexes installed skills and MCP servers into `skill-registry.md`, applies the department precondition to tool skills and creates the private layer folders. Show its output. Entries marked `auto: true` or under *Unassigned* are third-party skills it found; report them, do not fix them silently. In `waymark-leads` this is how the other framework's skills become available as *Fallback*.
+It indexes installed skills (this agent's, other agents' skill folders such as `~/.cursor/skills` or `~/.agents/skills`, plugins and project skill folders, each with its path) and MCP servers into `skill-registry.md`, applies the department precondition to tool skills and creates the private layer folders. Show its output. Entries marked `auto: true` or under *Unassigned* are third-party skills it found; report them, do not fix them silently. In `waymark-leads` this is how the other framework's skills become available as *Fallback*. Afterwards the session hook re-runs it in the background whenever skill folders change; no manual sync is needed for new third-party skills.
 
 **7.4 Orchestrator registry (`guest` only).** Run the orchestrator's refresh so it indexes the copied skills (`coexistence.md` §4; gentle-ai: `gentle-ai skill-registry refresh`). Check that its registry now lists `waymark` and the `dept-*` skills and report it. If it does not scan `<skills-dir>`, tell the user where it scans and ask **[ask]** before copying the skills there too. Never edit its registry by hand.
 
@@ -203,7 +203,8 @@ It indexes installed skills and MCP servers into `skill-registry.md`, applies th
 - Movido a la capa privada con tu permiso: …
 - Coexistencia: <framework> · modo … · adoptadas N · respaldo N · resueltas N · sus archivos: sin cambios   (solo si §1.1 encontró otro)
 - MCP: registrados … · omitidos …
-- Sync: … · Pendiente: reiniciar el agente y probar la frase de humo
+- Sync: … (skills de otros agentes: N) · Medir una tarea: node <skills-dir>/waymark/scripts/measure.mjs --turns a-b
+- Pendiente: reiniciar el agente y probar la frase de humo
 ```
 
 ## 9. Update

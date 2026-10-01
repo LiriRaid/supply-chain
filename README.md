@@ -44,7 +44,7 @@ Nothing is preloaded "just in case". Loading is layered:
 
 | Layer | Loaded | Size |
 |---|---|---|
-| Instructions block in `CLAUDE.md` / `AGENTS.md` | always | ~4.5 k chars: levels, routing, compact Entry/Exit, learning, memory |
+| Instructions block in `CLAUDE.md` / `AGENTS.md` | always | ~5.6 k chars (~1.4 k tokens): levels, routing, compact Entry/Exit, learning, memory |
 | Department `dept-*/SKILL.md` | when a task arrives | ~6–8 k chars: rules, brief questions, tools to use, DoD |
 | Department `procedures.md` | only the section the task needs | one procedure |
 | Core `waymark/references/*`, stack and architecture profiles | only in the situations they list (first time in a project, L2+, learning, missing skill) | on demand |
@@ -52,6 +52,16 @@ Nothing is preloaded "just in case". Loading is layered:
 | Project memory + *Project map* | every task | replaces re-exploring the project each session |
 
 A small L1 task loads the block plus one department and one procedure. Memory (project map, verified gate commands, engram) avoids re-discovering the same things every session.
+
+The bigger saving is not the size of each attempt but the **number of attempts**: a task costs *attempts × cost per attempt*. Waymark's fields (the ask and what each screenshot points at, evidence before the fix, reuse, verified APIs, the two-strike rule) aim at one attempt per task. Large tasks keep their plan as checkpoints in the project memory, so a context compaction does not make the agent guess what was done.
+
+### Measure it
+
+```bash
+node ~/.claude/skills/waymark/scripts/measure.mjs --turns 3-5
+```
+
+It reads the agent's own session transcript (offline, no model call) and shows, per prompt: responses, tool calls, images, new vs cached input tokens, output and sub-agent tokens; the fixed context the session started with; and for a range of prompts (one task) the number of **attempts**. Note the plan-quota % before and after a task to relate tokens to your limits.
 
 ## How it triggers
 
@@ -110,6 +120,10 @@ scripts/export.mjs     copy your installed (improved) skills back into the repo
 ### Missing skills are created, not skipped
 
 When a department needs a capability no installed skill provides, the agent installs a known one (asking first) or **creates a new skill** with its trigger description, registers it in `skill-map.json`, adds it to the department's Tools table and uses it. General skills go to the agent's skills folder; project-specific ones into the project.
+
+### Third-party skills are used too
+
+`sync.mjs` indexes every skill it can find, not only Waymark's: the agent's own folder, other agents' folders (`~/.cursor/skills`, `~/.codex/skills`, `~/.agents/skills`, Gemini, OpenCode), plugins and each project's `.claude/`, `.cursor/`, `.agents/`… `skills/`. Each one gets a department and a capability from its description and its path in `skill-registry.md`, so a department can read and follow it even when the agent did not load it. The session hook notices new or removed skills and refreshes the registry in the background. The six community skills Waymark replaces are listed as *Replaced* and never used.
 
 ### Tool skills that grow
 

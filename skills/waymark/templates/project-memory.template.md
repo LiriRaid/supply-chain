@@ -8,6 +8,8 @@ Read first at Recall; one entry per open task, each rewritten after its own mile
 - Updated: <YYYY-MM-DD HH:mm> · by: <agent>
 - Task: <what the user asked, in their words> · goal: <done looks like…>
 - Done: <steps finished, files touched>
+- Decision: <what was decided> ← <the evidence it rests on: file:line, output, observed value>
+- Plan (L3): ✔1 <step> · ▶2 <step> · 3 <step> — next gate: <command> · Descartado: <what was ruled out and why>
 - Next: <ordered remaining steps>
 - Open: <decisions or questions pending>
 - Last request: <the user's last message, short>

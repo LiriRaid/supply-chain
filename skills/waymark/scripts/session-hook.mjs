@@ -6,13 +6,19 @@
 // When another agent framework is installed it also injects ~/.waymark/coexistence.md, asks the agent to offer
 // the choice (keep leading / become guest) for a framework marker that file does not list, and offers the full
 // install back when the listed framework's markers are gone. In guest mode this hook is normally not registered.
+// It also notices when skill folders changed (this agent's, other agents', the project's) and refreshes
+// skill-registry.md in the background with sync.mjs, so third-party skills are usable without a manual sync.
 // It never blocks. Remove it from the agent's settings to disable it.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const HOME = process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark');
-const MAX = 2500; // characters of injected project memory, hard cap
+const SCRIPTS = path.dirname(fileURLToPath(import.meta.url));
+const MAX = 2700; // characters of injected project memory, hard cap
+const STALE_DAYS = 14; // Work in progress entries older than this are flagged for confirmation
 const MAX_COEXIST = 1800; // characters of injected coexistence rules, hard cap
 const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
 const read = (p) => { try { return fs.readFileSync(p, 'utf8'); } catch { return ''; } };
@@ -43,9 +49,34 @@ function digest(cwd) {
   if (solved.length) out.push('Solved problems (symptoms; details in the file):\n' + solved.slice(-10).join('\n'));
   const gates = section('\n' + best.text, 'Quality gates').filter((l) => l.startsWith('|') && !/^\|\s*(Gate|---)/.test(l));
   if (gates.length) out.push('Gates: ' + gates.map((l) => l.split('|').slice(1, 3).map((s) => s.trim()).join(': ')).join(' · '));
-  const wip = section('\n' + best.text, 'Work in progress').filter((l) => l.startsWith('-')).map((l) => (l.length > 260 ? l.slice(0, 257) + '…' : l));
+  const wip = section('\n' + best.text, 'Work in progress').filter((l) => l.startsWith('-')).map((l) => {
+    const date = Date.parse(l.match(/\b(20\d\d-\d\d-\d\d)\b/)?.[1] || '');
+    const stale = date && Date.now() - date > STALE_DAYS * 86400000 ? ` [>${STALE_DAYS} d old: confirm it still applies before acting on it]` : '';
+    return (l.length > 300 ? l.slice(0, 297) + '…' : l) + stale;
+  });
   if (wip.length) out.push('Work in progress:\n' + wip.join('\n'));
   return out.join('\n');
+}
+
+// Skill folders that sync.mjs indexes: this agent's, other agents', the current project's.
+function skillsChanged(cwd) {
+  const roots = [path.resolve(SCRIPTS, '..', '..'), ...['.claude', '.agents', '.codex', '.cursor', '.gemini', '.config/opencode'].map((d) => path.join(os.homedir(), ...d.split('/'), 'skills')),
+    ...['.claude', '.agents', '.codex', '.cursor', '.gemini', '.opencode'].map((d) => path.join(cwd, d, 'skills'))];
+  const names = [...new Set(roots)].flatMap((r) => { try { return fs.readdirSync(r).filter((n) => fs.existsSync(path.join(r, n, 'SKILL.md'))).map((n) => `${norm(r)}/${n}`); } catch { return []; } }).sort();
+  const sigFile = path.join(HOME, '.skills-signature.json');
+  let before = null;
+  try { before = JSON.parse(fs.readFileSync(sigFile, 'utf8')); } catch {}
+  const prev = new Set(before?.[norm(cwd)] || []);
+  const added = names.filter((n) => !prev.has(n)), removed = [...prev].filter((n) => !names.includes(n));
+  if (before?.[norm(cwd)] && !added.length && !removed.length) return '';
+  try {
+    fs.mkdirSync(HOME, { recursive: true });
+    fs.writeFileSync(sigFile, JSON.stringify({ ...before, [norm(cwd)]: names }));
+    if (!process.env.WAYMARK_NO_SYNC) spawn(process.execPath, [path.join(SCRIPTS, 'sync.mjs'), '--quiet'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+  } catch { return ''; }
+  if (!before?.[norm(cwd)]) return ''; // first run here: just index silently
+  const short = (l) => l.map((n) => n.split('/').pop()).join(', ');
+  return `Skills changed since the last session (${added.length ? '+' + short(added) : ''}${added.length && removed.length ? ' · ' : ''}${removed.length ? '-' + short(removed) : ''}): skill-registry.md is being refreshed in the background. Third-party skills are listed there with their path: read and follow that SKILL.md when its capability fits.`;
 }
 
 // Framework namespaces marked in the agents' instructions files (`<!-- name:section -->`, `<!-- BEGIN name -->`).
@@ -106,8 +137,11 @@ const emit = () => {
   let cwd = process.cwd();
   try { cwd = JSON.parse(input).cwd || cwd; } catch {}
   let text = '';
-  try { text = 'Waymark session memory (already recalled, cite it in "Memoria:"):\n' + digest(cwd); } catch { text = ''; }
+  try {
+    text = 'Waymark session memory (already recalled, cite it in "Memoria:"). Pointers, not facts: verify against the code before relying on them; if the code disagrees, the code wins and you fix or remove the entry.\n' + digest(cwd);
+  } catch { text = ''; }
   if (text.length > MAX) text = text.slice(0, MAX) + '…';
+  try { const s = skillsChanged(cwd); if (s) text += '\n' + s; } catch {}
   let coexist = '';
   try { coexist = coexistence(); } catch {}
   if (coexist) text = (text ? text + '\n' : '') + coexist;

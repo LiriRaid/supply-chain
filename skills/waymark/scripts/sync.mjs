@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // Re-indexes installed skills + MCP servers into skill-registry.md, auto-assigns new skills to a
-// department, and (re)applies the waymark precondition to installed tool skills.
-// Usage: node sync.mjs [--dry-run] [--unpatch]
+// department and a capability, and (re)applies the waymark precondition to installed tool skills.
+// Third-party skills are indexed too: other agents' skill folders (Cursor, Codex, .agents, Gemini, OpenCode…)
+// and project skill folders, with their path so any agent can read and follow them.
+// Usage: node sync.mjs [--dry-run] [--unpatch] [--quiet]
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -15,8 +17,14 @@ const LOCAL = process.env.WAYMARK_HOME || path.join(HOME, '.waymark'); // privat
 const PROJECT_SKILL_DIRS = ['.claude', '.agents', '.codex', '.cursor', '.gemini', '.opencode'].map((d) => [d, 'skills']);
 const MAP_FILE = path.join(SKILL_DIR, 'skill-map.json');
 const REGISTRY = path.join(SKILL_DIR, 'skill-registry.md');
+// Other agents' user-level skill folders; the one Waymark is installed in (SKILLS_HOME) is scanned as 'user'.
+const AGENT_SKILL_DIRS = [['claude', '.claude'], ['agents', '.agents'], ['codex', '.codex'], ['cursor', '.cursor'], ['gemini', '.gemini'], ['opencode', '.config/opencode']]
+  .map(([label, d]) => [label, path.join(HOME, ...d.split('/'), 'skills')]);
+// Community skills Waymark's own tool skills replace (INSTALL §4): indexed as replaced, never used.
+const REPLACED = { 'frontend-design': 'ui-build', impeccable: 'ui-refine', 'ui-ux-pro-max': 'ui-system', 'web-design-guidelines': 'ui-audit', 'webapp-testing': 'browser-verify', 'context7-mcp': 'library-docs' };
 const dryRun = process.argv.includes('--dry-run');
 const unpatch = process.argv.includes('--unpatch');
+const quiet = process.argv.includes('--quiet');
 const OWN = /^(waymark|dept-[a-z-]+)$/;
 const BEGIN = '<!-- waymark:begin -->';
 const END = '<!-- waymark:end -->';
@@ -33,6 +41,23 @@ const DEPT_KEYWORDS = {
   'dept-product': /\b(requirement|user story|prd|roadmap|product|spec|planning)\b/i,
   'dept-devex': /\b(claude|skill|mcp|prompt|agent|documentation|docs|readme|tooling|cli)\b/i,
 };
+
+// Capability guessed from the description, in the vocabulary of skill-map.json; first match wins.
+const CAP_KEYWORDS = [
+  ['review.security', /\b(security review|vulnerab|owasp|pentest|cve|secret scan)\b/i],
+  ['review.diff', /\b(code review|review (the )?(diff|changes|pr|pull request)|reviewer)\b/i],
+  ['test.browser', /\b(playwright|cypress|e2e|end-to-end|browser test|screenshot)\b/i],
+  ['test.unit', /\b(unit test|jest|vitest|pytest|rspec|tdd|test suite)\b/i],
+  ['ui.audit', /\b(accessib|a11y|wcag|audit)\b/i],
+  ['ui.build', /\b(component|ui|frontend|landing|page|screen|layout)\b/i],
+  ['docs.library', /\b(documentation|docs|api reference|library|framework)\b/i],
+  ['plan.implementation', /\b(plan|spec|requirement|roadmap|breakdown)\b/i],
+  ['git.workflow', /\b(commit|branch|pull request|pr|release|changelog)\b/i],
+  ['deploy', /\b(deploy|docker|kubernetes|ci|pipeline|terraform)\b/i],
+  ['data.query', /\b(sql|database|migration|schema|query)\b/i],
+  ['skills.author', /\b(skill|prompt|agent)\b/i],
+];
+const guessCapability = (s) => CAP_KEYWORDS.find(([, re]) => re.test(`${s.name.replace(/[-_]/g, ' ')} ${s.description || ''}`))?.[0] || '-';
 
 const readText = (p) => { try { return fs.readFileSync(p, 'utf8'); } catch { return null; } };
 const readJson = (p) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } };
@@ -65,6 +90,10 @@ function scanSkillsDir(dir, origin) {
 
 function discover() {
   const found = [...scanSkillsDir(SKILLS_HOME, 'user')];
+  const home = path.resolve(SKILLS_HOME).toLowerCase();
+  for (const [label, dir] of AGENT_SKILL_DIRS) {
+    if (path.resolve(dir).toLowerCase() !== home) found.push(...scanSkillsDir(dir, `foreign:${label}`));
+  }
   const synced = path.join(CLAUDE, 'skills', 'synced');
   for (const bucket of fs.existsSync(synced) ? fs.readdirSync(synced) : []) {
     found.push(...scanSkillsDir(path.join(synced, bucket), 'claude.ai'));
@@ -102,6 +131,7 @@ function discoverMcp() {
 }
 
 function autoAssign(skill) {
+  if (REPLACED[skill.name]) return ['replaced'];
   if (skill.origin === 'claude.ai') return ['general'];
   const text = `${skill.name.replace(/[-_]/g, ' ')} ${skill.description || ''}`;
   const hits = Object.entries(DEPT_KEYWORDS)
@@ -165,7 +195,9 @@ const LEARNED_DEPT = '_Grows with use (waymark `references/learning.md`). Only r
 // ---------- registry ----------
 
 function row(name, e, status) {
-  return `| \`${name}\` | ${e.type || 'mcp'} | ${e.capability || '-'} | ${e.when || '-'} | ${e.level || '-'} | ${status} | ${e.source || '-'} |`;
+  const type = e.origin?.startsWith('foreign:') ? `skill (${e.origin.slice(8)})` : e.type || 'mcp';
+  const source = e.path ? `\`${e.path.replace(/\\/g, '/')}\`` : e.source || '-';
+  return `| \`${name}\` | ${type} | ${e.capability || '-'} | ${e.when || '-'} | ${e.level || '-'} | ${status} | ${source} |`;
 }
 
 function render(map, installed, mcpNames, projects) {
@@ -182,6 +214,7 @@ function render(map, installed, mcpNames, projects) {
     `> Generated by \`scripts/sync.mjs\` on ${new Date().toISOString().slice(0, 10)}. Edit \`skill-map.json\`, not this file.`,
     '> Use: read your department section + **Shared**. Pick rows whose *When* matches and *Level* ≤ the task level.',
     '> Status `missing` → ask the user to install (`npx skills add <source>`), then re-run sync. Never invent names that are not here or in the session listing.',
+    '> Third-party skills (type `skill (<agent>)`, project skills) may not be in your session listing: read the `SKILL.md` at *Source* and follow it like a loaded skill. Rows under *Replaced* are never used.',
     '',
   ];
   const shared = Object.entries(map.skills).filter(([, e]) => e.departments.includes('*'));
@@ -198,9 +231,11 @@ function render(map, installed, mcpNames, projects) {
   if (general.length) lines.push('## General (not development)', '', general.map(([n]) => `\`${n}\``).join(' · '), '');
   const un = Object.entries(map.skills).filter(([, e]) => e.departments.includes('unassigned'));
   if (un.length) lines.push('## Unassigned', '', '_Detected but not mapped. Edit `skill-map.json` to assign a department._', '', head, ...un.map(([n, e]) => row(n, e, status(n, e))), '');
+  const rep = Object.entries(map.skills).filter(([, e]) => e.departments.includes('replaced'));
+  if (rep.length) lines.push('## Replaced (not used)', '', rep.map(([n]) => `- \`${n}\` → use \`${REPLACED[n] || '?'}\` (INSTALL §4 offers to remove it)`).join('\n'), '');
   if (projects.length) {
-    lines.push('## Project skills', '', '| Name | Project | Description |', '|---|---|---|');
-    for (const p of projects) lines.push(`| \`${p.name}\` | ${p.origin.replace('project:', '')} | ${(p.description || '').slice(0, 160)} |`);
+    lines.push('## Project skills', '', '_Read the SKILL.md at Path when working in that project._', '', '| Name | Project | Capability | Description | Path |', '|---|---|---|---|---|');
+    for (const p of projects) lines.push(`| \`${p.name}\` | ${p.origin.replace('project:', '')} | ${guessCapability(p)} | ${(p.description || '').replace(/\|/g, '/').slice(0, 160)} | \`${p.file.replace(/\\/g, '/')}\` |`);
     lines.push('');
   }
   const extraMcp = [...mcpNames].filter((n) => !map.mcp[n]);
@@ -239,14 +274,27 @@ if (vi > 0) {
 const { skills, projects } = discover();
 const installed = new Set(skills.map((s) => s.name));
 const added = [];
+const outsideAgent = (s) => s.origin.startsWith('foreign:');
 for (const s of skills) {
-  if (map.skills[s.name]) continue;
+  const e = map.skills[s.name];
+  if (e) {
+    // Auto entries follow the skill: fill a missing capability, keep the path of third-party skills current.
+    if (e.auto) {
+      if (!e.capability || e.capability === '-') e.capability = guessCapability(s);
+      if (outsideAgent(s)) { e.origin = s.origin; e.path = s.file; } else delete e.path;
+    }
+    continue;
+  }
   map.skills[s.name] = {
-    type: 'skill', departments: autoAssign(s), capability: '-', auto: true,
+    type: 'skill', departments: autoAssign(s), capability: REPLACED[s.name] ? '-' : guessCapability(s), auto: true,
     when: (s.description || '').replace(/\|/g, '/').slice(0, 140), level: 'L1', origin: s.origin,
+    ...(outsideAgent(s) ? { path: s.file } : {}),
   };
-  added.push(`${s.name} → ${map.skills[s.name].departments.join(', ')}`);
+  added.push(`${s.name} → ${map.skills[s.name].departments.join(', ')} (${map.skills[s.name].capability})`);
 }
+// Auto-discovered skills that were uninstalled leave the map (curated entries stay, shown as missing).
+const dropped = Object.keys(map.skills).filter((n) => map.skills[n].auto && !map.skills[n].owned && !installed.has(n));
+for (const n of dropped) delete map.skills[n];
 
 const patched = [];
 for (const s of skills) {
@@ -278,8 +326,12 @@ if (!dryRun) {
     if (!fs.existsSync(path.join(LOCAL, f))) { fs.copyFileSync(path.join(tpl, f), path.join(LOCAL, f)); evolved.push(`~/.waymark/${f} (created)`); }
   }
 }
-console.log(`Skills found: ${skills.length} · project skills: ${projects.length}`);
-console.log(`New (auto-assigned, review in skill-map.json): ${added.length ? '\n  ' + added.join('\n  ') : 'none'}`);
-console.log(`Precondition ${unpatch ? 'removed from' : 'applied to'}: ${patched.length ? patched.join(', ') : 'nothing changed'}`);
-console.log(`Learning sections / provenance added: ${evolved.length ? evolved.join(', ') : 'nothing changed'}`);
-console.log(`${dryRun ? '[dry-run] ' : ''}Registry: ${REGISTRY}`);
+if (!quiet) {
+  const foreign = skills.filter(outsideAgent).length;
+  console.log(`Skills found: ${skills.length} (from other agents: ${foreign}) · project skills: ${projects.length}`);
+  console.log(`New (auto-assigned, review in skill-map.json): ${added.length ? '\n  ' + added.join('\n  ') : 'none'}`);
+  console.log(`Removed (uninstalled auto entries): ${dropped.length ? dropped.join(', ') : 'none'}`);
+  console.log(`Precondition ${unpatch ? 'removed from' : 'applied to'}: ${patched.length ? patched.join(', ') : 'nothing changed'}`);
+  console.log(`Learning sections / provenance added: ${evolved.length ? evolved.join(', ') : 'nothing changed'}`);
+  console.log(`${dryRun ? '[dry-run] ' : ''}Registry: ${REGISTRY}`);
+}
