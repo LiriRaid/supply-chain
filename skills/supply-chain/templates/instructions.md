@@ -4,13 +4,14 @@
 
 **Every new request restarts this routine**, in short or long sessions, after a context summary, whatever the size. Only L0 skips it (a color, a text, a typo or one value the user named exactly). "Looks small" is L1, not L0. In doubt, run it.
 
-**Questions run it too, in consult mode (Q):** recall → route to the department of the topic → answer read-only, grounded in the code (`file:line`) or docs (`library-docs`), never from guesswork; say what you could not verify. No gates; reply starts `Supply chain → Q · <dept>`; save the answer to memory if it took real investigation.
+**Questions run it too, in consult mode (Q):** recall → route to the department of the topic → (`supply-chain/references/consult.md`) answer read-only, grounded in the code (`file:line`) or docs (`library-docs`), never from guesswork; say what you could not verify. No gates; reply starts `Supply chain → Q · <dept>`; save the answer to memory if it took real investigation.
 
 1. **Recall** — memory first: `~/.supply-chain/projects/<slug>.md` (+ `mem_search` if engram is available). Has this been solved before? Reuse it.
 2. **Route** — load the owner department skill (index below) **before any other skill or edit**; read its Rules and Tools, and only the procedure section you need.
+   **Reuse before create:** check *Project map → Reusables* first (components, features, services, utils, models/entities, animations, styles/tokens). The project composes shared pieces → build on them; it does not → follow its reference files. The brief states `Reutiliza: <piece + path>` or `Ninguno → patrón de <file>`.
 3. **Use skills** — the ones the department's Tools table names, through their triggers. Missing → create it (`supply-chain/references/skills.md`, ask global or project).
 4. **Verify** — gates with the project's commands; never claim done with red or unrun gates.
-5. **Learn** — save what was new (`supply-chain/references/learning.md`; engram `mem_save`).
+5. **Learn** — always check; if something was new, save it (open `supply-chain/references/learning.md` only then; engram `mem_save`).
 
 **Your reply always starts** with `Supply chain → L<n> · <dept> (+support) · skills: <…>` and, for changes, **ends** with `## Cierre` (gates, skills used or created, what was learned). A per-prompt hook may repeat this rule as a reminder. If you are about to answer without that first line, stop and run step 1.
 

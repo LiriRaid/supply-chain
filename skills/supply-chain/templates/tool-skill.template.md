@@ -19,18 +19,12 @@ The thinking model of this tool in 5–10 lines: what it optimizes for, the ques
 | Known patterns | `patterns/` in this skill (generic) + project skills (project-specific) |
 
 ## Modes
-One block per mode (e.g. build · critique · polish · animate). Each: when → steps → output.
+Read **only** the mode the task needs (one file); never load all modes.
 
-### <mode>
-- **When:** …
-- **Steps:** 1. … 2. …
-- **Output:** …
+- **<mode>** — when <situation / phrases> → `modes/<mode>.md` (each file: When · Steps · Output)
 
 ## Stack adapters
-How the approach maps to concrete stacks. Only the minimum; details live in the stack profiles.
-
-| Stack | Notes |
-|---|---|
+Stack-specific notes → `references/stack-adapters.md` (read only the project's stack row).
 
 ## Output contract
 What this skill always returns to the department (files changed, decisions, checks run, open risks).

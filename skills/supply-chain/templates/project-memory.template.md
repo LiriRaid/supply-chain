@@ -13,7 +13,15 @@ Updated: <YYYY-MM-DD>
 Filled by the minimal project scan (supply-chain `references/project-detection.md`); extended when a task explores a new area.
 - Source root and layout: <e.g. src/app/{core,shared,features}>
 - Path aliases: <e.g. @core/* → src/app/core/*>
-- Reusables: <shared components, base services, helpers, tokens/theme — with paths>
+- How this project builds: <composes shared pieces (e.g. every modal wraps app-modal) | builds per feature | mixed>
+- Reusables (path · what it is · when to use):
+  - Components / UI: <e.g. shared/components/app-modal — base dialog, wrap it for every modal>
+  - Features / modules: <…>
+  - Services / API clients: <…>
+  - Utils / helpers / pipes: <…>
+  - Models / entities / types: <…>
+  - Animations / motion: <…>
+  - Styles / tokens / theme: <…>
 - Reference files: <one exemplary file per kind: component, service, endpoint, test — with paths>
 - Config: <lint/format/test config files worth knowing>
 

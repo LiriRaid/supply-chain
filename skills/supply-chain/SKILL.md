@@ -16,7 +16,7 @@ Paths are relative to this skill's folder. `~/.supply-chain/` is the user's priv
 | Level | Name | Examples | Mandatory |
 |---|---|---|---|
 | L0 | Trivial | a color, a text, a typo, one CSS value | Nothing. Do it directly. No department. |
-| Q | Question | explain, where is, how does | Consult mode (`references/protocol.md`): route to the topic department, read-only, cite `file:line` or docs. |
+| Q | Question | explain, where is, how does | Consult mode (`references/consult.md`): route to the topic department, read-only, cite `file:line` or docs. |
 | L1 | Localized | bug in one known file, small addition in 1–2 files | Compact Entry · department Rules + Tools · one procedure section · gates without build |
 | L2 | Feature | new screen, endpoint, component tree, integration, bug touching >2 files | Full Entry (`references/protocol.md`) · department skills · Exit with build + review |
 | L3 | Architectural | refactor, migration, new module, cross-cutting change, new project | L2 + `sc-architecture` + plan before coding + ADR |
@@ -45,6 +45,7 @@ One **owner** department plus 1–2 supporting ones (e.g. "crear un modal de con
 | Situation | Read |
 |---|---|
 | L2+ task, or the compact protocol is not enough | `references/protocol.md` (full Entry, brief example, Exit, closing report) |
+| a question (Q) | `references/consult.md` |
 | first time in a project, new project, or memory without *Project map* | `references/project-detection.md` |
 | end of an L1+ task with something new learned | `references/learning.md` |
 | a needed skill is missing, or the user asks for a new skill | `references/skills.md` |

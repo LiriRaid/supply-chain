@@ -16,6 +16,8 @@ When `skill-registry.md` lists a provider as `missing` with a `source`:
 
 ## 3. Create the skill (autogeneration)
 
+The skills installed with the supply chain are **defaults, not a limit**. Any capability the user's work needs can become a skill: create it freely, in the user's way of working, whenever no installed skill covers it.
+
 No provider exists, and the capability is **reusable** (it will serve future tasks in this or other projects): create it, do not just work around it. One-off needs: do the work directly and note it in the closing report.
 
 **Where it lives — ask the user [ask].** Before writing, ask in one line where they want it, with your recommendation first:
@@ -34,7 +36,7 @@ Steps:
 2. **Name.** kebab-case, says what it does (`pdf-invoices`, `rails-service-objects`), no collisions with the registry.
 3. **Trigger (`description`).** One line, double-quoted: what it is → `Use when …` → the phrases the user actually typed for this need, in their language plus key English terms → `Not for …`. Concrete words only; generic words cause false triggers.
 4. **Precondition.** It belongs to a department: add `patch: "<sc-dept>"` in its `skill-map.json` entry; sync injects the "load the department first" block.
-5. **Body.** Follow the template sections: when to use, inputs, procedure with real commands verified in this session, rules, verification, `## Learned notes`. Keep `SKILL.md` ≤ ~8,000 characters; long material goes to `references/` read on demand.
+5. **Body — concise and layered, like the default skills.** `SKILL.md` holds only the precondition, approach, inputs, a one-line index of modes and `## Learned notes` (target ≤ ~5,000 characters). Each mode goes to `modes/<mode>.md`, stack-specific notes to `references/stack-adapters.md`, long checklists to `references/`. Use real commands verified in this session; shape it to how the user asked for it.
 6. **Register.** Add the entry to `skill-map.json` → `skills` (`type`, `departments`, `capability`, `when`, `level`, `owned: true`, `patch`). Add a row to the owning department's **Tools** table in its installed `SKILL.md`. Project skills: also project memory → *Project skills*.
 7. **Sync.** `node scripts/sync.mjs`; confirm it is listed and has no `auto: true`.
 8. **Use it now** for the current task; it loads automatically in the next session.

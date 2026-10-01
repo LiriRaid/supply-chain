@@ -45,57 +45,6 @@ Brownfield rule: if a field would require a new token, font or component variant
 | Design system | token source of truth, theme preset, shared/ui components (Grep the shared layer) |
 | Known patterns | `patterns/` in this skill (generic) + project skills (project-specific) |
 
-## Modes
-
-### build
-- **When:** a new component, dialog, form, screen or dashboard is needed and no equivalent exists.
-- **Steps:**
-  1. Read the brief and the mini-brief inputs; list `patterns/` and read any match.
-  2. Inventory: Grep shared components, tokens and similar screens. Note spacing scale, type steps, radius, elevation and motion tokens in use.
-  3. Write the design decision. Brownfield: name the screens it must match. Greenfield: run `greenfield-direction` first.
-  4. Sketch structure in text: regions, hierarchy (one dominant element), primary and secondary actions, reading order.
-  5. Choose primitives: native elements first, then the component library, then custom markup.
-  6. Implement with the stack adapter. Tokens only; no hard-coded color, spacing, radius or duration.
-  7. Implement every state: loading (skeleton for content, inline spinner for an action), empty (message + next action), error (cause + recovery), success feedback, disabled, hover, focus-visible, active. Forms add field-level validation, submit pending and server error.
-  8. Responsive: build from the narrowest viewport up; prefer fluid grid/flex, `minmax`, `clamp` and container-relative sizing over new breakpoints. Check reflow at 320 CSS px.
-  9. Accessibility basics: labelled controls, logical focus order, visible focus, dialogs trap and restore focus and close on Escape, async status in a live region, contrast in every theme, targets at least 24x24 px.
-  10. Motion only where it explains a change (open, close, reorder, feedback); respect reduced motion. Elaborate motion belongs to `ui-refine` animate.
-  11. Run it (`run` / `browser-verify`): every state, narrow and wide, light and dark, keyboard-only pass.
-- **Output:** files created, the design decision, states checklist, screenshots or notes of the checks.
-
-### compose
-- **When:** the screen can be assembled mostly from existing components (library or shared layer) with little or no new styling.
-- **Steps:**
-  1. Map each region of the requested screen to an existing component; list the gaps.
-  2. For each gap prefer, in order: a prop/variant of an existing component, composition of two existing ones, a new local component inside the feature. Promote to shared only when a second feature needs it (scope rule).
-  3. Lay out with the project's grid and spacing tokens; keep the page rhythm of sibling screens (header pattern, toolbar placement, content width).
-  4. Wire data and all states as in build steps 7–9.
-  5. Verify visually against one sibling screen side by side.
-- **Output:** component map (reused vs new), files created, gaps proposed for the shared layer.
-
-### greenfield-direction
-- **When:** no tokens, theme or component library exist yet, or the user explicitly asks for a new visual identity.
-- **Steps:**
-  1. Write one sentence of context: who uses it, on what device, in what situation and mood. Refine it until it forces decisions (light vs dark, density, pace).
-  2. Reject the first obvious answer for the category (the palette or layout anyone would guess from the domain alone); look for a choice that fits this specific product.
-  3. Decide and record:
-     - **Type:** a display/body pairing (or one family with clear weight contrast), a modular scale with visible contrast between steps, body measure around 60–75 characters.
-     - **Color strategy:** neutral-led with one accent, or one dominant brand color, or a small set of named roles. Tint neutrals toward the brand hue; avoid pure black and pure white surfaces. Define semantic roles (surface, text, muted, primary, danger, success) in both themes and check contrast.
-     - **Space and shape:** spacing scale, radius set, elevation approach (borders, tints or shadows: pick one as primary).
-     - **Motion:** durations for feedback, small transitions and view changes; one easing family that decelerates; no bounce in task flows.
-     - **Composition:** grid, content width, how emphasis is created (scale, contrast, whitespace) and what to avoid (nested cards, uniform card grids, decorative blur).
-  4. Encode it as tokens in the stack's source of truth before building views.
-  5. Write it to project memory under `## Design system` with the date: tone, type, color strategy, scales, motion, anti-choices. Future builds treat it as brownfield.
-- **Output:** design direction summary, token file(s), project memory `## Design system` entry.
-
-## Stack adapters
-| Stack | Notes |
-|---|---|
-| Angular | Standalone + OnPush, `input()`/`output()`/`model()`, signals for state, `@if`/`@for (track id)`/`@defer`. Tailwind 4 utilities on `@theme` tokens; PrimeNG components imported individually and themed through the preset (verify props with the `primeng` MCP); Lucide icons from the project's icon provider. Guard browser APIs for SSR. Place per *Architecture fit* (`features/<f>/components/`). |
-| React | Function components, derive during render, stable keys. Next.js: Server Component by default, `"use client"` only on the interactive leaf. Use the project's UI kit (shadcn/ui, Radix, MUI) and form library; CSS variables or Tailwind theme for tokens. |
-| Vue / Svelte (generic) | Single-file components; props in, events out; `ref`/`computed` or Svelte runes for state. Scoped styles consuming CSS custom properties; keep the library kit (Vuetify, PrimeVue, Skeleton) as the base. |
-| Native mobile (generic) | Platform components first (SwiftUI, Jetpack Compose, React Native, Flutter); a theme object holds tokens. Respect safe areas, dynamic type, 44/48 pt targets, platform navigation and back behavior, and the OS reduced-motion setting. |
-
 ## Output contract
 Always return to the department:
 1. **Design decision** (mini-brief) and mode used.
@@ -109,6 +58,16 @@ Always return to the department:
 - Before building, list `patterns/` and read the matching file, if any.
 - After building something reusable that has no pattern yet (a modal, a data table, a stepper…), write `patterns/<pattern>.md` from `../supply-chain/templates/pattern.template.md`: stack-agnostic intent, anatomy, states, a11y, pitfalls, and one short adapter per stack it was built in. Project-specific details go to project memory, not here.
 - Update an existing pattern only with new, verified information (novelty check, supply-chain `references/learning.md`).
+
+## Modes
+Read **only** the mode the task needs (one file); never load all modes.
+
+- **build** — a new component, dialog, form, screen or dashboard is needed and no equivalent exists. → `modes/build.md`
+- **compose** — the screen can be assembled mostly from existing components (library or shared layer) with little or no new styling. → `modes/compose.md`
+- **greenfield-direction** — no tokens, theme or component library exist yet, or the user explicitly asks for a new visual identity. → `modes/greenfield-direction.md`
+
+## Stack adapters
+Stack-specific notes → `references/stack-adapters.md` (read only the project's stack row).
 
 ## Learned notes
 _Grows with use (supply-chain `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._
