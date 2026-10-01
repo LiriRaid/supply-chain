@@ -28,7 +28,7 @@ Cómo: procedure "New component" · skills: ui-build → browser-verify · docs:
 2. **Architecture conformance** (L2+) — run the *Conformance checklist* of the architecture profile against the changed files. Report ✔/✘ with `file:line`.
 3. **Review** (L2+) — `code-review` skill on the diff. L3 — also `simplify` and, if security-relevant, `security-review`.
 4. **Department DoD** — tick the department's Definition of Done.
-5. **Learn** — `references/learning.md`.
+5. **Learn** — `references/learning.md`; rewrite project memory → *Work in progress* (or mark it idle).
 6. **Closing report**:
 
 ```

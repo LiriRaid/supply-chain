@@ -3,6 +3,16 @@
 Path: <absolute path to project root>
 Updated: <YYYY-MM-DD>
 
+## Work in progress
+Read first at Recall; rewritten after every task and every milestone (not at session end: sessions can stop without warning, e.g. out of tokens). Any agent can resume from here.
+- Updated: <YYYY-MM-DD HH:mm> · by: <agent>
+- Task: <what the user asked, in their words> · goal: <done looks like…>
+- Done: <steps finished, files touched>
+- Next: <ordered remaining steps>
+- Open: <decisions or questions pending>
+- Last request: <the user's last message, short>
+<!-- When the task is finished and nothing is pending: "- Status: idle (last: <task>, <date>)" -->
+
 ## Identity
 - Stack: <slug from stacks/> (<framework + version>)
 - Architecture: <slug from architectures/> — <how it maps here, e.g. features/<f>/{components,services,entities,routes}>

@@ -28,6 +28,12 @@ const names = [
 for (const n of names) {
   fs.rmSync(path.join(out, n), { recursive: true, force: true });
   fs.cpSync(path.join(live, n), path.join(out, n), { recursive: true, dereference: true });
+  if (n === 'supply-chain') {
+    const mf = path.join(out, n, 'skill-map.json');
+    const m = JSON.parse(fs.readFileSync(mf, 'utf8'));
+    for (const [k, e] of Object.entries(m.skills)) if (e.auto && e.origin && e.origin !== 'user') delete m.skills[k];
+    fs.writeFileSync(mf, JSON.stringify(m, null, 2) + '\n');
+  }
   if (!strip) continue;
   const f = path.join(out, n, 'SKILL.md');
   const t = fs.readFileSync(f, 'utf8').replace(/(\n## Learned (?:rules|notes)\n\n_[^\n]*_\n)[\s\S]*$/, '$1');

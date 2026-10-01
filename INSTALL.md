@@ -18,17 +18,18 @@ Repository: `https://github.com/LiriRaid/supply-chain`
 
 ## 1. Detect the agent and its paths
 
-Identify which agent **you** are, then open `adapters/<agent>.md` from the repository (`claude-code`, `codex`, `cursor`, `gemini-cli`, `opencode`, or `generic` if none fits). It gives:
+Identify which agent **you** are, and **every other agent installed on this machine** (config folders such as `~/.claude`, `~/.codex`, `~/.cursor`, `~/.gemini`, `~/.config/opencode`, or the agent's CLI on the PATH). The supply chain can be installed in all of them at once; they share one private layer, so work started in one agent can be resumed in another. For each agent, open `adapters/<agent>.md` from the repository (`claude-code`, `codex`, `cursor`, `gemini-cli`, `opencode`, or `generic` if none fits). It gives:
 
 - `<skills-dir>` — user-level skills folder (e.g. `~/.claude/skills`)
 - `<project-skills-dir>` — project-level skills folder (e.g. `.claude/skills`)
 - `<instructions-file>` — global instructions file (e.g. `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`)
 - how to register MCP servers
 
-If the adapter marks a path as *verify*, check it against your own documentation or the filesystem before using it. Tell the user in one line what you detected:
+If the adapter marks a path as *verify*, check it against your own documentation or the filesystem before using it. Tell the user in one line per agent what you detected:
 
 ```
 Agente: Claude Code · skills: ~/.claude/skills · instrucciones: ~/.claude/CLAUDE.md · capa privada: ~/.supply-chain
+También encontré: Codex (~/.codex) · Cursor (~/.cursor)
 ```
 
 **1.1 Plan and confirm [ask].** Before downloading or touching anything, show the user the plan and wait for an explicit yes:
@@ -39,11 +40,12 @@ Voy a instalar el supply chain así:
 2. Instrucciones generales → ~/.claude/CLAUDE.md          (bloque marcado arriba; el resto no se toca)
 3. Capa privada            → ~/.supply-chain/             (fuera de .claude; sirve para cualquier agente y se completa sola)
 4. Hook Rule 0         → ~/.claude/settings.json      (recordatorio por mensaje, ~70 tokens; no bloquea nada)
-5. Te preguntaré antes de: quitar skills de terceros, mover contenido de tu archivo de instrucciones y registrar MCP.
+5. Agentes: Claude Code (este) + ¿también Codex, Cursor…? (los que encontré; misma memoria compartida)
+6. Te preguntaré antes de: quitar skills de terceros, mover contenido de tu archivo de instrucciones y registrar MCP.
 ¿Continúo?
 ```
 
-Use the real paths from the adapter. If the user says no or changes something (another folder, skip a step), adapt and show the plan again.
+Use the real paths from the adapter. **Several agents chosen** → run §3–§7 once per agent with its own adapter (skills, instructions block, hook if supported, MCP in its own config), and §6.1 (private layer) only once. If the user says no or changes something (another folder, skip a step), adapt and show the plan again.
 
 ## 2. Get the files
 
@@ -80,7 +82,7 @@ This supply chain ships its own tool skills that replace these community skills.
 | `webapp-testing` | `browser-verify` |
 | `context7-mcp` (skill, not the MCP server) | `library-docs` |
 
-Remove only the confirmed ones. Remove a link, not the folder it points to, unless the user confirms nothing else uses it.
+Remove only the confirmed ones. Remove a link, not the folder it points to, unless the user confirms nothing else uses it. **Before removing a real folder, copy it to the §3 backup.** If `~/.agents/.skill-lock.json` exists, back it up and delete the entries of the removed skills (and entries whose folder no longer exists, reporting them).
 
 ## 5. Copy the skills
 
@@ -159,7 +161,8 @@ It indexes installed skills and MCP servers into `skill-registry.md`, applies th
 
 ```
 ## Supply chain instalado
-- Agente / rutas: …
+- Agentes / rutas: … (uno por línea)
+- Versión: <skills-dir>/supply-chain/VERSION
 - Respaldo: ~/.supply-chain-backups/<fecha>/
 - Skills: 17 copiadas · de terceros eliminadas: …
 - Archivos modificados según INSTALL.md:
@@ -174,11 +177,13 @@ It indexes installed skills and MCP servers into `skill-registry.md`, applies th
 
 ## 9. Update
 
-1. Get the files (§2) and back up (§3) — always, because installed skills may have learned content.
-2. For each skill folder: copy new and changed files, but **merge** `## Learned rules`, `## Learned notes`, `patterns/`, `rules/` and `facts/`: keep the user's entries, add the repository's.
-3. `~/.supply-chain/`: only create missing files or folders from the templates; never edit existing ones.
-4. Replace the instructions block (§6.2), make sure the Rule 0 hook is registered (§7.2) and run sync (§7.3).
-5. Report with the same list of modified files as §8.
+1. **Compare versions.** Read the installed `<skills-dir>/supply-chain/VERSION` (missing = older than 0.3.0) and the repository's. Same version → say it is up to date and stop unless the user insists. Otherwise show the user the `CHANGELOG.md` entries between both versions and wait for a yes **[ask]**.
+2. Get the files (§2) and back up (§3) — always, because installed skills may have learned content. Update every agent where the supply chain is installed (§1), unless the user names one.
+3. For each skill folder: copy new and changed files, delete files the repository removed (only inside the 17 supply chain skills), but **merge** `## Learned rules`, `## Learned notes`, `patterns/`, `rules/` and `facts/`: keep the user's entries, add the repository's.
+4. `~/.supply-chain/`: only create missing files or folders from the templates; never edit existing ones. Existing `projects/<slug>.md` files gain new template sections (e.g. *Work in progress*) the next time a task runs there; do not rewrite them now.
+   `skill-map.json`: take every entry from the repository, then add back the installed entries the repository does not have (skills and MCP servers the user created or mapped, project skills).
+5. Replace the instructions block (§6.2), make sure the Rule 0 hook is registered (§7.2) and run sync (§7.3).
+6. Report with the same list of modified files as §8, plus `Versión: <old> → <new>`.
 
 ## 10. Uninstall **[ask]**
 

@@ -6,13 +6,13 @@
 
 **Questions run it too, in consult mode (Q):** recall → route to the department of the topic → (`supply-chain/references/consult.md`) answer read-only, grounded in the code (`file:line`) or docs (`library-docs`), never from guesswork; say what you could not verify. No gates; reply starts `Supply chain → Q · <dept>`; save the answer to memory if it took real investigation.
 
-1. **Recall** — memory first: `~/.supply-chain/projects/<slug>.md` → *Solved problems* by symptom, *Project map* (+ `mem_search` if engram is available). Solved before → go straight to the known cause; skip the dead ends listed there.
+1. **Recall** — memory first: `~/.supply-chain/projects/<slug>.md` → *Work in progress* (pending work, maybe from another agent → say "La última vez (<agent>) estábamos en X; falta Y" and continue if the request fits), *Solved problems* by symptom, *Project map* (+ `mem_search` if engram is available). Solved before → go straight to the known cause; skip the dead ends listed there.
 2. **Route** — load the owner department skill (index below) **before any other skill or edit**; read its Rules and Tools, and only the procedure section you need.
    **Reuse before create:** check *Project map → Reusables* first (components, features, services, utils, models/entities, animations, styles/tokens). The project composes shared pieces → build on them; it does not → follow its reference files. The brief states `Reutiliza: <piece + path>` or `Ninguno → patrón de <file>`.
 3. **Use skills** — the ones the department's Tools table names, through their triggers. Missing → create it (`supply-chain/references/skills.md`, ask global or project).
 4. **Verify** — gates with the project's commands; never claim done with red or unrun gates.
    **Evidence before change:** for bugs and visual fixes, observe the real state first (computed style and where it comes from, actual value, log, response), then edit. **Two-strike rule:** the 2nd failed attempt on the same thing → stop varying; follow *When stuck* in `supply-chain/references/protocol.md`.
-5. **Learn** — always check; if something was new, save it (open `supply-chain/references/learning.md` only then; engram `mem_save`). When the user confirms ("eso era", "ya quedó") after more than one attempt, write a *Solved problems* entry with the dead ends.
+5. **Learn** — rewrite *Work in progress* (done, next, open) after every task and milestone; always check; if something was new, save it (open `supply-chain/references/learning.md` only then; engram `mem_save`). When the user confirms ("eso era", "ya quedó") after more than one attempt, write a *Solved problems* entry with the dead ends.
 
 **Your reply always starts** with `Supply chain → L<n> · <dept> (+support) · skills: <…>` and, for changes, **ends** with `## Cierre` (gates, skills used or created, what was learned). A per-prompt hook may repeat this rule as a reminder. If you are about to answer without that first line, stop and run step 1.
 
