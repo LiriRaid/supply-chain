@@ -39,7 +39,7 @@ Voy a instalar Waymark así:
 1. Skills (17)            → ~/.claude/skills/            (respaldo previo si ya existe algo)
 2. Instrucciones generales → ~/.claude/CLAUDE.md          (bloque marcado arriba; el resto no se toca)
 3. Capa privada            → ~/.waymark/             (fuera de .claude; sirve para cualquier agente y se completa sola)
-4. Hook Rule 0         → ~/.claude/settings.json      (recordatorio por mensaje, ~70 tokens; no bloquea nada)
+4. Hooks              → ~/.claude/settings.json      (memoria del proyecto al iniciar sesión ~400 tokens; recordatorio por mensaje ~90 tokens; no bloquean nada)
 5. Agentes: Claude Code (este) + ¿también Codex, Cursor…? (los que encontré; misma memoria compartida)
 6. Te preguntaré antes de: quitar skills de terceros, mover contenido de tu archivo de instrucciones y registrar MCP.
 ```
@@ -138,15 +138,18 @@ These files start generic on purpose. **Do not ask the user to fill them**: Waym
 
 The stack-specific entries shipped today are **examples** for Angular (`angular-cli`: `npx -y @angular/cli mcp`, `primeng`: `npx -y @primeng/mcp`). On a fresh machine the stack is usually unknown: skip them, and let `dept-devex` propose the right server later, when a project of that stack is detected (`waymark` §5).
 
-**7.2 Rule 0 hook (installed by default).** The instructions block can be ignored in long sessions; a per-prompt reminder keeps Waymark on every request. Once a day it also checks the repository's `VERSION` (1.5 s timeout, silent offline) and, only when a newer version exists, tells the agent to offer the update (§9) at most once a day; commits without a version change never trigger it. It runs locally (0 tokens to execute) and adds ~70 tokens of context per prompt; it never blocks or changes the prompt. Include it in the §1.1 plan.
+**7.2 Hooks (installed by default).** Two small local scripts. **Session memory** (`session-hook.mjs`, at session start, after `/clear` and after a context summary): injects a capped digest (≤ 2,500 chars, usually ~400 tokens) of this machine's *Environment* and the current project's memory, so Recall never depends on the agent remembering to read it. **Rule 0 reminder** (`rule0-hook.mjs`, per prompt). The instructions block can be ignored in long sessions; a per-prompt reminder keeps Waymark on every request. Once a day it also checks the repository's `VERSION` (1.5 s timeout, silent offline) and, only when a newer version exists, tells the agent to offer the update (§9) at most once a day; commits without a version change never trigger it. It runs locally (0 tokens to execute) and adds ~70 tokens of context per prompt; it never blocks or changes the prompt. Include it in the §1.1 plan.
 
-- **Claude Code:** merge into `~/.claude/settings.json` (keep every existing key and hook; do not duplicate if a hook with `rule0-hook.mjs` already exists):
+- **Claude Code:** merge into `~/.claude/settings.json` (keep every existing key and hook; do not duplicate a hook whose command already runs `rule0-hook.mjs` or `session-hook.mjs`):
 
 ```json
-{ "hooks": { "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "node \"<skills-dir>/waymark/scripts/rule0-hook.mjs\"" } ] } ] } }
+{ "hooks": {
+  "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "node \"<skills-dir>/waymark/scripts/rule0-hook.mjs\"" } ] } ],
+  "SessionStart":     [ { "hooks": [ { "type": "command", "command": "node \"<skills-dir>/waymark/scripts/session-hook.mjs\"" } ] } ]
+} }
 ```
 
-  Use the absolute path with forward slashes. Verify: `echo {} | node "<skills-dir>/waymark/scripts/rule0-hook.mjs"` prints JSON with `additionalContext`.
+  Use the absolute path with forward slashes. Verify: `echo {} | node "<skills-dir>/waymark/scripts/rule0-hook.mjs"` and `echo {} | node "<skills-dir>/waymark/scripts/session-hook.mjs"` each print JSON with `additionalContext`.
 - **Other agents:** if the adapter documents a per-prompt hook, register the same script there; otherwise skip it (the instructions block still applies) and say so in the report.
 - Report it under *Archivos modificados* (`settings.json — hook Rule 0 agregado`).
 
@@ -188,13 +191,13 @@ It indexes installed skills and MCP servers into `skill-registry.md`, applies th
 3. For each skill folder: copy new and changed files, delete files the repository removed (only inside the 17 Waymark skills), but **merge** `## Learned rules`, `## Learned notes`, `patterns/`, `rules/` and `facts/`: keep the user's entries, add the repository's.
 4. `~/.waymark/`: only create missing files or folders from the templates; never edit existing ones. Existing `projects/<slug>.md` files gain new template sections (e.g. *Work in progress*) the next time a task runs there; do not rewrite them now.
    `skill-map.json`: take every entry from the repository, then add back the installed entries the repository does not have (skills and MCP servers the user created or mapped, project skills).
-5. Replace the instructions block (§6.2), make sure the Rule 0 hook is registered (§7.2) and run sync (§7.3).
+5. Replace the instructions block (§6.2), make sure both hooks are registered (§7.2; versions before 1.4.0 only had the Rule 0 one) and run sync (§7.3).
 6. Report with the same list of modified files as §8, plus `Versión: <old> → <new>`.
 
 ## 10. Uninstall **[ask]**
 
 1. Back up (§3).
 2. Remove from `<skills-dir>`: `waymark`, `dept-*` and the six tool skills from §5.
-3. Remove the block between the `waymark` markers from `<instructions-file>`; leave the rest. Remove the hook entry that runs `rule0-hook.mjs` from the agent settings.
+3. Remove the block between the `waymark` markers from `<instructions-file>`; leave the rest. Remove the hook entries that run `rule0-hook.mjs` and `session-hook.mjs` from the agent settings.
 4. Ask whether to keep `~/.waymark/` (it is the user's memory; default: keep).
 5. MCP servers: list the ones the install registered and ask before removing any.

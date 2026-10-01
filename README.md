@@ -48,6 +48,7 @@ Nothing is preloaded "just in case". Loading is layered:
 | Department `dept-*/SKILL.md` | when a task arrives | ~6–8 k chars: rules, brief questions, tools to use, DoD |
 | Department `procedures.md` | only the section the task needs | one procedure |
 | Core `waymark/references/*`, stack and architecture profiles | only in the situations they list (first time in a project, L2+, learning, missing skill) | on demand |
+| Session memory digest (hook) | once per session | this machine's environment and the project's work in progress, solved problems and gates, injected automatically (~400 tokens) |
 | Project memory + *Project map* | every task | replaces re-exploring the project each session |
 
 A small L1 task loads the block plus one department and one procedure. Memory (project map, verified gate commands, engram) avoids re-discovering the same things every session.
