@@ -2,6 +2,14 @@
 
 Loaded on demand from `SKILL.md` → *Procedures*. Read only the section the task needs.
 
+### Quick bug triage (L1)
+1. **Recall:** project memory → *Solved problems* by symptom; known → apply it.
+2. **Reproduce the symptom precisely** from the user's words or screenshot: what, where, when it works and when it does not (e.g. "works after refresh, fails after navigating").
+3. **Locate the exact target** (element, file, selector, function) and read only the relevant lines.
+4. **Explain every symptom** with one cause; a cause that explains only some of them is not the cause yet.
+5. **Evidence:** observe the real state, or give the user the one-line check (*When stuck* → plan B).
+6. **Smallest fix**, then the L1 gate (lint/typecheck of changed files) and *Solved problems* entry.
+
 ### Test pyramid — choose the level
 1. **Unit** (most): pure logic, services, state, mappers. No network, DB or browser.
 2. **Integration** (fewer): component + template, endpoint + DB, repository + real store. Test the seam.

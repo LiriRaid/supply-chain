@@ -24,7 +24,7 @@ Cómo: procedure "New component" · skills: ui-build → browser-verify · docs:
 
 ## Exit (Definition of Done)
 
-1. **Quality gates** — run them yourself with the commands from project memory (or the stack profile): typecheck · lint (changed files) · tests (related at L1/L2, full at L3) · build (L2+). Report real output. If a failure is pre-existing, prove it (`git stash` → rerun → `git stash pop`) and say so. Never claim done with red gates.
+1. **Quality gates** — run them yourself with the commands from project memory (or the stack profile): typecheck · lint (changed files) · tests (related at L1/L2, full at L3) · build (L2+). Report real output. If a failure is pre-existing, prove it (`git stash` → rerun → `git stash pop`) and say so. Never claim done with red gates. **L1 minimum:** lint or typecheck of the changed files (UI changes: also the quickest compile check the project has); never zero gates.
 2. **Architecture conformance** (L2+) — run the *Conformance checklist* of the architecture profile against the changed files. Report ✔/✘ with `file:line`.
 3. **Review** (L2+) — `code-review` skill on the diff. L3 — also `simplify` and, if security-relevant, `security-review`.
 4. **Department DoD** — tick the department's Definition of Done.
@@ -36,7 +36,7 @@ Cómo: procedure "New component" · skills: ui-build → browser-verify · docs:
 ## When stuck (two-strike rule)
 
 The second failed attempt on the same problem means guessing has started. Stop varying the fix and switch method:
-1. **Observe, do not assume.** Get the real state: computed styles and the rule that wins (browser devtools / `browser-verify`), the actual runtime value, the full error and stack, the real request/response, the version installed.
+1. **Observe, do not assume.** Get the real state: computed styles and the rule that wins (browser devtools / `browser-verify`), the actual runtime value, the full error and stack, the real request/response, the version installed. **No browser, or the app needs a login you do not have** → give the user one copy-paste check (e.g. `getComputedStyle(document.querySelector('.x')).transform` in DevTools) with the expected value before and after the fix, and mark the fix *no verificado* until they confirm.
 2. **Re-read the source of truth.** Official docs for the exact API and version (`library-docs`), and the code that actually runs (not the file you think runs: check imports, overrides, themes, generated files).
 3. **Hypotheses.** List 2–3 possible causes; test first the check that rules out the most of them with the least effort. One change at a time.
 4. **Ask once, precisely.** Still unclear → one concrete question to the user (which element / screen / input, a screenshot of the inspector, the exact steps), not a list of guesses.

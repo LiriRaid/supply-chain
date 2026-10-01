@@ -31,8 +31,9 @@ Run the *Waymark protocol → Entry* from the instructions file (already in cont
 - Does not own: what to build → `dept-product` · layer rules → `dept-architecture` · CI pipelines and release → `dept-devops` · security testing depth → `dept-security` · accessibility design decisions → `dept-ux-ui`.
 
 ## Procedures
-Detailed steps live in `procedures.md` (same folder). **Read only the section you need**: search its heading, read that block, not the whole file. Anti-patterns and references are at the end of that file.
+Detailed steps live in `procedures.md` (same folder). Fast diagnosis of a reported bug → **Quick bug triage** (short; read it first). **Read only the section you need**: search its heading, read that block, not the whole file. Anti-patterns and references are at the end of that file.
 
+- Quick bug triage (L1)
 - Test pyramid — choose the level
 - New feature or behavior (TDD: red / green / refactor)
 - Bug fix

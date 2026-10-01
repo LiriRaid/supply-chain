@@ -2,6 +2,16 @@
 
 Part of the `waymark` core skill. Paths are relative to the core skill folder (`<skills-dir>/waymark/`). Read only when the instructions file or a department points here.
 
+## Minimal bootstrap (any level, one step)
+
+No `~/.waymark/projects/<slug>.md` yet → create it **now**, before the task, from `templates/project-memory.template.md`, filling only what one quick look gives:
+- *Identity*: stack and version from the manifest; architecture from the folder signals below (or "unknown").
+- *Quality gates*: commands from the project's own `AGENTS.md` / `CLAUDE.md` / README, else the manifest scripts (`package.json` scripts, `Makefile`, `composer.json`…); mark them *not verified*.
+- *Work in progress*: the current task.
+- Add the row to `~/.waymark/projects.md`.
+
+Leave *Project map* empty; the **full scan below** runs at L2+ or when the map is needed. Never skip Recall or Learn because the file did not exist.
+
 Run the first time Waymark works in a project, for a new project from scratch, or when the project memory has no *Project map*.
 
 | Signal | Stack |
