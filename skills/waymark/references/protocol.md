@@ -18,13 +18,14 @@ Waymark → L2 · dept-frontend (+ dept-ux-ui, dept-qa) · stack angular · arch
 Qué: modal de confirmación para eliminar contacto
 Para qué / quién: evitar borrados accidentales del agente
 Dónde: features/contacts/components/delete-contact-dialog/ (scope rule: un solo feature)
+Memoria: leída ~/.waymark/projects/contacts-app.md (creada ahora si no existía)
 Reutiliza: shared/components/app-modal (base de todos los modales del proyecto)
 Cómo: procedure "New component" · skills: ui-build → browser-verify · docs: library-docs → angular-cli (Angular CDK dialog), primeng (Dialog)
 ```
 
 ## Exit (Definition of Done)
 
-1. **Quality gates** — run them yourself with the commands from project memory (or the stack profile): typecheck · lint (changed files) · tests (related at L1/L2, full at L3) · build (L2+). Report real output. If a failure is pre-existing, prove it (`git stash` → rerun → `git stash pop`) and say so. Never claim done with red gates. **L1 minimum:** lint or typecheck of the changed files (UI changes: also the quickest compile check the project has); never zero gates.
+1. **Quality gates** — run them yourself with the commands from project memory (or the stack profile): typecheck · lint (changed files) · tests (related at L1/L2, full at L3) · build (L2+). Report real output. If a failure is pre-existing, prove it (`git stash` → rerun → `git stash pop`) and say so. Never claim done with red gates. **L1 minimum:** lint or typecheck of the changed files (UI changes: also the quickest compile check the project has); never zero gates. Re-run the gates after the **last** edit, not only after the first one. L2+ with no spec for the changed code: add one where the project already tests that kind of file; otherwise state "sin infraestructura de test" and give the user a one-line check.
 2. **Architecture conformance** (L2+) — run the *Conformance checklist* of the architecture profile against the changed files. Report ✔/✘ with `file:line`.
 3. **Review** (L2+) — `code-review` skill on the diff. L3 — also `simplify` and, if security-relevant, `security-review`.
 4. **Department DoD** — tick the department's Definition of Done.

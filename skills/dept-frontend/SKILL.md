@@ -8,6 +8,7 @@ description: "Waymark · Frontend Engineering department. Use FIRST, before ui-b
 ## Quick ref
 **Mission:** Build client-side UI (web or mobile) that is correct, accessible, performant and consistent with the stack's conventions.
 **Must:** reactive state primitive and render optimization per stack profile · styling system first, tokens only · guard platform-only APIs when server-rendering · clean up subscriptions, listeners and animations · every UI state (loading, empty, error, success)
+**UX musts:** match the existing screens (spacing, density, components) · visible focus and full keyboard path · labels on every control · loading / empty / error states that look like the project's own
 **Skills by default:** `ui-build` · `browser-verify` · `run` · `library-docs` (+ the stack's framework / UI-library MCP when the user has one)
 **DoD:** Works in the running app, a11y basics pass, all states handled, tests cover criteria, gates green.
 

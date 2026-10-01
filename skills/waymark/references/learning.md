@@ -12,6 +12,7 @@ After each L1+ task, collect what was **non-obvious and new**: something you had
 
 | The lesson is about… | Write it to |
 |---|---|
+| this machine or environment (OS, shell, missing tools, how to edit files) | `~/.waymark/profile.md` → *Environment* |
 | a problem that took more than one attempt | `~/.waymark/projects/<slug>.md` → *Solved problems* (symptom, cause, fix, dead ends) + `mem_save` |
 | this project only (paths, conventions, gotchas, commands) | `~/.waymark/projects/<slug>.md` |
 | a project rule that must apply to **every** task there and the team should share | `<project>/<project-instructions-file>` — ask first (see `project-detection.md`) |
