@@ -1,7 +1,7 @@
 # Stack: Generic (unknown stack fallback)
 
 ## Detect
-Signals the agent checks (supply-chain §6): used when no other stack profile matches and project memory sets no stack. Typical cases: Rails/Ruby, Python, Go, Rust, Java/Kotlin, .NET, PHP, Elixir, monorepos with mixed languages, repositories with only scripts or docs. With no known stack there are no default commands, so the agent must discover the project's real commands before claiming anything works.
+Signals the agent checks (supply-chain `references/project-detection.md`): used when no other stack profile matches and project memory sets no stack. Typical cases: Rails/Ruby, Python, Go, Rust, Java/Kotlin, .NET, PHP, Elixir, monorepos with mixed languages, repositories with only scripts or docs. With no known stack there are no default commands, so the agent must discover the project's real commands before claiming anything works.
 
 ## Commands
 There are no default commands for an unknown stack: the agent discovers them (below), verifies each once and records them in project memory. Do not treat "no gates ran" as "all green".

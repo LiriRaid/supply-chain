@@ -58,7 +58,7 @@
 
 ## sc-data
 
-_No dedicated skills yet. Use Shared, or propose one (supply-chain §5)._
+_No dedicated skills yet. Use Shared, or propose one (supply-chain `references/skills.md`)._
 
 ## sc-security
 
@@ -78,7 +78,7 @@ _No dedicated skills yet. Use Shared, or propose one (supply-chain §5)._
 
 ## sc-devops
 
-_No dedicated skills yet. Use Shared, or propose one (supply-chain §5)._
+_No dedicated skills yet. Use Shared, or propose one (supply-chain `references/skills.md`)._
 
 ## sc-devex
 

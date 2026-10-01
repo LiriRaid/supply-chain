@@ -1,7 +1,7 @@
 # Stack: .NET (ASP.NET Core, EF Core)
 
 ## Detect
-Signals the agent checks (supply-chain §6): `*.sln` / `*.slnx`, `*.csproj`, `*.fsproj`, `global.json`, `Directory.Build.props`. ASP.NET Core is indicated by `Microsoft.NET.Sdk.Web` in a `.csproj` and a `Program.cs` using `WebApplication.CreateBuilder`.
+Signals the agent checks (supply-chain `references/project-detection.md`): `*.sln` / `*.slnx`, `*.csproj`, `*.fsproj`, `global.json`, `Directory.Build.props`. ASP.NET Core is indicated by `Microsoft.NET.Sdk.Web` in a `.csproj` and a `Program.cs` using `WebApplication.CreateBuilder`.
 
 ## Commands
 Default commands the agent runs in the Exit protocol; verify each once, then record it in project memory. Run from the folder containing the solution (or pass the solution path when several exist).

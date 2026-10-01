@@ -105,7 +105,7 @@ Always return: scope (file count), categories applied, findings table with total
 ## Pattern library (grows with use)
 - Before building, list `patterns/` and read the matching file, if any. In this skill the reusable knowledge is the rule set in `rules/`; widget patterns (dialog, combobox, tabs) live in `ui-build` and are the reference for what a correct widget looks like.
 - After building something reusable that has no pattern yet (a modal, a data table, a stepper…), write `patterns/<pattern>.md` from `../supply-chain/templates/pattern.template.md`: stack-agnostic intent, anatomy, states, a11y, pitfalls, and one short adapter per stack it was built in. Project-specific details go to project memory, not here.
-- Update an existing pattern only with new, verified information (novelty check, supply-chain §7).
+- Update an existing pattern only with new, verified information (novelty check, supply-chain `references/learning.md`).
 
 ## Learned notes
-_Grows with use (supply-chain §7). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._
+_Grows with use (supply-chain `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._

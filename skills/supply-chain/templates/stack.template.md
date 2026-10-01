@@ -1,7 +1,7 @@
 # Stack: <name>
 
 ## Detect
-Signals the agent checks (supply-chain §6): <files / dependencies>.
+Signals the agent checks (supply-chain `references/project-detection.md`): <files / dependencies>.
 
 ## Commands
 Default commands the agent runs in the Exit protocol; verify each once, then record it in project memory. `<pm>` = detected package manager.

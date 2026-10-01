@@ -1,7 +1,7 @@
 # Stack: Python (Django, FastAPI, Flask)
 
 ## Detect
-Signals the agent checks (supply-chain §6): `pyproject.toml`, `requirements.txt`, `setup.py`/`setup.cfg`, `Pipfile`, `uv.lock` or `poetry.lock`. Framework hints: `manage.py` (Django), `fastapi` dependency (FastAPI), `flask` dependency (Flask).
+Signals the agent checks (supply-chain `references/project-detection.md`): `pyproject.toml`, `requirements.txt`, `setup.py`/`setup.cfg`, `Pipfile`, `uv.lock` or `poetry.lock`. Framework hints: `manage.py` (Django), `fastapi` dependency (FastAPI), `flask` dependency (Flask).
 
 ## Commands
 Default commands the agent runs in the Exit protocol; verify each once, then record it in project memory. `{files}` = changed files.

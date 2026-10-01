@@ -4,7 +4,7 @@ Reusable verification flows, one file per flow: `patterns/<flow>.md` (e.g. `logi
 
 ## When to add one
 - A flow was verified end to end, is likely to recur in other projects, and has no file here yet.
-- Run the novelty check first (supply-chain §7): list this folder and grep the flow name.
+- Run the novelty check first (supply-chain `references/learning.md`): list this folder and grep the flow name.
 
 ## Format
 Start from `../../supply-chain/templates/pattern.template.md` and fill it for a check, not for a build:

@@ -6,7 +6,7 @@ Verified API facts, one file per library: `facts/<library>.md` (e.g. `angular.md
 Write a fact only when all three hold:
 1. **Verified** — a docs lookup in this session (dedicated MCP, context7 or official site) confirmed it.
 2. **Non-obvious** — it differs from what a model would assume: renamed or removed API, changed default, version-specific signature, deprecated path that still compiles, surprising interaction between two packages.
-3. **Novel** — the novelty check (supply-chain §7) found it nowhere in `../SKILL.md`, the stack profile, project memory or this folder.
+3. **Novel** — the novelty check (supply-chain `references/learning.md`) found it nowhere in `../SKILL.md`, the stack profile, project memory or this folder.
 
 Stack conventions (how the user's projects should use a library) go to `../../supply-chain/stacks/<stack>.md`, not here. Project-only quirks go to project memory.
 

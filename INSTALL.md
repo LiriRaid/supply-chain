@@ -124,7 +124,7 @@ These files start generic on purpose. **Do not ask the user to fill them**: the 
 | Server | Propose when | Command / source |
 |---|---|---|
 | `context7` | always (docs for any library) | `https://mcp.context7.com/mcp` (HTTP) |
-| `engram` | optional, only if its binary is already installed | `https://github.com/Gentleman-Programming/engram` |
+| `engram` | recommended: persistent memory across sessions (the instructions block uses it to search before re-reading and to save decisions) | `https://github.com/Gentleman-Programming/engram` — if the binary is missing, offer to install it following its README **[ask]**; register it with the adapter's command |
 | stack-specific servers | only when the user works with that stack | entries in `skill-map.json` → `mcp` with a `stack` field |
 
 The stack-specific entries shipped today are **examples** for Angular (`angular-cli`: `npx -y @angular/cli mcp`, `primeng`: `npx -y @primeng/mcp`). On a fresh machine the stack is usually unknown: skip them, and let `sc-devex` propose the right server later, when a project of that stack is detected (`supply-chain` §5).

@@ -1,7 +1,7 @@
 # Stack: Java (Spring Boot; Kotlin note)
 
 ## Detect
-Signals the agent checks (supply-chain §6): `pom.xml` (Maven) or `build.gradle` / `build.gradle.kts` / `settings.gradle*` (Gradle). Spring Boot is indicated by `spring-boot-starter-*` dependencies or the Spring Boot plugin. Prefer the wrapper (`./gradlew`, `./mvnw`) when present.
+Signals the agent checks (supply-chain `references/project-detection.md`): `pom.xml` (Maven) or `build.gradle` / `build.gradle.kts` / `settings.gradle*` (Gradle). Spring Boot is indicated by `spring-boot-starter-*` dependencies or the Spring Boot plugin. Prefer the wrapper (`./gradlew`, `./mvnw`) when present.
 
 ## Commands
 Default commands the agent runs in the Exit protocol; verify each once, then record it in project memory. Pick Maven or Gradle from the build file found.

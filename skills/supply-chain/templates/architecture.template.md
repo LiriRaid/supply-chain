@@ -3,7 +3,7 @@
 ## Quick ref
 **Intent:** <one line>
 **Dependency rule:** <one line, e.g. "inner layers never import outer layers">
-**Detect:** <folder signals the agent checks, supply-chain §6>
+**Detect:** <folder signals the agent checks, supply-chain `references/project-detection.md`>
 
 ## Layout
 Generic tree, then one short mapping per common stack.

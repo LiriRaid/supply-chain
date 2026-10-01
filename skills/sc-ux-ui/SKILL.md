@@ -12,13 +12,10 @@ description: "Supply chain · UX/UI Design department. Use FIRST, before ui-syst
 **DoD:** Audit passes AA, states and copy complete, tokens consistent, motion reduced-safe, gates green.
 
 ## Entry
-Run the Entry protocol of the `supply-chain` skill (`../supply-chain/SKILL.md` §3):
-- Project memory `~/.supply-chain/projects/<slug>.md` (UI language, theme setup, token source).
-- Stack profile `../supply-chain/stacks/<stack>.md` — L1: *Conventions by department → Frontend*; L2+: full.
-- Architecture profile `../supply-chain/architectures/<arch>.md` (L2+), the project `CLAUDE.md`, and the token source of truth (stack profile).
-- Learnings `~/.supply-chain/learnings/sc-ux-ui.md` if it exists.
-- Registry `../supply-chain/skill-registry.md` → `## sc-ux-ui`.
-- Print the brief before the first edit.
+Run the *Supply chain protocol → Entry* from the instructions file (already in context; do not load the `supply-chain` skill for it). Department-specific reads:
+- Learnings: `~/.supply-chain/learnings/sc-ux-ui.md` if it exists.
+- Stack profile: L1 *Conventions by department → Frontend*, L2+ full. Also the project's token source of truth.
+- Tools: the **Tools** table below. Open `../supply-chain/skill-registry.md` only if a capability there has no installed provider.
 
 ## Brief questions
 The brief must answer:
@@ -35,40 +32,14 @@ The brief must answer:
 - Owns: accessibility requirements, visual hierarchy, layout rhythm, typography, color, design tokens and theming rules, interaction states, motion design, microcopy, information architecture, responsive intent.
 - Does not own: component implementation → `sc-frontend` · requirements and priority → `sc-product` · test automation → `sc-qa`.
 
-## Procedure
+## Procedures
+Detailed steps live in `procedures.md` (same folder). **Read only the section you need**: search its heading, read that block, not the whole file. Anti-patterns and references are at the end of that file.
 
-### New screen or flow (L2)
-1. Identify the primary task of the screen and the single primary action; everything else is secondary.
-2. Define hierarchy: one dominant heading, grouped content, consistent spacing scale, scannable alignment.
-3. Specify states: loading (skeleton for lists/content, spinner only for one-off actions), empty (message + action), error (what happened + how to recover), success (immediate feedback), disabled, hover, focus, active.
-4. Specify responsive intent: narrowest viewport first, touch targets, reflow at 320 CSS px without horizontal scroll.
-5. Write microcopy (copy rules) in the project's UI language.
-6. Pick tokens from the existing system; propose new tokens only when none fits.
-7. Invoke `ui-system` for hierarchy and design-system quality; hand implementation to `sc-frontend` (`ui-build`).
-8. Run `ui-audit` on the implemented code; fix every AA failure.
-
-### Visual improvement ("se ve feo", "más profesional")
-1. Capture the current screen (`browser-verify` screenshot) and name the concrete problems.
-2. Fix hierarchy, spacing rhythm and contrast before adding decoration.
-3. Invoke `ui-system`; use `ui-refine` for critique and polish. Preserve behavior and interactions.
-4. Capture after and compare.
-
-### Accessibility audit
-1. Invoke `ui-audit` on the target screens/components.
-2. Check manually: keyboard-only pass (tab order, focus visible, no traps except modals), screen reader names/roles, contrast in all themes, zoom to 200%, reflow at 320px, reduced motion.
-3. Use `browser-verify` to capture evidence (screenshots, focus order).
-4. Report findings by WCAG success criterion, severity and file:line; fix or hand off.
-
-### Theming / tokens change
-1. Locate the token source of truth (stack profile); never edit generated or vendor files. PrimeNG themes → `primeng` MCP for token names.
-2. Change tokens at the semantic layer (surface, primary, text-muted), not raw palette usages.
-3. Validate contrast for every affected pair in light and dark themes.
-4. Runtime theming → verify the theme persists and applies before first paint where possible.
-
-### Motion
-1. Invoke `ui-refine`.
-2. Give each animation a purpose: feedback, orientation or continuity. Remove decorative-only motion from task flows.
-3. Provide a reduced-motion variant (no motion or a simple fade) for every non-essential animation.
+- New screen or flow (L2)
+- Visual improvement ("se ve feo", "más profesional")
+- Accessibility audit
+- Theming / tokens change
+- Motion
 
 ## Rules
 
@@ -115,10 +86,10 @@ The brief must answer:
 | `test.browser` | `browser-verify` | Evidence: keyboard pass, screenshots, responsive checks | L2 |
 | `ui.library` | `primeng` MCP (PrimeNG); other libraries: `library-docs` | Component a11y and theming tokens | L1 |
 | `docs.library` | `library-docs` (→ angular-cli / primeng / context7 MCP) | WCAG, ARIA APG, styling-system docs | Q |
-| `contrast.check` | none yet → supply-chain §5 | Automated contrast and color-blindness checks | — |
+| `contrast.check` | none yet → supply-chain `references/skills.md` | Automated contrast and color-blindness checks | — |
 
 ## Definition of Done
-- [ ] Exit protocol of `supply-chain` §4 (gates, architecture conformance, review, learnings)
+- [ ] Exit protocol of `supply-chain` (instructions file → Exit; L2+ full: `../supply-chain/references/protocol.md`) (gates, architecture conformance, review, learnings)
 - [ ] `ui-audit` run; no WCAG 2.2 AA failures open
 - [ ] Keyboard-only pass and visible focus verified
 - [ ] Contrast verified in every theme
@@ -127,18 +98,6 @@ The brief must answer:
 - [ ] Copy reviewed: verbs first, actionable errors, consistent terms
 - [ ] Tokens only; new tokens added to the source of truth
 
-## Anti-patterns
-- Removing focus outlines without a visible replacement.
-- Placeholder text used as the only label.
-- Hero or above-the-fold icons as raster images when inline vectors improve load.
-- Buttons without press feedback.
-- Generic errors without recovery information.
-- Spinners where a skeleton fits.
-- Light text on light backgrounds without a contrast check.
-- Motion that ignores reduced-motion preferences.
-- Multiple competing primary actions on one view.
-- Restyling that silently changes behavior or interactions.
-
 ## Hand-offs
 - To `sc-frontend`: implementation of specified states, tokens and motion.
 - To `sc-product`: flows that change scope or need new requirements.
@@ -146,15 +105,6 @@ The brief must answer:
 - To `sc-data`: persistence of user preferences (theme, reduced motion, language).
 - To `sc-devex`: design-system documentation and token tooling.
 
-## References
-- WCAG 2.2: https://www.w3.org/TR/WCAG22/
-- WAI-ARIA Authoring Practices Guide: https://www.w3.org/WAI/ARIA/apg/
-- ISO 9241-210:2019 — Human-centred design: https://www.iso.org/standard/77520.html
-- W3C Design Tokens Community Group format: https://www.designtokens.org
-- MDN prefers-reduced-motion: https://developer.mozilla.org/docs/Web/CSS/@media/prefers-reduced-motion
-- Material Design 3: https://m3.material.io
-- Apple Human Interface Guidelines: https://developer.apple.com/design/human-interface-guidelines
-
 ## Learned rules
 
-_Grows with use (supply-chain §7). Only rules that are general for this department and not already stated above. Format: `- [YYYY-MM-DD] <rule> — <why> (source: <project>)`._
+_Grows with use (supply-chain `references/learning.md`). Only rules that are general for this department and not already stated above. Format: `- [YYYY-MM-DD] <rule> — <why> (source: <project>)`._

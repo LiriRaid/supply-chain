@@ -1,7 +1,7 @@
 # Stack: React (Next.js App Router, Vite)
 
 ## Detect
-Signals the agent checks (supply-chain §6): `react` in `dependencies` of `package.json`. Sub-flavor from further signals: `next` or `next.config.*` means Next.js; `vite` or `vite.config.*` means Vite SPA; `react-native` / `expo` means mobile (out of scope, use `generic`). Also read: `@testing-library/react`, `vitest`, `jest`, `eslint`, `typescript`, `tailwindcss`.
+Signals the agent checks (supply-chain `references/project-detection.md`): `react` in `dependencies` of `package.json`. Sub-flavor from further signals: `next` or `next.config.*` means Next.js; `vite` or `vite.config.*` means Vite SPA; `react-native` / `expo` means mobile (out of scope, use `generic`). Also read: `@testing-library/react`, `vitest`, `jest`, `eslint`, `typescript`, `tailwindcss`.
 
 ## Commands
 Default commands the agent runs in the Exit protocol; verify each once, then record it in project memory. `<pm>` = package manager from the lockfile (pnpm, yarn, npm, bun).

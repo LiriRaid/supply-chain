@@ -1,6 +1,6 @@
 # ui-system pattern library
 
-This folder holds **system-level** patterns: reusable decisions about tokens, theming and visual structure that recur across projects. It starts empty on purpose and grows only from real work (supply-chain §7).
+This folder holds **system-level** patterns: reusable decisions about tokens, theming and visual structure that recur across projects. It starts empty on purpose and grows only from real work (supply-chain `references/learning.md`).
 
 ## What belongs here
 - Theming mechanics: theme switch with persisted preference, applying the theme before first paint, high-contrast variant.

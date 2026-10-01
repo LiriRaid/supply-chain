@@ -10,7 +10,7 @@ Updated: <YYYY-MM-DD>
 - Related projects: <e.g. backend API at ../api>
 
 ## Project map
-Filled by the minimal project scan (supply-chain §6); extended when a task explores a new area.
+Filled by the minimal project scan (supply-chain `references/project-detection.md`); extended when a task explores a new area.
 - Source root and layout: <e.g. src/app/{core,shared,features}>
 - Path aliases: <e.g. @core/* → src/app/core/*>
 - Reusables: <shared components, base services, helpers, tokens/theme — with paths>

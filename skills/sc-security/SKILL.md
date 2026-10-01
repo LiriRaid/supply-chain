@@ -12,7 +12,10 @@ description: "Supply chain · Security / DevSecOps department. Use FIRST for aut
 **DoD:** gates green · `security-review` clean or findings resolved · no secret in diff · authz tests for 401/403 · audit has no high/critical
 
 ## Entry
-Run the Entry protocol of the `supply-chain` skill (`../supply-chain/SKILL.md` §3): project memory `~/.supply-chain/projects/<slug>.md` · stack profile `../supply-chain/stacks/<stack>.md` (L1: *Commands* (audit) + *Security*; L2+: full) · architecture profile `../supply-chain/architectures/<arch>.md` (L2+) · learnings `~/.supply-chain/learnings/sc-security.md` · registry `../supply-chain/skill-registry.md` section `## sc-security` · brief. At L2+ also read the auth middleware/guards and config files touched by the change.
+Run the *Supply chain protocol → Entry* from the instructions file (already in context; do not load the `supply-chain` skill for it). Department-specific reads:
+- Learnings: `~/.supply-chain/learnings/sc-security.md` if it exists.
+- Stack profile: L1 *Commands* (audit) + *Security*, L2+ full.
+- Tools: the **Tools** table below. Open `../supply-chain/skill-registry.md` only if a capability there has no installed provider.
 
 ## Brief questions
 The brief must answer before the first edit:
@@ -29,46 +32,15 @@ The brief must answer before the first edit:
 - Owns: authn/authz design, secrets handling, input/output safety, CORS/CSRF/CSP, security headers, dependency and supply-chain risk, security logging, threat modeling, agent tool permissions.
 - Does not own (security reviews, they implement): endpoint implementation → `sc-backend` · schema and data policy implementation → `sc-data` · CI and infra hardening → `sc-devops` · UI → `sc-frontend`.
 
-## Procedure
+## Procedures
+Detailed steps live in `procedures.md` (same folder). **Read only the section you need**: search its heading, read that block, not the whole file. Anti-patterns and references are at the end of that file.
 
-### Security review of a change (L2+ with security impact)
-1. List the trust boundaries the diff crosses: client→server, server→DB, server→third party, inbound webhook, file system.
-2. Per boundary check: input validation, authn, authz, output encoding, error handling, logging.
-3. Run `security-review` on the pending changes. Verify each finding technically; do not accept or dismiss blindly.
-4. Grep the diff for secrets (keys, tokens, passwords, connection strings, private keys).
-5. Fix or hand off findings; record accepted risks in the closing report.
-
-### New or changed auth flow
-1. Use the framework's vetted auth mechanism from the stack profile; never hand-roll crypto or session handling.
-2. Passwords: slow adaptive hash (argon2id, bcrypt, scrypt). Tokens: short-lived access, rotated refresh, server-side revocation.
-3. Browser tokens in HttpOnly, Secure, SameSite cookies, not in browser storage.
-4. Authorize per request on the server: deny by default, check ownership/tenant, not just "logged in".
-5. Tests: unauthenticated (401), wrong user/tenant (403), expired/revoked token, privilege escalation attempt.
-6. Rate-limit login, reset and token endpoints; respond identically for unknown user and wrong password.
-
-### Secrets handling
-1. Read secrets from environment variables or the stack's encrypted secret store (stack profile).
-2. Secret files (`.env`, key files, local config) in `.gitignore`; commit only an example file with placeholders.
-3. If a secret was committed or logged: rotate it first, then purge history. Tell the user immediately.
-
-### Dependency audit
-1. Run the stack's audit command (stack profile → *Commands*).
-2. Block on critical/high with a known fix: upgrade or patch. No-fix findings: document exposure and mitigation.
-3. New dependency: check maintenance, adoption, license, install scripts. Never approve install/build scripts without reading them.
-4. Commit lockfiles; pin versions per the stack convention.
-
-### Threat model (L3, or new external surface)
-1. Describe the data flow in 5–10 lines: actors, entry points, data stores, trust boundaries.
-2. Apply STRIDE per entry point: Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege.
-3. Per credible threat: threat, impact (low/med/high), mitigation, owner department.
-4. Turn high-impact mitigations into acceptance criteria and tests before coding.
-5. Include the table in the plan and the closing report.
-
-### Security bug fix
-1. Reproduce with a failing test demonstrating the exploit (no real secrets or production data).
-2. Fix the root cause at the boundary, not only the reported payload.
-3. Search for the same pattern across the codebase (`Explore`).
-4. Keep the test as a regression guard.
+- Security review of a change (L2+ with security impact)
+- New or changed auth flow
+- Secrets handling
+- Dependency audit
+- Threat model (L3, or new external surface)
+- Security bug fix
 
 ## Rules
 Mapped to OWASP Top 10 (2021) and ASVS chapters.
@@ -101,27 +73,16 @@ Mapped to OWASP Top 10 (2021) and ASVS chapters.
 | review.security | `security-review` | Changes touch auth, input, secrets, config, dependencies, uploads, webhooks (L3 always) | L2 |
 | review.diff | `code-review` | Correctness bugs that are also security bugs | L2 |
 | plan.implementation | `Plan` (agent) | Threat model and mitigation plan | L3 |
-| secret.scan / dependency.audit tooling | none yet → supply-chain §5 | Automated secret scanning or SCA beyond the stack audit command | L2 |
+| secret.scan / dependency.audit tooling | none yet → supply-chain `references/skills.md` | Automated secret scanning or SCA beyond the stack audit command | L2 |
 
 ## Definition of Done
-- [ ] Exit protocol of `supply-chain` §4 (gates, architecture conformance, review, learnings)
+- [ ] Exit protocol of `supply-chain` (instructions file → Exit; L2+ full: `../supply-chain/references/protocol.md`) (gates, architecture conformance, review, learnings)
 - [ ] `security-review` run; findings fixed or accepted with reason
 - [ ] No secret, token, key or PII in the diff, fixtures or logs
 - [ ] Authz tests cover 401, 403 and cross-tenant access for new protected resources
 - [ ] Stack audit command shows no high/critical with an available fix
 - [ ] CORS/CSRF/CSP config reviewed if touched
 - [ ] Threat model table present (L3)
-
-## Anti-patterns
-- "The frontend already hides the button" as authorization.
-- Tokens in browser storage without justification.
-- Sanitizer bypass or raw HTML with user content.
-- Catch-all handlers that swallow auth or validation failures.
-- Wildcard CORS with credentials.
-- Logging full request bodies or headers.
-- Rotating a leaked secret "later".
-- Approving dependency install scripts without reading them.
-- Allowlisting destructive commands for the agent to save prompts.
 
 ## Hand-offs
 - To `sc-backend`: implement validation, authz checks, rate limits, webhook verification.
@@ -132,15 +93,6 @@ Mapped to OWASP Top 10 (2021) and ASVS chapters.
 - To `sc-qa`: security regression tests.
 - To `sc-architecture`: trust boundary changes from the threat model.
 
-## References
-- OWASP Top 10 (2021) — owasp.org/Top10
-- OWASP API Security Top 10 (2023)
-- OWASP ASVS — owasp.org/www-project-application-security-verification-standard
-- OWASP Cheat Sheet Series — cheatsheetseries.owasp.org
-- NIST SSDF SP 800-218 · ISO/IEC 27001:2022
-- STRIDE threat modeling (Microsoft)
-- Framework security guides: `../supply-chain/stacks/<stack>.md` → *References*
-
 ## Learned rules
 
-_Grows with use (supply-chain §7). Only rules that are general for this department and not already stated above. Format: `- [YYYY-MM-DD] <rule> — <why> (source: <project>)`._
+_Grows with use (supply-chain `references/learning.md`). Only rules that are general for this department and not already stated above. Format: `- [YYYY-MM-DD] <rule> — <why> (source: <project>)`._

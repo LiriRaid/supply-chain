@@ -159,8 +159,8 @@ function ensureNotice(dir, name, e) {
   return true;
 }
 
-const LEARNED_TOOL = '_Grows with use (supply-chain §7). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._';
-const LEARNED_DEPT = '_Grows with use (supply-chain §7). Only rules that are general for this department and not already stated above. Format: `- [YYYY-MM-DD] <rule> — <why> (source: <project>)`._';
+const LEARNED_TOOL = '_Grows with use (supply-chain `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._';
+const LEARNED_DEPT = '_Grows with use (supply-chain `references/learning.md`). Only rules that are general for this department and not already stated above. Format: `- [YYYY-MM-DD] <rule> — <why> (source: <project>)`._';
 
 // ---------- registry ----------
 
@@ -191,7 +191,7 @@ function render(map, installed, mcpNames, projects) {
     const s = Object.entries(map.skills).filter(([, e]) => e.departments.includes(d));
     const m = Object.entries(map.mcp).filter(([, e]) => e.departments.includes(d));
     lines.push(`## ${d}`, '');
-    if (!s.length && !m.length) { lines.push('_No dedicated skills yet. Use Shared, or propose one (supply-chain §5)._', ''); continue; }
+    if (!s.length && !m.length) { lines.push('_No dedicated skills yet. Use Shared, or propose one (supply-chain `references/skills.md`)._', ''); continue; }
     lines.push(head, ...s.map(([n, e]) => row(n, e, status(n, e))), ...m.map(([n, e]) => row(n, { ...e, type: e.stack ? `mcp (${e.stack})` : 'mcp' }, mcpStatus(n))), '');
   }
   const general = Object.entries(map.skills).filter(([, e]) => e.departments.includes('general'));

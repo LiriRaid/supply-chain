@@ -1,7 +1,7 @@
 # Stack: Ruby on Rails (API mode and full-stack)
 
 ## Detect
-Signals the agent checks (supply-chain §6): `Gemfile` plus `Gemfile.lock` containing `rails`, and `config/application.rb`. API mode is `config.api_only = true`. Package manager is always Bundler (`bundle`); never pnpm/npm/yarn here, even if a `package.json` exists for assets.
+Signals the agent checks (supply-chain `references/project-detection.md`): `Gemfile` plus `Gemfile.lock` containing `rails`, and `config/application.rb`. API mode is `config.api_only = true`. Package manager is always Bundler (`bundle`); never pnpm/npm/yarn here, even if a `package.json` exists for assets.
 
 ## Commands
 Default commands the agent runs in the Exit protocol; verify each once, then record it in project memory. Run everything through `bundle exec`. `{files}` = changed files.

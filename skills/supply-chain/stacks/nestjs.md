@@ -1,7 +1,7 @@
 # Stack: NestJS
 
 ## Detect
-Signals the agent checks (supply-chain §6): `@nestjs/core` in `dependencies` of `package.json`, or `nest-cli.json` at the project root. Also read: `@nestjs/testing`, `class-validator`, `zod` / `nestjs-zod`, `@prisma/client` / `prisma`, `typeorm`, `@nestjs/typeorm`, `@nestjs/websockets`, `@nestjs/bullmq`, `jest`, `vitest`, `supertest`.
+Signals the agent checks (supply-chain `references/project-detection.md`): `@nestjs/core` in `dependencies` of `package.json`, or `nest-cli.json` at the project root. Also read: `@nestjs/testing`, `class-validator`, `zod` / `nestjs-zod`, `@prisma/client` / `prisma`, `typeorm`, `@nestjs/typeorm`, `@nestjs/websockets`, `@nestjs/bullmq`, `jest`, `vitest`, `supertest`.
 
 ## Commands
 Default commands the agent runs in the Exit protocol; verify each once, then record it in project memory. `<pm>` = package manager from the lockfile. Owner rule: NestJS projects use pnpm, even if no lockfile exists yet.

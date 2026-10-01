@@ -96,9 +96,9 @@ Open risk: <anything still uncertain, or none>
 ## Pattern library (grows with use)
 This skill grows facts instead of UI patterns:
 - Before querying, read `facts/<library>.md` (format in `facts/README.md`).
-- After a lookup confirmed something non-obvious (a renamed option, a changed default, a version-specific signature, a deprecated path that still compiles), run the novelty check (supply-chain §7: grep the fact in this file, the stack profile, project memory and `facts/`). Novel and verified → append it to `facts/<library>.md` with its version range and source.
+- After a lookup confirmed something non-obvious (a renamed option, a changed default, a version-specific signature, a deprecated path that still compiles), run the novelty check (supply-chain `references/learning.md`: grep the fact in this file, the stack profile, project memory and `facts/`). Novel and verified → append it to `facts/<library>.md` with its version range and source.
 - If the fact is really a convention of the stack (how the user's projects should use the library), propose it for `../supply-chain/stacks/<stack>.md` → *Conventions* instead of saving it here.
 - A newer version that changes a fact → mark the old line as superseded with its version range; never silently rewrite it.
 
 ## Learned notes
-_Grows with use (supply-chain §7). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._
+_Grows with use (supply-chain `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._

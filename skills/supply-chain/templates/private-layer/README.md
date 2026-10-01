@@ -1,6 +1,6 @@
 # ~/.supply-chain — private layer
 
-This user's memory of the supply chain. The same for every agent, never published, never overwritten by installs or updates. Everything here **fills itself** as the user works (supply-chain skill §6 and §7).
+This user's memory of the supply chain. The same for every agent, never published, never overwritten by installs or updates. Everything here **fills itself** as the user works (supply-chain `references/project-detection.md` and `references/learning.md`).
 
 | File | What | Filled by |
 |---|---|---|

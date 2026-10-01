@@ -1,6 +1,6 @@
 # Profile
 
-Defaults for this user, read by the Entry protocol when a project has no memory yet. **Filled automatically** by project detection (supply-chain §6) and the learning loop (§7): every time a new stack, package manager or architecture is confirmed in a project, add or update its line here with the date. Do not ask the user to fill this file.
+Defaults for this user, read by the Entry protocol when a project has no memory yet. **Filled automatically** by project detection (supply-chain `references/project-detection.md`) and the learning loop (`references/learning.md`): every time a new stack, package manager or architecture is confirmed in a project, add or update its line here with the date. Do not ask the user to fill this file.
 
 ## Stacks used
 <!-- - [YYYY-MM-DD] <stack> (<framework + version, key libraries>) — seen in <project> -->

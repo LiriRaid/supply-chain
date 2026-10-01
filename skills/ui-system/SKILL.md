@@ -112,7 +112,7 @@ Always return: mode(s) run; sources of truth read; files changed; decisions (rec
 ## Pattern library (grows with use)
 - Before building, list `patterns/` and read the matching file, if any. See `patterns/README.md` for what belongs here.
 - After building something reusable that has no pattern yet (theme switch, status color set, KPI tile row…), write `patterns/<pattern>.md` from `../supply-chain/templates/pattern.template.md`: stack-agnostic intent, anatomy, states, a11y, pitfalls, and one short adapter per stack it was built in. Project-specific details go to project memory, not here.
-- Update an existing pattern only with new, verified information (novelty check, supply-chain §7).
+- Update an existing pattern only with new, verified information (novelty check, supply-chain `references/learning.md`).
 
 ## Learned notes
-_Grows with use (supply-chain §7). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._
+_Grows with use (supply-chain `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._

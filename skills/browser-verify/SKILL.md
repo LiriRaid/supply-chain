@@ -107,7 +107,7 @@ Server: stopped / left running (not mine)
 ## Pattern library (grows with use)
 - Before building, list `patterns/` and read the matching file, if any (`patterns/README.md` explains the format).
 - After verifying a reusable flow that has no pattern yet (login with a seed user, a CRUD form, a modal, a paginated table, a theme toggle), write `patterns/<pattern>.md` from `../supply-chain/templates/pattern.template.md`: intent, anatomy of the check, states to cover, a11y checks, pitfalls, one adapter per provider used. Project-specific routes and accounts go to project memory, not here.
-- Update an existing pattern only with new, verified information (novelty check, supply-chain §7).
+- Update an existing pattern only with new, verified information (novelty check, supply-chain `references/learning.md`).
 
 ## Learned notes
-_Grows with use (supply-chain §7). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._
+_Grows with use (supply-chain `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._

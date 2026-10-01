@@ -12,7 +12,7 @@ Reusable, stack-agnostic refinement recipes learned while improving existing int
 ## How it is used
 1. Before refining, list this folder and read the file that matches the target or mode, if any.
 2. After a reusable refinement with no pattern yet, create it from `../../supply-chain/templates/pattern.template.md`.
-3. Edit an existing pattern only with new, verified information (novelty check, supply-chain §7). Add a stack adapter when applied in a new stack; update `Seen in`.
+3. Edit an existing pattern only with new, verified information (novelty check, supply-chain `references/learning.md`). Add a stack adapter when applied in a new stack; update `Seen in`.
 
 ## Index
 _No patterns yet._

@@ -1,7 +1,7 @@
 # Stack: Node / TypeScript (generic) and JS fallback
 
 ## Detect
-Signals the agent checks (supply-chain §6): a `package.json` at the project root with none of the more specific signals (`@angular/core`, `react`, `@nestjs/core`). This profile covers:
+Signals the agent checks (supply-chain `references/project-detection.md`): a `package.json` at the project root with none of the more specific signals (`@angular/core`, `react`, `@nestjs/core`). This profile covers:
 - Backends: Express, Fastify, Hono, Koa.
 - Libraries and CLIs published to npm (`bin`, `exports`, `main` fields).
 - Fallback for other JS frameworks: Vue (`vue`, Nuxt), Svelte (`svelte`, SvelteKit), Solid, Astro, Remix.

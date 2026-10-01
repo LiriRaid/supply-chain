@@ -1,7 +1,7 @@
 # Stack: Go
 
 ## Detect
-Signals the agent checks (supply-chain §6): `go.mod` at the project root (module path and Go version). `go.work` indicates a multi-module workspace; run commands per module.
+Signals the agent checks (supply-chain `references/project-detection.md`): `go.mod` at the project root (module path and Go version). `go.work` indicates a multi-module workspace; run commands per module.
 
 ## Commands
 Default commands the agent runs in the Exit protocol; verify each once, then record it in project memory.

@@ -2,35 +2,48 @@
 <!-- Managed by the supply chain installer (INSTALL.md). Edit outside this block; this block is replaced on update. -->
 # Working instructions
 
-## Supply chain (always)
+## Supply chain — every task, any size
 
-Every task goes through the supply chain unless it is **L0 trivial** (a color, a text, a typo, one value).
+Only **L0** (a color, a text, a typo, one value) is done directly. Every other task, small, medium or large, goes through the department that owns it, its rules and its skills. Size decides the level, never whether the supply chain runs.
 
-1. Load the department skill that owns the task **before any other skill**: `sc-frontend`, `sc-backend`, `sc-data`, `sc-security`, `sc-qa`, `sc-devops`, `sc-architecture`, `sc-ux-ui`, `sc-product`, `sc-devex`. If unsure which one, load `supply-chain`.
-2. Follow its Entry protocol (project memory → stack profile → architecture profile → learnings → skill registry → brief), use the skills and MCP servers it selects, and close with its Exit protocol (typecheck · lint · tests · build · architecture conformance · learnings).
-3. A department never gets skipped because a task "looks small". Size decides the level (L1/L2/L3), not whether the supply chain runs.
-4. Agents without a skill tool: "load a skill" means read `<skills-dir>/<name>/SKILL.md` (paths in `~/.supply-chain/agent.md`) and follow it.
-
-## Private layer — read it, keep it current
-
-`~/.supply-chain/` is this user's memory. It starts generic and fills itself as they work (supply-chain skill §7); never ask the user to fill it by hand.
-
-| File | Read | Update automatically when |
+| Level | Example | Load |
 |---|---|---|
-| `profile.md` | when a project has no memory yet | a new stack, package manager or architecture shows up |
-| `preferences.md` | before answering or delivering code | the user corrects how you communicate or deliver |
-| `subagents.md` | before searching broadly or delegating | a delegation rule proves wrong or missing |
-| `projects.md` | when the task spans projects or names one | a project is worked on for the first time |
-| `projects/<slug>.md` | Entry protocol, every task | gates, gotchas, decisions are learned |
+| L1 | bug or small change in 1–2 known files | department `SKILL.md` + one procedure section |
+| L2 | screen, endpoint, integration, bug across >2 files | + `supply-chain/references/protocol.md` + department skills |
+| L3 | refactor, migration, new module, new project | L2 + `sc-architecture` + plan before coding + ADR |
+
+**Route by what the task is about** and load that skill before any other skill or edit:
+UI code → `sc-frontend` · look & feel, accessibility, motion → `sc-ux-ui` · API, service, job, webhook, realtime → `sc-backend` · schema, migration, query, cache, state → `sc-data` · auth, permissions, secrets, vulnerabilities → `sc-security` · tests, bugs, review → `sc-qa` · build, CI, git, deploy → `sc-devops` · structure, refactor, patterns → `sc-architecture` · idea → scope and criteria → `sc-product` · skills, agent config, docs → `sc-devex` · unsure → `supply-chain`.
+
+**Token discipline (layered loading).** This block is always loaded; nothing else is, until needed. Load one department; inside it read only the procedure section you need from `procedures.md`; open core references, stack and architecture profiles only in the situations they list; search large files instead of reading them whole. Never preload "just in case". (`supply-chain/…` paths are inside `<skills-dir>`, see `~/.supply-chain/agent.md`.)
+
+## Supply chain protocol
+
+**Entry** (before the first edit):
+1. Project memory `~/.supply-chain/projects/<slug>.md`. Missing, or without *Project map* → `supply-chain/references/project-detection.md` (detect + minimal scan) and create it.
+2. Department `SKILL.md` → Rules, Tools, Procedures index. Stack profile only in the sections the department names.
+3. Memory MCP available (e.g. engram) → `mem_search` the task's topic before re-reading code.
+4. Print the brief: `Supply chain → L<n> · <dept> (+support) · stack · arch` then *Qué · Para qué · Dónde · Cómo (procedure, skills, docs)*.
+
+**Skills.** Use the skills the department's **Tools** table names for this task. A needed skill does not exist → follow `supply-chain/references/skills.md`: install a known one (ask first) or **create it** with its trigger, register it and use it. Never invent skill or tool names.
+
+**Exit** (before saying done):
+1. Gates with the commands in project memory: typecheck · lint (changed files) · tests · build (L2+). Real output; never claim done with red gates.
+2. L2+: architecture conformance and review (protocol.md).
+3. **Learn — always, every L1+ task:** anything new and non-obvious goes to exactly one place (`supply-chain/references/learning.md`); keep `~/.supply-chain/` current.
+4. Memory MCP available → `mem_save` decisions, bug root causes, conventions discovered and skills created; at the end of a long session `mem_session_summary`.
+5. Close with `## Cierre`: level, departments, skills used, gates, files learned, skills created.
+
+## Private layer `~/.supply-chain/` (self-filling, never ask the user to fill it)
+
+`profile.md` stacks seen · `preferences.md` how to answer and deliver (read before replying; add a line when the user corrects you) · `subagents.md` search and delegation rules · `projects.md` project index · `projects/<slug>.md` per-project memory · `agent.md` this agent's paths (`<skills-dir>`, `<project-skills-dir>`; agents without a skill tool read `<skills-dir>/<name>/SKILL.md`).
 
 ## General rules
 
-- **Language:** reply in the user's language (see `preferences.md`); keep code, identifiers and commits in the project's language.
-- **Package manager:** use the one the lockfile names (`pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`, `bun.lockb`, `Gemfile.lock`, `poetry.lock`, `uv.lock`…). Never mix.
-- **Preserve behavior:** identify current behavior before changing code; keep visuals, keyboard/hover/focus states, animations, responsive behavior, inputs/outputs and public APIs unless asked.
-- **Smallest change:** no new abstractions, services, helpers or wrappers unless asked or the duplication is already harmful. Do not replace the project's patterns, components or libraries without an explicit request. Fix first; propose refactors separately.
-- **Reusable code:** when changing a shared component or module, check all its consumers.
-- **Search before reading:** search for the symbol first; read only the relevant range; delegate broad exploration (`subagents.md`).
-- **Never claim done** with failing or unrun gates; report real output.
-- **Ask before** destructive, outward-facing or irreversible actions (deleting data, pushing, publishing, installing).
+- Reply in the user's language; code, identifiers and commits in the project's language.
+- Package manager from the lockfile; never mix.
+- Preserve current behavior (visuals, keyboard/hover/focus, animations, responsive, public APIs) unless asked.
+- Smallest change; no new abstractions unless asked; do not replace the project's patterns or libraries; fix first, propose refactors separately; check all consumers of shared code.
+- Search before reading; delegate broad exploration (`subagents.md`).
+- Ask before destructive, outward-facing or irreversible actions (delete, push, publish, install).
 <!-- supply-chain:end -->

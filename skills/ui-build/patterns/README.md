@@ -10,7 +10,7 @@ Reusable, stack-agnostic UI patterns learned while building new interface with `
 ## How it is used
 1. Before building, list this folder and read the file that matches the request, if any.
 2. After building something reusable with no pattern yet, create it from `../../supply-chain/templates/pattern.template.md`.
-3. Edit an existing pattern only with new, verified information (novelty check, supply-chain §7). Add a stack adapter when the pattern is built in a new stack; update `Seen in`.
+3. Edit an existing pattern only with new, verified information (novelty check, supply-chain `references/learning.md`). Add a stack adapter when the pattern is built in a new stack; update `Seen in`.
 
 ## Index
 _No patterns yet._

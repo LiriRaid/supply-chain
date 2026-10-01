@@ -32,6 +32,20 @@ There is no installer script. [`INSTALL.md`](INSTALL.md) is written **for the ag
 
 The same sentence with "update" or "uninstall" runs the other flows. Node.js 18+ is needed only for `sync.mjs`.
 
+## Built to save tokens
+
+Nothing is preloaded "just in case". Loading is layered:
+
+| Layer | Loaded | Size |
+|---|---|---|
+| Instructions block in `CLAUDE.md` / `AGENTS.md` | always | ~4.5 k chars: levels, routing, compact Entry/Exit, learning, memory |
+| Department `sc-*/SKILL.md` | when a task arrives | ~6–8 k chars: rules, brief questions, tools to use, DoD |
+| Department `procedures.md` | only the section the task needs | one procedure |
+| Core `supply-chain/references/*`, stack and architecture profiles | only in the situations they list (first time in a project, L2+, learning, missing skill) | on demand |
+| Project memory + *Project map* | every task | replaces re-exploring the project each session |
+
+A small L1 task loads the block plus one department and one procedure. Memory (project map, verified gate commands, engram) avoids re-discovering the same things every session.
+
 ## How it triggers
 
 There are no hooks. The agent loads a skill when the request matches the skill's `description`. Each department lists the phrases people actually type, and the instructions block makes the department mandatory above L0.
@@ -55,13 +69,15 @@ There are no hooks. The agent loads a skill when the request matches the skill's
 ```
 skills/
   supply-chain/        core: triage, Entry/Exit protocols, skill registry, learning loop
-    SKILL.md · skill-map.json · skill-registry.md (generated) · scripts/sync.mjs
+    SKILL.md (triage, departments, what to read when) · skill-map.json · skill-registry.md (generated)
+    references/        protocol, project-detection, learning, skills (find / install / create), maintenance
+    scripts/sync.mjs
     stacks/            angular, react, node, nestjs, rails, python, go, java, dotnet, generic
     architectures/     screaming, feature-sliced, hexagonal, clean, layered, modular-monolith
     templates/         department, stack, architecture, tool skill, project skill, project memory,
                        instructions.md (block for CLAUDE.md / AGENTS.md), private-layer/
   sc-product  sc-architecture  sc-frontend  sc-ux-ui  sc-backend
-  sc-data  sc-security  sc-qa  sc-devops  sc-devex          ← 10 departments
+  sc-data  sc-security  sc-qa  sc-devops  sc-devex          ← 10 departments (SKILL.md + procedures.md)
   ui-build  ui-refine  ui-system  ui-audit  browser-verify  library-docs   ← own tool skills
 adapters/              per-agent paths and MCP registration
 INSTALL.md             install / update / uninstall, written for the agent
@@ -83,6 +99,10 @@ scripts/export.mjs     copy your installed (improved) skills back into the repo
 | `sc-qa` | tests, verification, review, Definition of Done |
 | `sc-devops` | build, CI/CD, git, environments, deploy |
 | `sc-devex` | agent tooling, this supply chain, docs |
+
+### Missing skills are created, not skipped
+
+When a department needs a capability no installed skill provides, the agent installs a known one (asking first) or **creates a new skill** with its trigger description, registers it in `skill-map.json`, adds it to the department's Tools table and uses it. General skills go to the agent's skills folder; project-specific ones into the project.
 
 ### Tool skills that grow
 

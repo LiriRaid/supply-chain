@@ -1,6 +1,6 @@
 # Preferences
 
-How this user wants the agent to communicate and deliver. Read before answering or delivering code. The defaults below are general; **Learned preferences** grows automatically: when the user corrects tone, length, format, language or delivery, add one line there (supply-chain §7). A learned line overrides a default.
+How this user wants the agent to communicate and deliver. Read before answering or delivering code. The defaults below are general; **Learned preferences** grows automatically: when the user corrects tone, length, format, language or delivery, add one line there (supply-chain `references/learning.md`). A learned line overrides a default.
 
 ## Defaults
 

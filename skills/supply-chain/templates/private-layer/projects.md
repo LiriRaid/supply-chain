@@ -1,6 +1,6 @@
 # Projects
 
-Index of this user's projects and how they relate. **Filled automatically**: the first time the supply chain works in a project (supply-chain §6), add a row here and create `projects/<slug>.md`. Update the row when the stack, purpose or relations change. Details (gates, gotchas, ADRs) live in the project file, not here.
+Index of this user's projects and how they relate. **Filled automatically**: the first time the supply chain works in a project (supply-chain `references/project-detection.md`), add a row here and create `projects/<slug>.md`. Update the row when the stack, purpose or relations change. Details (gates, gotchas, ADRs) live in the project file, not here.
 
 | Project | Path | Stack · architecture | Purpose | Related to | Memory |
 |---|---|---|---|---|---|

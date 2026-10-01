@@ -1,7 +1,7 @@
 # Stack: Angular (v17 through 21)
 
 ## Detect
-Signals the agent checks (supply-chain §6): `angular.json` or `@angular/core` in `dependencies` of `package.json`. Version comes from `@angular/core`. Optional layers from dependencies: `@angular/ssr` (SSR), `tailwindcss`, `primeng`, `@lucide/angular` or `lucide-angular`, `gsap`, `@analogjs/vitest-angular`, `angular-eslint` / `@angular-eslint/*`.
+Signals the agent checks (supply-chain `references/project-detection.md`): `angular.json` or `@angular/core` in `dependencies` of `package.json`. Version comes from `@angular/core`. Optional layers from dependencies: `@angular/ssr` (SSR), `tailwindcss`, `primeng`, `@lucide/angular` or `lucide-angular`, `gsap`, `@analogjs/vitest-angular`, `angular-eslint` / `@angular-eslint/*`.
 
 ## Commands
 Default commands the agent runs in the Exit protocol; verify each once, then record it in project memory. `<pm>` = package manager from the lockfile. Owner rule: Angular projects use pnpm, even if no lockfile exists yet.
