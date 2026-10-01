@@ -25,15 +25,16 @@ There is no installer script. [`INSTALL.md`](INSTALL.md) is written **for the ag
 1. Detects which agent it is and where that agent keeps skills and instructions ([`adapters/`](adapters)).
 2. Clones the repo and backs up anything already installed.
 3. Offers to remove the third-party skills this one replaces.
-4. Copies the skills, creates your private layer `~/.supply-chain/` and adds the activation block to the agent's instructions file.
-5. Proposes the MCP servers that fit your stack, and runs `sync.mjs` to index everything.
-6. Asks you to restart, then gives you a smoke test.
+4. Copies the skills and creates your private layer `~/.supply-chain/`.
+5. Writes a managed block of general working rules into the agent's instructions file (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`…). The rest of that file stays as it is.
+6. Proposes MCP servers (`context7`; stack-specific ones only for stacks you use) and runs `sync.mjs`.
+7. Lists every file it created or modified, asks you to restart, and gives you a smoke test.
 
 The same sentence with "update" or "uninstall" runs the other flows. Node.js 18+ is needed only for `sync.mjs`.
 
 ## How it triggers
 
-There are no hooks. The agent loads a skill when the request matches the skill's `description`. Each department lists the phrases people actually type, and the activation block makes the department mandatory above L0.
+There are no hooks. The agent loads a skill when the request matches the skill's `description`. Each department lists the phrases people actually type, and the instructions block makes the department mandatory above L0.
 
 ```
 "quiero crear un modal"      → sc-frontend → brief → ui-build → browser-verify → gates → learn
@@ -57,12 +58,12 @@ skills/
     SKILL.md · skill-map.json · skill-registry.md (generated) · scripts/sync.mjs
     stacks/            angular, react, node, nestjs, rails, python, go, java, dotnet, generic
     architectures/     screaming, feature-sliced, hexagonal, clean, layered, modular-monolith
-    templates/         department, stack, architecture, tool skill, project skill, project memory
+    templates/         department, stack, architecture, tool skill, project skill, project memory,
+                       instructions.md (block for CLAUDE.md / AGENTS.md), private-layer/
   sc-product  sc-architecture  sc-frontend  sc-ux-ui  sc-backend
   sc-data  sc-security  sc-qa  sc-devops  sc-devex          ← 10 departments
   ui-build  ui-refine  ui-system  ui-audit  browser-verify  library-docs   ← own tool skills
-adapters/              per-agent paths, MCP registration, activation block
-private-layer/         templates for ~/.supply-chain/ (never published)
+adapters/              per-agent paths and MCP registration
 INSTALL.md             install / update / uninstall, written for the agent
 scripts/export.mjs     copy your installed (improved) skills back into the repo
 .claude-plugin/        optional Claude Code plugin manifest
@@ -88,6 +89,20 @@ scripts/export.mjs     copy your installed (improved) skills back into the repo
 `ui-build`, `ui-refine`, `ui-system`, `ui-audit`, `browser-verify` and `library-docs` are original skills. Each one is owned by a department and starts with a precondition that loads that department first. They grow as you work through `patterns/`, `rules/`, `facts/` and `## Learned notes`.
 
 `library-docs` routes documentation lookups to the right MCP server: `angular-cli` for Angular, `primeng` for PrimeNG and `context7` for everything else.
+
+## It adapts to you
+
+Nothing personal ships in this repository: no stack, no preferences, no projects. Your private layer `~/.supply-chain/` starts generic and fills itself as you work:
+
+| File | Fills itself when… |
+|---|---|
+| `profile.md` | a project of a new stack, package manager or architecture is detected |
+| `projects.md` + `projects/<slug>.md` | you work in a project for the first time; then gates, gotchas and decisions as they are learned |
+| `preferences.md` | you correct how the agent answers or delivers code |
+| `subagents.md` | a search or delegation rule proves wrong or missing |
+| `agent.md` | the installer records where your agent keeps skills and instructions |
+
+The same layer serves every agent, so switching from Claude Code to Codex keeps your memory.
 
 ## The learning loop
 

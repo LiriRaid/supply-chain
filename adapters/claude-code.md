@@ -25,4 +25,4 @@ These exist natively in Claude Code: `Explore` / `Plan` / `general-purpose` agen
 
 ## Alternative: plugin
 
-The repository also contains `.claude-plugin/`. `/plugin marketplace add LiriRaid/supply-chain` then `/plugin install supply-chain@supply-chain` installs the skills with a `supply-chain:` prefix. Use the plugin **or** the copy install, never both (every skill would appear twice). The private layer and activation block (INSTALL §6) are still required. Not tested yet.
+The repository also contains `.claude-plugin/`. `/plugin marketplace add LiriRaid/supply-chain` then `/plugin install supply-chain@supply-chain` installs the skills with a `supply-chain:` prefix. Use the plugin **or** the copy install, never both (every skill would appear twice). The private layer and instructions block (INSTALL §6) are still required. Not tested yet.

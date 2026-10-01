@@ -34,7 +34,7 @@ Run the Entry protocol of the `supply-chain` skill (`../supply-chain/SKILL.md` �
 - `<skills-dir>/sc-<dept>/SKILL.md` — one skill per department (`templates/department.template.md`).
 - `<skills-dir>/<tool>/` — owned tool skills (`"owned": true` in skill-map, provenance in `NOTICE.md`, evolve via `## Learned notes`).
 - Source repository (clone of the published repo): `skills/`, `adapters/`, `INSTALL.md`, `scripts/export.mjs` (copies the live skills back into the repo to publish improvements).
-- `~/.supply-chain/` — private layer: `agent.md` (agent paths), `profile.md`, `learnings/sc-<dept>.md`, `projects/<slug>.md`. Never shared or published.
+- `~/.supply-chain/` — private layer, self-filling (templates in `../supply-chain/templates/private-layer/`): `agent.md`, `profile.md`, `preferences.md`, `subagents.md`, `projects.md`, `learnings/`, `projects/`. Never shared or published.
 - `<project>/<project-skills-dir>/<slug>-<topic>/` — project skills. `<skills-dir>` / `<project-skills-dir>` per agent: `~/.supply-chain/agent.md`.
 - As a plugin, names are prefixed (`supply-chain:sc-qa`); use the form the session lists.
 - Enforcement is by description triggers and the core protocol only.

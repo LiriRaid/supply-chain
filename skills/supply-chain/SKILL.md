@@ -40,7 +40,7 @@ A task usually has one **owner** department plus 1–2 supporting ones (e.g. "cr
 
 ## 3. Entry protocol (every department runs it)
 
-1. **Project memory.** Identify the project root (nearest folder with a manifest: `package.json`, `Gemfile`, `pyproject.toml`, `go.mod`, `pom.xml`, `*.csproj`, `Cargo.toml`, `composer.json`, `pubspec.yaml`). Read `~/.supply-chain/projects/<project-slug>.md`. If it does not exist, read `~/.supply-chain/profile.md` (the user's defaults) if present, run §6 and create the memory from `templates/project-memory.template.md`.
+1. **Project memory.** Identify the project root (nearest folder with a manifest: `package.json`, `Gemfile`, `pyproject.toml`, `go.mod`, `pom.xml`, `*.csproj`, `Cargo.toml`, `composer.json`, `pubspec.yaml`). Read `~/.supply-chain/projects/<project-slug>.md`. If it does not exist, read `~/.supply-chain/profile.md` (the user's defaults), run §6 and create the memory from `templates/project-memory.template.md`. Any private-layer file missing (`profile.md`, `preferences.md`, `subagents.md`, `projects.md`, `agent.md`) → create it from `templates/private-layer/` without asking.
 2. **Stack profile.** Read `stacks/<stack>.md` (L1: *Commands* + your department's section; L2+: full). Unknown stack → `stacks/generic.md`.
 3. **Architecture profile** (L2+). Read `architectures/<architecture>.md`. Unknown → ask once, record the answer in project memory.
 4. **Learnings.** Read `~/.supply-chain/learnings/<department>.md` if it exists.
@@ -100,7 +100,7 @@ When a capability's provider is marked `missing` in `skill-registry.md`, or is n
 | `modules/<a>/`, `modules/<b>/` with public index, or `packs/` | modular-monolith |
 | `controllers/` + `services/` or Rails `app/models` + `app/controllers` | layered |
 
-Then verify the gate commands once (run each, keep the ones that work) and write the project memory file. **New project from scratch**: run `sc-product` (scope) → `sc-architecture` (choose architecture, write ADR) → owner department, and create the project memory at the end of the first session.
+Then verify the gate commands once (run each, keep the ones that work) and write the project memory file. Then keep the private layer current: add the project's row to `~/.supply-chain/projects.md`, and add any stack, package manager or architecture not yet listed to `~/.supply-chain/profile.md`. **New project from scratch**: run `sc-product` (scope) → `sc-architecture` (choose architecture, write ADR) → owner department, and create the project memory at the end of the first session.
 
 ## 7. Learning loop (per user, grows with every task)
 
@@ -116,6 +116,8 @@ After each L1+ task, collect what was **non-obvious and new**: something you had
 | a stack/framework, valid in any project of that stack | `stacks/<stack>.md` → matching *Conventions* section |
 | how to use a tool skill (ui-build, ui-refine, …) | that skill's `## Learned notes` |
 | a general rule of the department, valid in any stack | the department's `## Learned rules` |
+| how the user wants answers or code delivered (a correction) | `~/.supply-chain/preferences.md` → *Learned preferences* |
+| searching or delegating to subagents | `~/.supply-chain/subagents.md` → *Learned rules* |
 | not sure yet / seen once | `~/.supply-chain/learnings/sc-<dept>.md` (staging) |
 
 Format: `- [YYYY-MM-DD] <lesson> — <why> (source: <project>)`.

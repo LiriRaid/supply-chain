@@ -5,7 +5,7 @@
 | `<skills-dir>` | `~/.codex/skills` (*verify*: some versions read `~/.agents/skills`) |
 | `<project-skills-dir>` | `.agents/skills` (*verify*) |
 | `<instructions-file>` | `~/.codex/AGENTS.md` |
-| Skill loading | native Agent Skills support (*verify* in the docs); otherwise read `SKILL.md` as the activation block says |
+| Skill loading | native Agent Skills support (*verify* in the docs); otherwise read `SKILL.md` as the instructions block says |
 | Restart needed | yes |
 
 ## MCP registration

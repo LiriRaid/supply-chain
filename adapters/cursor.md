@@ -5,7 +5,7 @@
 | `<skills-dir>` | `~/.cursor/skills` (*verify*; fallback `~/.agents/skills`) |
 | `<project-skills-dir>` | `.cursor/skills` (*verify*) |
 | `<instructions-file>` | user level: Settings → Rules (not a file: show the block and ask the user to paste it); project level: `AGENTS.md` at the repository root, or `.cursor/rules/supply-chain.mdc` with `alwaysApply: true` |
-| Skill loading | native Agent Skills support where available; otherwise the activation block makes the agent read `SKILL.md` |
+| Skill loading | native Agent Skills support where available; otherwise the instructions block makes the agent read `SKILL.md` |
 | Restart needed | reload the window |
 
 ## MCP registration

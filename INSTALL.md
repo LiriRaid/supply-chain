@@ -80,36 +80,41 @@ ui-build  ui-refine  ui-system  ui-audit  browser-verify  library-docs
 
 Copy real files (no symlinks). If this is a reinstall and the user's installed copies have entries under `## Learned rules` / `## Learned notes`, or files in `patterns/`, `rules/`, `facts/` that the repository does not have, keep those entries: merge them into the new files instead of overwriting.
 
-## 6. Private layer and activation
+## 6. Private layer and instructions
 
-**6.1 Private layer.** Create `~/.supply-chain/` from the repository's `private-layer/`:
+Keep a list of **every file you create or modify** from here on; §8 reports it.
 
-- `README.md`, `profile.md`, `agent.md` — copy only if missing (never overwrite).
-- `learnings/` and `projects/` — create if missing.
-- Fill `agent.md` with the paths from §1. If the user works with several agents, add one row per agent.
-- **Migration:** if `~/.claude/supply-chain.local/` exists, merge its files into `~/.supply-chain/` (never overwrite a newer file), then tell the user the old folder can be deleted **[ask]**.
-- If the user has their own private layer elsewhere (a private repo, a zip, a folder they name), copy it into `~/.supply-chain/` instead of the templates.
-- `profile.md`: if it still contains the template placeholders, ask the user 3 questions (usual stacks, package managers, language of responses) and fill it.
+**6.1 Private layer.** Create `~/.supply-chain/` from `<skills-dir>/supply-chain/templates/private-layer/`:
 
-**6.2 Activation block.** Read `adapters/activation.md`. Insert its block into `<instructions-file>`:
+| File | If missing | If it exists |
+|---|---|---|
+| `README.md`, `profile.md`, `preferences.md`, `subagents.md`, `projects.md` | copy the template | keep it; never overwrite |
+| `agent.md` | copy and fill with the paths from §1 | add or update this agent's row only |
+| `learnings/`, `projects/` | create | keep |
 
-- If a block between `<!-- supply-chain:begin -->` and `<!-- supply-chain:end -->` already exists, replace it.
-- Else, if the file has an older hand-written supply chain section (mentions `sc-*` skills or `supply-chain.local`), show it to the user and ask whether to replace it with the block **[ask]**.
-- Else append the block at the end. Create the file if it does not exist.
-- Do not change anything else in that file.
+These files start generic on purpose. **Do not ask the user to fill them**: the supply chain completes them automatically while they work (stacks and projects on first detection, preferences from corrections, see `supply-chain` §6–§7).
+
+- **Migration (legacy layer):** if `~/.claude/supply-chain.local/` exists, merge it into `~/.supply-chain/` (never overwrite a newer file) and offer to delete the old folder **[ask]**.
+- **The user's own layer:** if they name one (a private repository, a zip, a folder), copy it into `~/.supply-chain/` instead of the templates.
+
+**6.2 Instructions block.** Insert `<skills-dir>/supply-chain/templates/instructions.md` (everything from `<!-- supply-chain:begin -->` to `<!-- supply-chain:end -->`) into `<instructions-file>`. It holds the general working rules and the mandatory use of the supply chain; it contains no stack or personal data.
+
+- File missing → create it with the block.
+- Block already present → replace it in place.
+- File exists without the block → add the block **at the top** and leave the rest of the file untouched. Then read the rest of the file and list for the user the parts that are now covered by the block or the private layer (an older supply chain section, rules about subagents, delivery preferences, project descriptions, links to files such as `Agents.md` or `user-preferences.md`). Offer **[ask]**: move each part into the matching private-layer file (`subagents.md`, `preferences.md` → *Learned preferences*, `projects.md`, `profile.md`) and remove it from the instructions file. Never delete content the user did not approve.
+- Agents whose instructions are not a file (e.g. Cursor user rules): show the block and ask the user to paste it.
 
 ## 7. MCP servers and sync
 
-**7.1 MCP [ask].** The supply chain works without MCP servers, but `library-docs` uses them for version-accurate documentation. Propose only what fits the user's stacks (from `profile.md`), using the registration method in the adapter:
+**7.1 MCP [ask].** The supply chain works without MCP servers; `library-docs` uses them for version-accurate documentation. Register only what the user accepts, with the method in the adapter, and skip servers already registered.
 
-| Server | For | Command / source |
+| Server | Propose when | Command / source |
 |---|---|---|
-| `context7` | docs for any library | `https://mcp.context7.com/mcp` (HTTP) |
-| `angular-cli` | Angular projects | `npx -y @angular/cli mcp` |
-| `primeng` | PrimeNG projects | `npx -y @primeng/mcp` |
-| `engram` | persistent memory (optional) | `https://github.com/Gentleman-Programming/engram` — only if the binary is already installed |
+| `context7` | always (docs for any library) | `https://mcp.context7.com/mcp` (HTTP) |
+| `engram` | optional, only if its binary is already installed | `https://github.com/Gentleman-Programming/engram` |
+| stack-specific servers | only when the user works with that stack | entries in `skill-map.json` → `mcp` with a `stack` field |
 
-Skip servers that are already registered.
+The stack-specific entries shipped today are **examples** for Angular (`angular-cli`: `npx -y @angular/cli mcp`, `primeng`: `npx -y @primeng/mcp`). On a fresh machine the stack is usually unknown: skip them, and let `sc-devex` propose the right server later, when a project of that stack is detected (`supply-chain` §5).
 
 **7.2 Sync.** Run:
 
@@ -117,38 +122,42 @@ Skip servers that are already registered.
 node "<skills-dir>/supply-chain/scripts/sync.mjs"
 ```
 
-It indexes installed skills and MCP servers into `skill-registry.md`, applies the department precondition to tool skills and creates the private layer folders. Show its output. Entries marked `auto: true` or listed under *Unassigned* are third-party skills it found; report them, do not fix them silently.
+It indexes installed skills and MCP servers into `skill-registry.md`, applies the department precondition to tool skills and creates the private layer folders. Show its output. Entries marked `auto: true` or under *Unassigned* are third-party skills it found; report them, do not fix them silently.
 
 ## 8. Verify and report
 
-1. Confirm these files exist: `<skills-dir>/supply-chain/SKILL.md`, `<skills-dir>/sc-frontend/SKILL.md`, `<skills-dir>/ui-build/SKILL.md`, `~/.supply-chain/agent.md`, and the activation block in `<instructions-file>`.
-2. Tell the user that skills load at session start: **they must restart the agent** (new session) for the skills to appear.
-3. Give them the smoke test for the new session: *"quiero crear un modal de confirmación"* → the agent must load `sc-frontend`, print the supply chain brief, then use `ui-build`.
-4. Report:
+1. Confirm these exist: `<skills-dir>/supply-chain/SKILL.md`, `<skills-dir>/sc-frontend/SKILL.md`, `<skills-dir>/ui-build/SKILL.md`, `~/.supply-chain/agent.md`, `~/.supply-chain/preferences.md`, and the block in `<instructions-file>`.
+2. Tell the user that skills load at session start: **they must restart the agent** (new session).
+3. Smoke test for the new session: *"quiero crear un modal de confirmación"* → the agent must load `sc-frontend`, print the supply chain brief, then use `ui-build`.
+4. Report, listing **every file created or modified** (from §6 on), so the user knows what changed:
 
 ```
 ## Supply chain instalado
 - Agente / rutas: …
-- Respaldo: …
-- Skills copiadas: 17 · skills de terceros eliminadas: …
-- Capa privada: ~/.supply-chain (nueva / migrada / existente)
-- Bloque de activación: agregado / reemplazado en …
+- Respaldo: ~/.supply-chain-backups/<fecha>/
+- Skills: 17 copiadas · de terceros eliminadas: …
+- Archivos modificados según INSTALL.md:
+  - <instructions-file> — bloque agregado arriba / reemplazado (resto intacto)
+  - ~/.supply-chain/agent.md — creado / fila agregada
+  - ~/.supply-chain/{profile,preferences,subagents,projects}.md — creados (se completan solos al trabajar)
+  - …
+- Movido a la capa privada con tu permiso: …
 - MCP: registrados … · omitidos …
 - Sync: … · Pendiente: reiniciar el agente y probar la frase de humo
 ```
 
 ## 9. Update
 
-1. Get the files (§2).
-2. Back up (§3) — always, because installed skills may have learned content.
-3. For each skill folder: copy new and changed files from the repository, but **merge** `## Learned rules`, `## Learned notes`, `patterns/`, `rules/` and `facts/`: keep the user's entries, add the repository's.
-4. Never touch `~/.supply-chain/` except to create missing folders or files.
-5. Replace the activation block (§6.2) and run sync (§7.2). Report what changed.
+1. Get the files (§2) and back up (§3) — always, because installed skills may have learned content.
+2. For each skill folder: copy new and changed files, but **merge** `## Learned rules`, `## Learned notes`, `patterns/`, `rules/` and `facts/`: keep the user's entries, add the repository's.
+3. `~/.supply-chain/`: only create missing files or folders from the templates; never edit existing ones.
+4. Replace the instructions block (§6.2) and run sync (§7.2).
+5. Report with the same list of modified files as §8.
 
 ## 10. Uninstall **[ask]**
 
 1. Back up (§3).
 2. Remove from `<skills-dir>`: `supply-chain`, `sc-*` and the six tool skills from §5.
-3. Remove the activation block from `<instructions-file>`.
+3. Remove the block between the `supply-chain` markers from `<instructions-file>`; leave the rest.
 4. Ask whether to keep `~/.supply-chain/` (it is the user's memory; default: keep).
 5. MCP servers: list the ones the install registered and ask before removing any.

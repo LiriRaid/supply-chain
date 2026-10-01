@@ -272,6 +272,10 @@ if (!dryRun) {
   fs.writeFileSync(REGISTRY, registry + '\n');
   fs.mkdirSync(path.join(LOCAL, 'learnings'), { recursive: true });
   fs.mkdirSync(path.join(LOCAL, 'projects'), { recursive: true });
+  const tpl = path.join(SKILL_DIR, 'templates', 'private-layer');
+  for (const f of fs.existsSync(tpl) ? fs.readdirSync(tpl).filter((n) => n.endsWith('.md')) : []) {
+    if (!fs.existsSync(path.join(LOCAL, f))) { fs.copyFileSync(path.join(tpl, f), path.join(LOCAL, f)); evolved.push(`~/.supply-chain/${f} (created)`); }
+  }
 }
 console.log(`Skills found: ${skills.length} · project skills: ${projects.length}`);
 console.log(`New (auto-assigned, review in skill-map.json): ${added.length ? '\n  ' + added.join('\n  ') : 'none'}`);

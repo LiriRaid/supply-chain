@@ -5,7 +5,7 @@
 | `<skills-dir>` | `~/.gemini/skills` (*verify*; fallback `~/.agents/skills`) |
 | `<project-skills-dir>` | `.gemini/skills` (*verify*) |
 | `<instructions-file>` | `~/.gemini/GEMINI.md` |
-| Skill loading | native Agent Skills support where available; otherwise via the activation block |
+| Skill loading | native Agent Skills support where available; otherwise via the instructions block |
 | Restart needed | yes |
 
 ## MCP registration
