@@ -1,0 +1,10 @@
+{
+  "name": "supply-chain",
+  "version": "0.1.0",
+  "description": "A department-based supply chain for coding agents: every non-trivial task passes through the department that owns it (frontend, backend, data, security, QA, devops, architecture, UX/UI, product, devex), which decides what to build, why, where and how, and which skills and MCP servers to use. Stack- and language-agnostic, self-indexing skill registry, per-user learning and project-specific skill generation.",
+  "author": { "name": "LiriRaid", "url": "https://github.com/LiriRaid" },
+  "homepage": "https://github.com/LiriRaid/supply-chain",
+  "repository": "https://github.com/LiriRaid/supply-chain",
+  "license": "MIT",
+  "keywords": ["supply-chain", "departments", "skills", "agent-skills", "routing", "architecture", "quality"]
+}

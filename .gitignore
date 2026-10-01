@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+Thumbs.db
+*.zip
+# never commit a private layer by accident
+.supply-chain/
+supply-chain.local/

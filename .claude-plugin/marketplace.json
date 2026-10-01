@@ -1,0 +1,11 @@
+{
+  "name": "supply-chain",
+  "owner": { "name": "LiriRaid", "url": "https://github.com/LiriRaid" },
+  "plugins": [
+    {
+      "name": "supply-chain",
+      "source": "./",
+      "description": "Department-based supply chain for coding agents: triage, department rules, skill registry, learning loop."
+    }
+  ]
+}
