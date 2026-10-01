@@ -12,7 +12,7 @@ Repository: `https://github.com/LiriRaid/supply-chain`
 
 | The user said… | Do |
 |---|---|
-| "instálame / install the supply chain" | §1 → §8 |
+| "instálame / install the supply chain" | §1 (incl. §1.1 confirm) → §8 |
 | "actualiza / update the supply chain" | §9 |
 | "desinstala / uninstall the supply chain" | §10 |
 
@@ -30,6 +30,19 @@ If the adapter marks a path as *verify*, check it against your own documentation
 ```
 Agente: Claude Code · skills: ~/.claude/skills · instrucciones: ~/.claude/CLAUDE.md · capa privada: ~/.supply-chain
 ```
+
+**1.1 Plan and confirm [ask].** Before downloading or touching anything, show the user the plan and wait for an explicit yes:
+
+```
+Voy a instalar el supply chain así:
+1. Skills (17)            → ~/.claude/skills/            (respaldo previo si ya existe algo)
+2. Instrucciones generales → ~/.claude/CLAUDE.md          (bloque marcado arriba; el resto no se toca)
+3. Capa privada            → ~/.supply-chain/             (fuera de .claude; sirve para cualquier agente y se completa sola)
+4. Te preguntaré antes de: quitar skills de terceros, mover contenido de tu archivo de instrucciones y registrar MCP.
+¿Continúo?
+```
+
+Use the real paths from the adapter. If the user says no or changes something (another folder, skip a step), adapt and show the plan again.
 
 ## 2. Get the files
 
