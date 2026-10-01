@@ -4,10 +4,10 @@ Reusable verification flows, one file per flow: `patterns/<flow>.md` (e.g. `logi
 
 ## When to add one
 - A flow was verified end to end, is likely to recur in other projects, and has no file here yet.
-- Run the novelty check first (supply-chain `references/learning.md`): list this folder and grep the flow name.
+- Run the novelty check first (waymark `references/learning.md`): list this folder and grep the flow name.
 
 ## Format
-Start from `../../supply-chain/templates/pattern.template.md` and fill it for a check, not for a build:
+Start from `../../waymark/templates/pattern.template.md` and fill it for a check, not for a build:
 - **Intent** — what the flow proves for the user and when the check is not worth running.
 - **Anatomy** — the steps: route, recon, actions, assertions on visible outcomes.
 - **States** — which of loading, empty, error, disabled, focus, viewport and theme apply.
@@ -16,6 +16,6 @@ Start from `../../supply-chain/templates/pattern.template.md` and fill it for a 
 - **Stack adapters** — one short block per provider or stack actually used (built-in pane, Playwright, Angular, Rails…).
 
 ## What does not belong here
-- Project routes, seed accounts, ports or data → project memory (`~/.supply-chain/projects/<slug>.md`).
+- Project routes, seed accounts, ports or data → project memory (`~/.waymark/projects/<slug>.md`).
 - Real credentials of any kind, ever.
 - Anything already covered by `../SKILL.md` or a stack profile.

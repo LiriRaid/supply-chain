@@ -13,4 +13,4 @@ Use this when no specific adapter fits.
 What changes:
 - Ask the user where the agent reads global instructions if its docs do not say.
 - MCP: register the servers from INSTALL §7.1 with whatever the agent supports, or skip them (`library-docs` then falls back to official docs on the web).
-- Record the chosen paths in `~/.supply-chain/agent.md` so every department knows them.
+- Record the chosen paths in `~/.waymark/agent.md` so every department knows them.

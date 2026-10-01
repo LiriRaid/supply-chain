@@ -7,7 +7,7 @@
 | `<instructions-file>` | `~/.claude/CLAUDE.md` |
 | `<project-instructions-file>` | `CLAUDE.md` at the project root |
 | Skill loading | native (`Skill` tool, triggered by each skill's `description`) |
-| Per-prompt hook | `UserPromptSubmit` in `~/.claude/settings.json` → `node "<skills-dir>/supply-chain/scripts/rule0-hook.mjs"` (INSTALL §7.2) |
+| Per-prompt hook | `UserPromptSubmit` in `~/.claude/settings.json` → `node "<skills-dir>/waymark/scripts/rule0-hook.mjs"` (INSTALL §7.2) |
 | Restart needed | yes, start a new session after installing |
 
 ## MCP registration (user scope)
@@ -27,4 +27,4 @@ These exist natively in Claude Code: `Explore` / `Plan` / `general-purpose` agen
 
 ## Alternative: plugin
 
-The repository also contains `.claude-plugin/`. `/plugin marketplace add LiriRaid/supply-chain` then `/plugin install supply-chain@supply-chain` installs the skills with a `supply-chain:` prefix. Use the plugin **or** the copy install, never both (every skill would appear twice). The private layer and instructions block (INSTALL §6) are still required. Not tested yet.
+The repository also contains `.claude-plugin/`. `/plugin marketplace add LiriRaid/waymark` then `/plugin install waymark@waymark` installs the skills with a `waymark:` prefix. Use the plugin **or** the copy install, never both (every skill would appear twice). The private layer and instructions block (INSTALL §6) are still required. Not tested yet.

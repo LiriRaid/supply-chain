@@ -1,11 +1,11 @@
 ---
 name: ui-refine
-description: "Supply chain tool skill (ui.refine), owned by sc-ux-ui. Use to improve existing interface through explicit modes: critique, polish, simplify, clarify, harden, adapt, animate, boldify or quieten: \"mejora esta pantalla\", \"se ve feo\", \"pulir detalles\", \"hazlo más limpio\", \"agrega animaciones\", \"transiciones\", \"microinteracciones\", \"no se adapta al móvil\", \"revisa la UX\". Load sc-ux-ui first if it is not loaded. Preserves behavior that was not asked to change. Not for building new UI from scratch (use ui-build)."
+description: "Waymark tool skill (ui.refine), owned by dept-ux-ui. Use to improve existing interface through explicit modes: critique, polish, simplify, clarify, harden, adapt, animate, boldify or quieten: \"mejora esta pantalla\", \"se ve feo\", \"pulir detalles\", \"hazlo más limpio\", \"agrega animaciones\", \"transiciones\", \"microinteracciones\", \"no se adapta al móvil\", \"revisa la UX\". Load dept-ux-ui first if it is not loaded. Preserves behavior that was not asked to change. Not for building new UI from scratch (use ui-build)."
 ---
 
 # UI Refine
 
-> **Precondition.** Tool of `sc-ux-ui` (supporting: `sc-frontend` for implementation). If that department skill is not loaded in this conversation, load it first and use its brief (what, why, where, how) as the input of this skill. Skip only for L0 edits.
+> **Precondition.** Tool of `dept-ux-ui` (supporting: `dept-frontend` for implementation). If that department skill is not loaded in this conversation, load it first and use its brief (what, why, where, how) as the input of this skill. Skip only for L0 edits.
 
 ## Approach
 Refinement works on something that already exists and already has users. It improves one named quality at a time and leaves everything else exactly as it was.
@@ -21,9 +21,9 @@ Before the first edit, write a short **keep list** for the target: hover, focus 
 ## Inputs
 | Input | Source |
 |---|---|
-| Brief | the `sc-ux-ui` brief (what is wrong today, for whom) |
-| Stack conventions | `../supply-chain/stacks/<stack>.md` → *Frontend* (styling, motion library, SSR guards) |
-| Project context | `~/.supply-chain/projects/<slug>.md` → `## Design system`, *Conventions*, UI language |
+| Brief | the `dept-ux-ui` brief (what is wrong today, for whom) |
+| Stack conventions | `../waymark/stacks/<stack>.md` → *Frontend* (styling, motion library, SSR guards) |
+| Project context | `~/.waymark/projects/<slug>.md` → `## Design system`, *Conventions*, UI language |
 | Current state | screenshot(s) via `browser-verify` or `run`, plus the component files |
 | Detail references | `references/` in this skill (load only for the active mode) |
 | Known patterns | `patterns/` in this skill (generic) + project skills (project-specific) |
@@ -35,12 +35,12 @@ Always return to the department:
 3. **Files changed** and tokens touched; proposed new tokens listed separately.
 4. **Evidence:** before/after captures or a clear description of each, viewports and themes checked.
 5. **A11y impact:** contrast, focus, reduced motion, target size.
-6. **Open items** for `sc-frontend` (implementation), `sc-product` (scope) or a later mode.
+6. **Open items** for `dept-frontend` (implementation), `dept-product` (scope) or a later mode.
 
 ## Pattern library (grows with use)
 - Before building, list `patterns/` and read the matching file, if any.
-- After building something reusable that has no pattern yet (a modal, a data table, a stepper…), write `patterns/<pattern>.md` from `../supply-chain/templates/pattern.template.md`: stack-agnostic intent, anatomy, states, a11y, pitfalls, and one short adapter per stack it was built in. Project-specific details go to project memory, not here.
-- Update an existing pattern only with new, verified information (novelty check, supply-chain `references/learning.md`).
+- After building something reusable that has no pattern yet (a modal, a data table, a stepper…), write `patterns/<pattern>.md` from `../waymark/templates/pattern.template.md`: stack-agnostic intent, anatomy, states, a11y, pitfalls, and one short adapter per stack it was built in. Project-specific details go to project memory, not here.
+- Update an existing pattern only with new, verified information (novelty check, waymark `references/learning.md`).
 - For this skill, patterns are refinement recipes as well as components (e.g. `staggered-list-entrance.md`, `skeleton-to-content.md`).
 
 ## Modes
@@ -59,4 +59,4 @@ Read **only** the mode the task needs (one file); never load all modes.
 Stack-specific notes → `references/stack-adapters.md` (read only the project's stack row).
 
 ## Learned notes
-_Grows with use (supply-chain `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._
+_Grows with use (waymark `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._

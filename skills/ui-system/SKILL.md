@@ -1,11 +1,11 @@
 ---
 name: ui-system
-description: "Supply chain tool skill (ui.system), owned by sc-ux-ui. Use for design systems and visual identity in any stack: \"paleta de colores\", \"tipografía\", \"design tokens\", \"tema oscuro\", \"sistema de diseño\", \"jerarquía visual\", \"hazlo más profesional\", \"qué estilo le queda\", \"qué gráfica uso\", palette, font pairing, spacing scale, theming, dashboards and landing direction. Load sc-ux-ui first if it is not loaded. Discovers and records the project's existing system before proposing anything new. Not for building a specific component (use ui-build)."
+description: "Waymark tool skill (ui.system), owned by dept-ux-ui. Use for design systems and visual identity in any stack: \"paleta de colores\", \"tipografía\", \"design tokens\", \"tema oscuro\", \"sistema de diseño\", \"jerarquía visual\", \"hazlo más profesional\", \"qué estilo le queda\", \"qué gráfica uso\", palette, font pairing, spacing scale, theming, dashboards and landing direction. Load dept-ux-ui first if it is not loaded. Discovers and records the project's existing system before proposing anything new. Not for building a specific component (use ui-build)."
 ---
 
 # UI System
 
-> **Precondition.** Tool of `sc-ux-ui`. If that department skill is not loaded in this conversation, load it first and use its brief (what, why, where, how) as the input of this skill. Skip only for L0 edits.
+> **Precondition.** Tool of `dept-ux-ui`. If that department skill is not loaded in this conversation, load it first and use its brief (what, why, where, how) as the input of this skill. Skip only for L0 edits.
 
 ## Approach
 A design system is derived from a few decisions, not chosen from a catalogue: product, audience, conditions of use and existing code in; tokens in the project's own styling system out.
@@ -19,19 +19,19 @@ A design system is derived from a few decisions, not chosen from a catalogue: pr
 ## Inputs
 | Input | Source |
 |---|---|
-| Brief | the `sc-ux-ui` brief |
-| Stack conventions | `../supply-chain/stacks/<stack>.md` → *Frontend* (styling system, component library, SSR) |
-| Project context | `~/.supply-chain/projects/<slug>.md` → `## Design system` (this skill's record, shared with ui-build and ui-refine) |
+| Brief | the `dept-ux-ui` brief |
+| Stack conventions | `../waymark/stacks/<stack>.md` → *Frontend* (styling system, component library, SSR) |
+| Project context | `~/.waymark/projects/<slug>.md` → `## Design system` (this skill's record, shared with ui-build and ui-refine) |
 | Methods | `references/`: `palette-method`, `type-scale`, `product-direction`, `chart-choice` (load only what the mode needs) |
 | Known patterns | `patterns/` in this skill (generic) + project skills (project-specific) |
 
 ## Output contract
-Always return: mode(s) run; sources of truth read; files changed; decisions (recorded in project memory: yes/no); contrast table for every touched pair (pair · theme · ratio · pass/fail); drift counts; open risks (failing pairs, unmigrated files, library tokens not covered); hand-offs (`sc-frontend` for runtime theme code, `ui-audit` for a full accessibility pass, `sc-qa` for visual regression).
+Always return: mode(s) run; sources of truth read; files changed; decisions (recorded in project memory: yes/no); contrast table for every touched pair (pair · theme · ratio · pass/fail); drift counts; open risks (failing pairs, unmigrated files, library tokens not covered); hand-offs (`dept-frontend` for runtime theme code, `ui-audit` for a full accessibility pass, `dept-qa` for visual regression).
 
 ## Pattern library (grows with use)
 - Before building, list `patterns/` and read the matching file, if any. See `patterns/README.md` for what belongs here.
-- After building something reusable that has no pattern yet (theme switch, status color set, KPI tile row…), write `patterns/<pattern>.md` from `../supply-chain/templates/pattern.template.md`: stack-agnostic intent, anatomy, states, a11y, pitfalls, and one short adapter per stack it was built in. Project-specific details go to project memory, not here.
-- Update an existing pattern only with new, verified information (novelty check, supply-chain `references/learning.md`).
+- After building something reusable that has no pattern yet (theme switch, status color set, KPI tile row…), write `patterns/<pattern>.md` from `../waymark/templates/pattern.template.md`: stack-agnostic intent, anatomy, states, a11y, pitfalls, and one short adapter per stack it was built in. Project-specific details go to project memory, not here.
+- Update an existing pattern only with new, verified information (novelty check, waymark `references/learning.md`).
 
 ## Modes
 Read **only** the mode the task needs (one file); never load all modes.
@@ -46,4 +46,4 @@ Read **only** the mode the task needs (one file); never load all modes.
 Stack-specific notes → `references/stack-adapters.md` (read only the project's stack row).
 
 ## Learned notes
-_Grows with use (supply-chain `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._
+_Grows with use (waymark `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._

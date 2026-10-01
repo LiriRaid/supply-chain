@@ -1,6 +1,6 @@
 # ui-audit rule set
 
-Original rules derived from WCAG 2.2 level AA and common web interface practice. Local, versioned with the supply chain, and growing from real audits (see *Growing the rule set* in `../SKILL.md`).
+Original rules derived from WCAG 2.2 level AA and common web interface practice. Local, versioned with Waymark, and growing from real audits (see *Growing the rule set* in `../SKILL.md`).
 
 ## Index
 | File | Prefix | Covers | Rules |

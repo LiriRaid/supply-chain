@@ -1,7 +1,7 @@
 # Motion (MOT)
 
 ### MOT-01 Non-essential motion respects reduced-motion
-`serious` · 2.3.3 (AAA, required by sc-ux-ui) · auto
+`serious` · 2.3.3 (AAA, required by dept-ux-ui) · auto
 - Rule: every non-essential animation and any transition over 300 ms is removed or reduced to a fade under `prefers-reduced-motion: reduce`.
 - Why: vestibular disorders turn movement into nausea and dizziness.
 - Check: STY/TS `@keyframes|animation:|transition:|gsap\.|animate\(|motion\.`, Tailwind `animate-` → confirm a reduced-motion query, `motion-safe:` variant or `matchMedia` guard.

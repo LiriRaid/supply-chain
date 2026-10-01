@@ -1,11 +1,11 @@
 ---
 name: ui-build
-description: "Supply chain tool skill (ui.build), owned by sc-frontend. Use when building new user interface in any framework: \"crea un modal\", \"nueva pantalla\", \"construye el componente\", \"arma un dashboard\", \"formulario de registro\", \"landing\", build a component, page, dialog, form or layout with intentional, production-grade design. Load sc-frontend first if it is not loaded. Follows the project's design system; defines a direction only for greenfield projects. Not for restyling or polishing existing UI (use ui-refine)."
+description: "Waymark tool skill (ui.build), owned by dept-frontend. Use when building new user interface in any framework: \"crea un modal\", \"nueva pantalla\", \"construye el componente\", \"arma un dashboard\", \"formulario de registro\", \"landing\", build a component, page, dialog, form or layout with intentional, production-grade design. Load dept-frontend first if it is not loaded. Follows the project's design system; defines a direction only for greenfield projects. Not for restyling or polishing existing UI (use ui-refine)."
 ---
 
 # UI Build
 
-> **Precondition.** Tool of `sc-frontend`. If that department skill is not loaded in this conversation, load it first and use its brief (what, why, where, how) as the input of this skill. Skip only for L0 edits.
+> **Precondition.** Tool of `dept-frontend`. If that department skill is not loaded in this conversation, load it first and use its brief (what, why, where, how) as the input of this skill. Skip only for L0 edits.
 
 ## Approach
 New interface is a design decision before it is code. Decide on purpose and character first, then write code that carries that decision into every detail.
@@ -26,7 +26,7 @@ Write it before the first file, 4–6 lines, in the brief's language. It adapts 
 | **Differentiator** | one detail that makes this view excellent inside the system (information density, a clear empty state, a well-paced form) | the one memorable trait of the visual identity (type pairing, color strategy, layout rhythm) |
 | **Reuse** | components and patterns reused, new ones justified | primitives to create first (tokens, button, input, surface) |
 
-Brownfield rule: if a field would require a new token, font or component variant, list it as a proposal for `sc-ux-ui` instead of silently adding it.
+Brownfield rule: if a field would require a new token, font or component variant, list it as a proposal for `dept-ux-ui` instead of silently adding it.
 
 ### Avoid
 - Inventing fonts, colors or radii in a project that already has a system.
@@ -39,9 +39,9 @@ Brownfield rule: if a field would require a new token, font or component variant
 ## Inputs
 | Input | Source |
 |---|---|
-| Brief | the `sc-frontend` brief (plus `sc-ux-ui` states/specs when present) |
-| Stack conventions | `../supply-chain/stacks/<stack>.md` → *Conventions by department → Frontend* |
-| Project context | `~/.supply-chain/projects/<slug>.md` → *Identity*, *Conventions*, `## Design system` (create the section if missing) |
+| Brief | the `dept-frontend` brief (plus `dept-ux-ui` states/specs when present) |
+| Stack conventions | `../waymark/stacks/<stack>.md` → *Conventions by department → Frontend* |
+| Project context | `~/.waymark/projects/<slug>.md` → *Identity*, *Conventions*, `## Design system` (create the section if missing) |
 | Design system | token source of truth, theme preset, shared/ui components (Grep the shared layer) |
 | Known patterns | `patterns/` in this skill (generic) + project skills (project-specific) |
 
@@ -52,12 +52,12 @@ Always return to the department:
 3. **Reuse map**: components and tokens reused; anything new and why.
 4. **States** covered (checklist) and the responsive and theme checks done.
 5. **A11y basics** verified (keyboard path, focus, labels, contrast).
-6. **Open risks / proposals** for `sc-ux-ui` (new tokens, variants) or `sc-backend` (missing error shapes).
+6. **Open risks / proposals** for `dept-ux-ui` (new tokens, variants) or `dept-backend` (missing error shapes).
 
 ## Pattern library (grows with use)
 - Before building, list `patterns/` and read the matching file, if any.
-- After building something reusable that has no pattern yet (a modal, a data table, a stepper…), write `patterns/<pattern>.md` from `../supply-chain/templates/pattern.template.md`: stack-agnostic intent, anatomy, states, a11y, pitfalls, and one short adapter per stack it was built in. Project-specific details go to project memory, not here.
-- Update an existing pattern only with new, verified information (novelty check, supply-chain `references/learning.md`).
+- After building something reusable that has no pattern yet (a modal, a data table, a stepper…), write `patterns/<pattern>.md` from `../waymark/templates/pattern.template.md`: stack-agnostic intent, anatomy, states, a11y, pitfalls, and one short adapter per stack it was built in. Project-specific details go to project memory, not here.
+- Update an existing pattern only with new, verified information (novelty check, waymark `references/learning.md`).
 
 ## Modes
 Read **only** the mode the task needs (one file); never load all modes.
@@ -70,4 +70,4 @@ Read **only** the mode the task needs (one file); never load all modes.
 Stack-specific notes → `references/stack-adapters.md` (read only the project's stack row).
 
 ## Learned notes
-_Grows with use (supply-chain `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._
+_Grows with use (waymark `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._

@@ -1,22 +1,12 @@
 # Changelog
 
-The installed version is in `<skills-dir>/supply-chain/VERSION`. Update with: *"actualiza el supply chain desde https://github.com/LiriRaid/supply-chain siguiendo su INSTALL.md"* (INSTALL §9).
+The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version is published the agent offers the update; you can also say *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"* (INSTALL §9).
 
-## 0.4.0
-- **Update notices:** the Rule 0 hook checks the repository's `VERSION` once a day (0 tokens; one line of context at most once a day only when a newer version exists) and the agent offers *Actualizar ahora / Más tarde / Ver cambios*. Only a version change triggers it, never plain commits.
-- **Choice windows:** confirmations (install plan, updates, global vs project skill, removals) use the agent's choice window when it has one (Claude Code: `AskUserQuestion`), text otherwise.
-
-## 0.3.0
-- **Handoff between sessions and agents:** project memory → *Work in progress* (task, done, next, open, last request), read first at Recall and rewritten after every task and milestone, so another agent or session resumes where the last one stopped.
-- **Multi-agent install:** INSTALL detects every agent on the machine and configures the selected ones in one run, sharing `~/.supply-chain/`.
-- **Versioned updates:** `VERSION` file and this changelog; INSTALL §9 compares versions and reports what changed.
-- Fixes from the first real install: back up third-party skills before removing them and clean `~/.agents/.skill-lock.json`; `skill-map.json` no longer ships machine-specific entries.
-
-## 0.2.0
-- Layered loading (instructions block → department → one procedure → one mode), Rule 0 with routing receipt and skill index, per-prompt Rule 0 reminder hook, consult mode for questions.
-- Reuse before create, project map with reusables by kind, minimal project scan, generated architecture profiles.
-- Official-docs escalation, two-strike rule, evidence before change, *Solved problems* log.
-- Missing skills are created (global or project, asked), MCP servers the user has are mapped and used.
-
-## 0.1.0
-- First public release: 10 department skills, core protocol, 6 tool skills, agent adapters, agent-executable INSTALL.md.
+## 1.0.0 — first release as Waymark
+- **Departments:** 10 department skills (`dept-product`, `dept-architecture`, `dept-frontend`, `dept-ux-ui`, `dept-backend`, `dept-data`, `dept-security`, `dept-qa`, `dept-devops`, `dept-devex`) plus the `waymark` core and 6 tool skills (`ui-build`, `ui-refine`, `ui-system`, `ui-audit`, `browser-verify`, `library-docs`).
+- **Rule 0 on every request:** recall → route → skills → verify → learn; questions in read-only consult mode; routing line at the start of every reply; per-prompt reminder hook.
+- **Layered loading:** instructions block → one department → one procedure → one mode; references only when needed.
+- **Right decision, faster:** reuse before create, minimal project scan with a project map, evidence before change, two-strike rule, official docs escalation, *Solved problems* with dead ends.
+- **Self-filling memory** in `~/.waymark/`, shared by every agent, with *Work in progress* so another session or agent resumes where the last stopped.
+- **Grows with use:** missing skills are created (global or project, asked), unknown architectures get a generated profile, the user's own MCP servers are mapped and used.
+- **Install, update and uninstall** written for the agent (INSTALL.md), multi-agent, with choice windows, backups and daily update notices.

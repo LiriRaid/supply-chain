@@ -2,7 +2,7 @@
 
 Loaded on demand from `../SKILL.md` → *Modes*.
 
-- **When:** "audita la UI", "revisa la accesibilidad", "cumple WCAG", "revisa el formulario", before a PR with UI changes, `sc-qa` Definition of Done.
+- **When:** "audita la UI", "revisa la accesibilidad", "cumple WCAG", "revisa el formulario", before a PR with UI changes, `dept-qa` Definition of Done.
 - **Steps:**
   1. Fix the scope. More than ~30 files → ask, or start with the primary flows.
   2. Read `rules/README.md` and pick categories by file type: templates → accessibility, focus-and-keyboard, forms, navigation-and-state, content-and-copy; styles → layout-and-responsive, motion, contrast rules; routes, config, image and font loading → performance.

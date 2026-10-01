@@ -4,7 +4,7 @@
 // Usage: node scripts/export.mjs [<skills-dir>] [--strip-learned]
 //   <skills-dir>     installed skills folder (default: ~/.claude/skills)
 //   --strip-learned  empty the "Learned rules / Learned notes" lists (personal experience) in the export
-// The private layer ~/.supply-chain/ is never exported. Review the diff with git before committing.
+// The private layer ~/.waymark/ is never exported. Review the diff with git before committing.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -15,20 +15,20 @@ const args = process.argv.slice(2);
 const strip = args.includes('--strip-learned');
 const live = path.resolve(args.find((a) => !a.startsWith('--')) || path.join(os.homedir(), '.claude', 'skills'));
 const out = path.join(repo, 'skills');
-const mapFile = path.join(live, 'supply-chain', 'skill-map.json');
-if (!fs.existsSync(mapFile)) { console.error(`No supply chain found in ${live}`); process.exit(1); }
+const mapFile = path.join(live, 'waymark', 'skill-map.json');
+if (!fs.existsSync(mapFile)) { console.error(`No Waymark found in ${live}`); process.exit(1); }
 const map = JSON.parse(fs.readFileSync(mapFile, 'utf8'));
 
 const names = [
-  'supply-chain',
-  ...fs.readdirSync(live).filter((n) => /^sc-/.test(n)),
+  'waymark',
+  ...fs.readdirSync(live).filter((n) => /^dept-/.test(n)),
   ...Object.entries(map.skills).filter(([, e]) => e.owned).map(([n]) => n),
 ].filter((n, i, all) => all.indexOf(n) === i && fs.existsSync(path.join(live, n, 'SKILL.md')));
 
 for (const n of names) {
   fs.rmSync(path.join(out, n), { recursive: true, force: true });
   fs.cpSync(path.join(live, n), path.join(out, n), { recursive: true, dereference: true });
-  if (n === 'supply-chain') {
+  if (n === 'waymark') {
     const mf = path.join(out, n, 'skill-map.json');
     const m = JSON.parse(fs.readFileSync(mf, 'utf8'));
     for (const [k, e] of Object.entries(m.skills)) if (e.auto && e.origin && e.origin !== 'user') delete m.skills[k];

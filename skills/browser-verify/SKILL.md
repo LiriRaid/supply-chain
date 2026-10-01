@@ -1,11 +1,11 @@
 ---
 name: browser-verify
-description: "Supply chain tool skill (test.browser), owned by sc-qa. Use to verify a web change in a real browser: \"verifica que funcione\", \"pruébalo en el navegador\", \"revisa que se vea bien en móvil\", \"toma screenshots\", \"hay errores en consola\", smoke test, e2e check, visual regression, responsive check. Load sc-qa first if it is not loaded. Uses the session's browser tools first and Playwright as fallback; local dev hosts only. Not for writing unit tests."
+description: "Waymark tool skill (test.browser), owned by dept-qa. Use to verify a web change in a real browser: \"verifica que funcione\", \"pruébalo en el navegador\", \"revisa que se vea bien en móvil\", \"toma screenshots\", \"hay errores en consola\", smoke test, e2e check, visual regression, responsive check. Load dept-qa first if it is not loaded. Uses the session's browser tools first and Playwright as fallback; local dev hosts only. Not for writing unit tests."
 ---
 
 # Browser Verify
 
-> **Precondition.** Tool of `sc-qa` (supporting `sc-frontend`). If that department skill is not loaded in this conversation, load it first and use its brief (what, why, where, how) as the input of this skill. Skip only for L0 edits.
+> **Precondition.** Tool of `dept-qa` (supporting `dept-frontend`). If that department skill is not loaded in this conversation, load it first and use its brief (what, why, where, how) as the input of this skill. Skip only for L0 edits.
 
 ## Approach
 A passing test suite says the code compiles and the units behave; only a rendered page says the user can do the job. This skill turns the brief's acceptance criteria into observations in a real browser and returns evidence, not opinions.
@@ -21,7 +21,7 @@ A passing test suite says the code compiles and the units behave; only a rendere
 - **MUST NOT** type real passwords, tokens, card or ID numbers; use test values from the project's seeds/fixtures or generated ones recorded there.
 - **MUST NOT** install browsers or packages without an explicit yes.
 - **MUST** stop servers you started and leave the user's running.
-- **SHOULD** keep scripts throwaway in the scratchpad; promote to a committed e2e test only when `sc-qa` asks for one.
+- **SHOULD** keep scripts throwaway in the scratchpad; promote to a committed e2e test only when `dept-qa` asks for one.
 
 ### Provider order
 Decide once per session, top to bottom; stop at the first that works. Say which one was used in the output.
@@ -40,9 +40,9 @@ Starting, reusing or stopping the dev server → `references/server-lifecycle.md
 ## Inputs
 | Input | Source |
 |---|---|
-| Brief | the `sc-qa` / `sc-frontend` brief: acceptance criteria, affected screens, states, viewports |
-| Stack conventions | `../supply-chain/stacks/<stack>.md` → *Commands* and *Testing* |
-| Project context | `~/.supply-chain/projects/<slug>.md` → *Quality gates* (dev server row), *Gotchas*, test accounts |
+| Brief | the `dept-qa` / `dept-frontend` brief: acceptance criteria, affected screens, states, viewports |
+| Stack conventions | `../waymark/stacks/<stack>.md` → *Commands* and *Testing* |
+| Project context | `~/.waymark/projects/<slug>.md` → *Quality gates* (dev server row), *Gotchas*, test accounts |
 | Known patterns | `patterns/` in this skill (generic flows) + project skills (project-specific) |
 
 ## Output contract
@@ -61,13 +61,13 @@ Server: stopped / left running (not mine)
 
 ## Pattern library (grows with use)
 - Before building, list `patterns/` and read the matching file, if any (`patterns/README.md` explains the format).
-- After verifying a reusable flow that has no pattern yet (login with a seed user, a CRUD form, a modal, a paginated table, a theme toggle), write `patterns/<pattern>.md` from `../supply-chain/templates/pattern.template.md`: intent, anatomy of the check, states to cover, a11y checks, pitfalls, one adapter per provider used. Project-specific routes and accounts go to project memory, not here.
-- Update an existing pattern only with new, verified information (novelty check, supply-chain `references/learning.md`).
+- After verifying a reusable flow that has no pattern yet (login with a seed user, a CRUD form, a modal, a paginated table, a theme toggle), write `patterns/<pattern>.md` from `../waymark/templates/pattern.template.md`: intent, anatomy of the check, states to cover, a11y checks, pitfalls, one adapter per provider used. Project-specific routes and accounts go to project memory, not here.
+- Update an existing pattern only with new, verified information (novelty check, waymark `references/learning.md`).
 
 ## Modes
 Read **only** the mode the task needs (one file); never load all modes.
 
-Pick the smallest mode that proves the brief. `sc-qa` browser verification for any UI change = smoke + the relevant parts of states + evidence.
+Pick the smallest mode that proves the brief. `dept-qa` browser verification for any UI change = smoke + the relevant parts of states + evidence.
 - **smoke** — any UI change; golden path of the changed feature. → `modes/smoke.md`
 - **states** — new or restyled components, screens with async data, responsive or theming work. → `modes/states.md`
 - **regression** — a previously reported bug was fixed, or a change touches code near a known bug. → `modes/regression.md`
@@ -77,4 +77,4 @@ Pick the smallest mode that proves the brief. `sc-qa` browser verification for a
 Stack-specific notes → `references/stack-adapters.md` (read only the project's stack row).
 
 ## Learned notes
-_Grows with use (supply-chain `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._
+_Grows with use (waymark `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._

@@ -1,11 +1,11 @@
 ---
 name: ui-audit
-description: "Supply chain tool skill (ui.audit), owned by sc-ux-ui. Use to audit user interface code against accessibility (WCAG 2.2 AA) and interface guidelines: \"revisa la accesibilidad\", \"audita la UI\", \"cumple WCAG\", \"revisa el formulario\", \"problemas de foco o teclado\", \"revisa la UX\", review my UI, check accessibility, audit design. Load sc-ux-ui first if it is not loaded. Reports findings with rule id and file:line before changing anything. Not for redesigning (use ui-refine)."
+description: "Waymark tool skill (ui.audit), owned by dept-ux-ui. Use to audit user interface code against accessibility (WCAG 2.2 AA) and interface guidelines: \"revisa la accesibilidad\", \"audita la UI\", \"cumple WCAG\", \"revisa el formulario\", \"problemas de foco o teclado\", \"revisa la UX\", review my UI, check accessibility, audit design. Load dept-ux-ui first if it is not loaded. Reports findings with rule id and file:line before changing anything. Not for redesigning (use ui-refine)."
 ---
 
 # UI Audit
 
-> **Precondition.** Tool of `sc-ux-ui` (supporting: `sc-qa`, which runs it in the Definition of Done of significant UI changes). If that department skill is not loaded in this conversation, load it first and use its brief (what, why, where, how) as the input of this skill. Skip only for L0 edits.
+> **Precondition.** Tool of `dept-ux-ui` (supporting: `dept-qa`, which runs it in the Definition of Done of significant UI changes). If that department skill is not loaded in this conversation, load it first and use its brief (what, why, where, how) as the input of this skill. Skip only for L0 edits.
 
 ## Approach
 An audit produces evidence, not opinions. Every finding names a rule, a location and a fix; a concern that maps to no rule is a note for `ui-refine`, not a finding.
@@ -19,10 +19,10 @@ An audit produces evidence, not opinions. Every finding names a rule, a location
 ## Inputs
 | Input | Source |
 |---|---|
-| Brief | the `sc-ux-ui` (or `sc-qa`) brief |
+| Brief | the `dept-ux-ui` (or `dept-qa`) brief |
 | Scope | files or globs given; else the diff (`git diff --name-only HEAD` plus untracked) filtered to templates, components and styles |
-| Stack conventions | `../supply-chain/stacks/<stack>.md` → *Frontend* (template syntax, component library) |
-| Project context | `~/.supply-chain/projects/<slug>.md` → `## UI audit log`, `## Design system` (token pairs for contrast), UI language |
+| Stack conventions | `../waymark/stacks/<stack>.md` → *Frontend* (template syntax, component library) |
+| Project context | `~/.waymark/projects/<slug>.md` → `## UI audit log`, `## Design system` (token pairs for contrast), UI language |
 | Rules | `rules/README.md` (index, check syntax) + the category files it lists |
 | Known patterns | `patterns/` of `ui-build` / `ui-system` (expected a11y of known widgets) + project skills |
 
@@ -43,17 +43,17 @@ Each rule has a default severity. Raise it one level when the issue sits on a pr
 - A category file beyond ~15 rules → split it and update the index.
 
 ## Output contract
-Always return: scope (file count), categories applied, findings table with totals by severity, the not-verified list, files changed (fix mode only), check re-run results, audit log updated (yes/no), rules added or refined, and hand-offs: `ui-system` for system-level token or contrast fixes, `ui-refine` for non-rule UX critique, `sc-frontend` for structural changes, `sc-qa` for automated accessibility tests.
+Always return: scope (file count), categories applied, findings table with totals by severity, the not-verified list, files changed (fix mode only), check re-run results, audit log updated (yes/no), rules added or refined, and hand-offs: `ui-system` for system-level token or contrast fixes, `ui-refine` for non-rule UX critique, `dept-frontend` for structural changes, `dept-qa` for automated accessibility tests.
 
 ## Pattern library (grows with use)
 - Before building, list `patterns/` and read the matching file, if any. In this skill the reusable knowledge is the rule set in `rules/`; widget patterns (dialog, combobox, tabs) live in `ui-build` and are the reference for what a correct widget looks like.
-- After building something reusable that has no pattern yet (a modal, a data table, a stepper…), write `patterns/<pattern>.md` from `../supply-chain/templates/pattern.template.md`: stack-agnostic intent, anatomy, states, a11y, pitfalls, and one short adapter per stack it was built in. Project-specific details go to project memory, not here.
-- Update an existing pattern only with new, verified information (novelty check, supply-chain `references/learning.md`).
+- After building something reusable that has no pattern yet (a modal, a data table, a stepper…), write `patterns/<pattern>.md` from `../waymark/templates/pattern.template.md`: stack-agnostic intent, anatomy, states, a11y, pitfalls, and one short adapter per stack it was built in. Project-specific details go to project memory, not here.
+- Update an existing pattern only with new, verified information (novelty check, waymark `references/learning.md`).
 
 ## Modes
 Read **only** the mode the task needs (one file); never load all modes.
 
-- **audit** — "audita la UI", "revisa la accesibilidad", "cumple WCAG", "revisa el formulario", before a PR with UI changes, `sc-qa` Definition of Done. → `modes/audit.md`
+- **audit** — "audita la UI", "revisa la accesibilidad", "cumple WCAG", "revisa el formulario", before a PR with UI changes, `dept-qa` Definition of Done. → `modes/audit.md`
 - **fix** — the user approved findings by number, rule id or severity. → `modes/fix.md`
 - **regression** — after a fix round, before a release, "verifica que sigan corregidos". → `modes/regression.md`
 
@@ -61,4 +61,4 @@ Read **only** the mode the task needs (one file); never load all modes.
 Stack-specific notes → `references/stack-adapters.md` (read only the project's stack row).
 
 ## Learned notes
-_Grows with use (supply-chain `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._
+_Grows with use (waymark `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._

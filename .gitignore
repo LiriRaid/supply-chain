@@ -3,5 +3,4 @@ node_modules/
 Thumbs.db
 *.zip
 # never commit a private layer by accident
-.supply-chain/
-supply-chain.local/
+.waymark/

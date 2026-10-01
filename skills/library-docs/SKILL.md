@@ -1,11 +1,11 @@
 ---
 name: library-docs
-description: "Supply chain tool skill (docs.library), shared by every department. Use before writing or changing code that depends on a library or framework API you have not verified in this session, and for setup, configuration, migration or version questions: \"cómo se usa\", \"cuál es la API de\", \"documentación de\", \"migrar a la versión\", \"configurar\", \"documentación oficial\", \"sigue sin funcionar\", any framework, library, ORM, database or CLI. Routes to the docs MCP servers the user has connected (a framework or vendor MCP first, then a general docs index), else the official site, always for the installed version."
+description: "Waymark tool skill (docs.library), shared by every department. Use before writing or changing code that depends on a library or framework API you have not verified in this session, and for setup, configuration, migration or version questions: \"cómo se usa\", \"cuál es la API de\", \"documentación de\", \"migrar a la versión\", \"configurar\", \"documentación oficial\", \"sigue sin funcionar\", any framework, library, ORM, database or CLI. Routes to the docs MCP servers the user has connected (a framework or vendor MCP first, then a general docs index), else the official site, always for the installed version."
 ---
 
 # Library Docs
 
-> **Precondition.** Tool of `supply-chain`, shared by every `sc-*` department. If no department skill is loaded in this conversation, load the owner of the task first and use its brief (what, why, where, how) as the input of this skill. Skip for L0 edits and for questions that do not depend on a library's behavior.
+> **Precondition.** Tool of `waymark`, shared by every `dept-*` department. If no department skill is loaded in this conversation, load the owner of the task first and use its brief (what, why, where, how) as the input of this skill. Skip for L0 edits and for questions that do not depend on a library's behavior.
 
 ## Approach
 Training data ages; libraries do not wait. Before code leans on an API, this skill pins down which version the project really runs and asks a source that speaks for that version.
@@ -29,7 +29,7 @@ Training data ages; libraries do not wait. Before code leans on an API, this ski
 ### Provider routing
 Check the session's tool list (or `ToolSearch`) for the exact tool names before calling; servers rename tools between releases. A server listed as failed to connect counts as unavailable.
 
-**Use the MCP servers this user actually has.** They are listed in `../supply-chain/skill-registry.md` → MCP sections (sync indexes every configured server) and in the session tool list. Never assume a server exists because another user or a stack profile mentions it.
+**Use the MCP servers this user actually has.** They are listed in `../waymark/skill-registry.md` → MCP sections (sync indexes every configured server) and in the session tool list. Never assume a server exists because another user or a stack profile mentions it.
 
 | Library | First provider | Fallback |
 |---|---|---|
@@ -50,8 +50,8 @@ When the route falls back, say so in one line (for example: "framework MCP not c
 | Input | Source |
 |---|---|
 | Brief | the department brief: what code depends on which library API |
-| Stack conventions | `../supply-chain/stacks/<stack>.md` → *Tools* (`docs.library` row) and *Official docs* |
-| Project context | `~/.supply-chain/projects/<slug>.md` → *Identity* (stack, versions), *Gotchas* |
+| Stack conventions | `../waymark/stacks/<stack>.md` → *Tools* (`docs.library` row) and *Official docs* |
+| Project context | `~/.waymark/projects/<slug>.md` → *Identity* (stack, versions), *Gotchas* |
 | Known facts | `facts/<library>.md` in this skill (verified, version-scoped) |
 
 ## Output contract
@@ -69,8 +69,8 @@ Open risk: <anything still uncertain, or none>
 ## Pattern library (grows with use)
 This skill grows facts instead of UI patterns:
 - Before querying, read `facts/<library>.md` (format in `facts/README.md`).
-- After a lookup confirmed something non-obvious (a renamed option, a changed default, a version-specific signature, a deprecated path that still compiles), run the novelty check (supply-chain `references/learning.md`: grep the fact in this file, the stack profile, project memory and `facts/`). Novel and verified → append it to `facts/<library>.md` with its version range and source.
-- If the fact is really a convention of the stack (how the user's projects should use the library), propose it for `../supply-chain/stacks/<stack>.md` → *Conventions* instead of saving it here.
+- After a lookup confirmed something non-obvious (a renamed option, a changed default, a version-specific signature, a deprecated path that still compiles), run the novelty check (waymark `references/learning.md`: grep the fact in this file, the stack profile, project memory and `facts/`). Novel and verified → append it to `facts/<library>.md` with its version range and source.
+- If the fact is really a convention of the stack (how the user's projects should use the library), propose it for `../waymark/stacks/<stack>.md` → *Conventions* instead of saving it here.
 - A newer version that changes a fact → mark the old line as superseded with its version range; never silently rewrite it.
 
 ## Modes
@@ -84,4 +84,4 @@ Read **only** the mode the task needs (one file); never load all modes.
 Stack-specific notes → `references/stack-adapters.md` (read only the project's stack row).
 
 ## Learned notes
-_Grows with use (supply-chain `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._
+_Grows with use (waymark `references/learning.md`). Dated, non-obvious notes about using this tool. When there are more than ~10, fold them into the body above and clear this list._
