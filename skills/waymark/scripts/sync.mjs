@@ -273,7 +273,8 @@ if (!dryRun) {
   fs.mkdirSync(path.join(LOCAL, 'learnings'), { recursive: true });
   fs.mkdirSync(path.join(LOCAL, 'projects'), { recursive: true });
   const tpl = path.join(SKILL_DIR, 'templates', 'private-layer');
-  for (const f of fs.existsSync(tpl) ? fs.readdirSync(tpl).filter((n) => n.endsWith('.md')) : []) {
+  // coexistence.md exists only when the installer found another agent framework (references/coexistence.md).
+  for (const f of fs.existsSync(tpl) ? fs.readdirSync(tpl).filter((n) => n.endsWith('.md') && n !== 'coexistence.md') : []) {
     if (!fs.existsSync(path.join(LOCAL, f))) { fs.copyFileSync(path.join(tpl, f), path.join(LOCAL, f)); evolved.push(`~/.waymark/${f} (created)`); }
   }
 }

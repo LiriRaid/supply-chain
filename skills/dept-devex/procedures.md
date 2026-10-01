@@ -7,7 +7,7 @@ Loaded on demand from `SKILL.md` → *Procedures*. Read only the section the tas
 - `<skills-dir>/dept-<dept>/SKILL.md` — one skill per department (`templates/department.template.md`).
 - `<skills-dir>/<tool>/` — owned tool skills (`"owned": true` in skill-map, provenance in `NOTICE.md`, evolve via `## Learned notes`).
 - Source repository (clone of the published repo): `skills/`, `adapters/`, `INSTALL.md`, `scripts/export.mjs` (copies the live skills back into the repo to publish improvements).
-- `~/.waymark/` — private layer, self-filling (templates in `../waymark/templates/private-layer/`): `agent.md`, `profile.md`, `preferences.md`, `subagents.md`, `projects.md`, `learnings/`, `projects/`. Never shared or published.
+- `~/.waymark/` — private layer, self-filling (templates in `../waymark/templates/private-layer/`): `agent.md`, `profile.md`, `preferences.md`, `subagents.md`, `projects.md`, `learnings/`, `projects/`, and `coexistence.md` only when another agent framework is installed (`../waymark/references/coexistence.md`). Never shared or published.
 - `<project>/<project-skills-dir>/<slug>-<topic>/` — project skills. `<skills-dir>` / `<project-skills-dir>` per agent: `~/.waymark/agent.md`.
 - As a plugin, names are prefixed (`waymark:dept-qa`); use the form the session lists.
 - Enforcement: description triggers + the instructions block (Rule 0) + the per-prompt Rule 0 reminder hook (`scripts/rule0-hook.mjs`) where the agent supports hooks. The hook only reminds; it never blocks or orchestrates.

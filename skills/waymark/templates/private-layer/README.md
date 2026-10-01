@@ -11,5 +11,6 @@ This user's memory of Waymark. The same for every agent, never published, never 
 | `projects.md` | index of projects and how they relate | first task in each project |
 | `projects/<slug>.md` | stack, verified gate commands, gotchas, decisions, project skills | every task |
 | `learnings/dept-<dept>.md` | lessons seen once (staging) | learning loop |
+| `coexistence.md` | only with another agent framework: who leads, its rules Waymark adopts, uses as fallback or resolves | installer and updates |
 
 To use it on several machines, keep it in a **private** repository.

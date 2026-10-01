@@ -49,6 +49,7 @@ One **owner** department plus 1–2 supporting ones (e.g. "crear un modal de con
 | first time in a project, new project, or memory without *Project map* | `references/project-detection.md` |
 | end of an L1+ task with something new learned | `references/learning.md` |
 | a needed skill is missing, or the user asks for a new skill | `references/skills.md` |
+| another agent framework is installed (install, update, the hook says it is not configured, the user changes who leads) | `references/coexistence.md` |
 | sync, vendoring, new stack / architecture / department | `references/maintenance.md` |
 | stack or architecture conventions | `stacks/<stack>.md`, `architectures/<arch>.md` — only the sections the level asks for |
 | a provider's status or source | `skill-registry.md` — search the capability, do not read it whole |

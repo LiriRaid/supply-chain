@@ -128,8 +128,13 @@ Nothing personal ships in this repository: no stack, no preferences, no projects
 | `preferences.md` | you correct how the agent answers or delivers code |
 | `subagents.md` | a search or delegation rule proves wrong or missing |
 | `agent.md` | the installer records where your agent keeps skills and instructions |
+| `coexistence.md` | the installer finds another agent framework (see below) |
 
 The same layer serves every agent, so switching from Claude Code to Codex keeps your memory.
+
+### Living next to another framework
+
+Already using a framework such as gentle-ai (persona, SDD orchestrator, review triggers)? The installer detects it, reads its rules and sorts each one: **adopted** (Waymark follows it, e.g. conventional commits), **fallback** (its skill backs Waymark up, e.g. its reviews or its SDD flow for big changes) or **resolved** (both act at the same moment; the chosen leader wins). You pick who leads — Waymark, the other framework, or skills only — and can move any rule. The other framework's files are never edited: Waymark adapts on its side (`~/.waymark/coexistence.md`, injected at session start), and uninstalling Waymark leaves it exactly as it was.
 
 ## The learning loop
 

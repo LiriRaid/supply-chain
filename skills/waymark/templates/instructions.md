@@ -23,6 +23,7 @@ Each field is a step; fill it truthfully:
 - **skills** — every skill listed is invoked; a support department is listed only if you read its Quick ref. A library API or internal not verified this session → verify it in official docs (`library-docs`) or in the installed package source (cite the file). Missing skill → `waymark/references/skills.md` (ask global or project).
 - **Gates** — L1: lint or typecheck of changed files (UI: quickest compile check); L2+: + tests, build, review. No spec → add one where the project tests that kind of file, else "sin infraestructura de test" + one-line check. 2nd failed attempt → *When stuck* (`waymark/references/protocol.md`).
 - **Aprendido** — rewrite **your task's** entry in *Work in progress* (keep other tasks' pending items); new facts → `waymark/references/learning.md`; fixed bug → *Solved problems* (symptom, cause, fix, dead ends).
+- **Coexistence** — another framework installed → obey the injected `~/.waymark/coexistence.md` (*Resolved* wins over this block); never edit its files. Not configured → offer it first (`waymark/references/coexistence.md`).
 
 Questions (Q): same first line, read-only, answer grounded in `file:line` or official docs (`waymark/references/consult.md`), no Cierre. Confirmations (plans, updates, global vs project skill, destructive steps): your choice window if you have one (Claude Code: `AskUserQuestion`); an update notice from the hook is asked that way before the task.
 
