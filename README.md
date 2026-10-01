@@ -132,9 +132,17 @@ Nothing personal ships in this repository: no stack, no preferences, no projects
 
 The same layer serves every agent, so switching from Claude Code to Codex keeps your memory.
 
-### Living next to another framework
+### Living next to an orchestrator
 
-Already using a framework such as gentle-ai (persona, SDD orchestrator, review triggers)? The installer detects it, reads its rules and sorts each one: **adopted** (Waymark follows it, e.g. conventional commits), **fallback** (its skill backs Waymark up, e.g. its reviews or its SDD flow for big changes) or **resolved** (both act at the same moment; the chosen leader wins). You pick who leads — Waymark, the other framework, or skills only — and can move any rule. The other framework's files are never edited: Waymark adapts on its side (`~/.waymark/coexistence.md`, injected at session start), and uninstalling Waymark leaves it exactly as it was.
+Waymark is not an orchestrator: an orchestrator decides *who* does the work, Waymark gives the criteria and the memory the work is done with. So it adapts to whoever arrived first:
+
+| On this machine | Waymark |
+|---|---|
+| no orchestrator | leads: Rule 0 block, both hooks, full routine |
+| an orchestrator already installed (e.g. gentle-ai) | **guest**: no hooks, no block; its departments reach the orchestrator through the orchestrator's own skill registry, its memory through engram |
+| Waymark first, an orchestrator later | keeps leading; the newcomer's rules are sorted into **adopted**, **fallback** (its skills back Waymark up) or **resolved**, and you are asked once whether Waymark should step down to guest |
+
+You can always pick another mode and move any rule. The other framework's files are never edited (`~/.waymark/coexistence.md` holds the adaptation), and uninstalling Waymark leaves it exactly as it was.
 
 ## The learning loop
 

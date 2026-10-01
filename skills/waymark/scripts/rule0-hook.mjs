@@ -16,16 +16,16 @@ const stateFile = path.join(HOME, '.update-check.json');
 
 // Coexistence mode (~/.waymark/coexistence.md, waymark/references/coexistence.md) decides the reminder.
 let mode = '';
-try { mode = fs.readFileSync(path.join(HOME, 'coexistence.md'), 'utf8').match(/^Mode:\s*(waymark-leads|other-leads|skills-only)\b/m)?.[1] || ''; } catch {}
+try { mode = fs.readFileSync(path.join(HOME, 'coexistence.md'), 'utf8').match(/^Mode:\s*(waymark-leads|guest|other-leads|skills-only)\b/m)?.[1] || ''; } catch {}
 
+// guest / skills-only (and 1.5.0's other-leads): the orchestrator owns the turn, so no reminder at all.
 const reminders = {
   '':
     'Waymark Rule 0 — first text: "Waymark → L<n>|Q · <dept> · skills: …"; first tool call: the owner dept-* skill. ' +
     'Before the first edit: "Memoria · Reutiliza · Evidencia · Procedimiento" (memory digest was injected at session start; obey Environment). ' +
     'Close changes with "## Cierre" (Gates after the last edit · Aprendido · engram; L2+: Tests · Navegador · Review). User\'s language. Only L0 skips.',
-  'other-leads':
-    'Waymark (support mode: the other framework leads; no Waymark opener). When a task matches a department, load its dept-* skill as knowledge; ' +
-    'recall the injected project memory before editing and update its Work in progress / Solved problems after. Never edit the other framework\'s files.',
+  guest: '',
+  'other-leads': '',
   'skills-only': '',
 };
 reminders['waymark-leads'] = reminders[''] + ' Coexistence: follow the injected Adopted/Fallback/Resolved rules; never edit the other framework\'s files.';

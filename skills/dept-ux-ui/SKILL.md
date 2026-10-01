@@ -12,7 +12,7 @@ description: "Waymark · UX/UI Design department. Use FIRST, before ui-system, u
 **DoD:** Audit passes AA, states and copy complete, tokens consistent, motion reduced-safe, gates green.
 
 ## Entry
-Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). Department-specific reads:
+Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). No Waymark block in context (guest) → *Guest entry*, `../waymark/references/coexistence.md` §3. Department-specific reads:
 - Learnings: `~/.waymark/learnings/dept-ux-ui.md` if it exists.
 - Stack profile: L1 *Conventions by department → Frontend*, L2+ full. Also the project's token source of truth.
 - Tools: the **Tools** table below. Open `../waymark/skill-registry.md` only if a capability there has no installed provider.

@@ -3,8 +3,9 @@
 // fires on startup, resume, clear and after a context summary). Runs locally; it injects once per session a
 // compact digest of what the agent must recall: this machine's Environment and the current project's memory
 // (Work in progress, Solved problems symptoms, Quality gates). Missing project memory → a one-line instruction.
-// When another agent framework is installed it also injects ~/.waymark/coexistence.md, or asks the agent to
-// offer configuring it if the instructions file carries a framework marker that file does not list.
+// When another agent framework is installed it also injects ~/.waymark/coexistence.md, asks the agent to offer
+// the choice (keep leading / become guest) for a framework marker that file does not list, and offers the full
+// install back when the listed framework's markers are gone. In guest mode this hook is normally not registered.
 // It never blocks. Remove it from the agent's settings to disable it.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -64,17 +65,29 @@ function foreignMarkers() {
   return found;
 }
 
+// Modes: waymark-leads | guest | skills-only (`other-leads` from 1.5.0 is read as guest).
 function coexistence() {
   const text = '\n' + read(path.join(HOME, 'coexistence.md'));
-  const mode = text.match(/\nMode:\s*(waymark-leads|other-leads|skills-only)\b/)?.[1];
+  let mode = text.match(/\nMode:\s*(waymark-leads|guest|other-leads|skills-only)\b/)?.[1];
+  if (mode === 'other-leads') mode = 'guest';
   const frameworks = (text.match(/\nFrameworks:\s*([^\n]+)/)?.[1] || '').toLowerCase();
+  const markers = foreignMarkers();
   const out = [];
-  const missing = [...foreignMarkers()].filter(([ns]) => !(mode && frameworks.includes(ns)));
+  if (mode === 'guest' || mode === 'skills-only') {
+    // Normally no hook runs in these modes; if one is still registered, stay out of the orchestrator's way.
+    return `Coexistence mode ${mode} (${frameworks || 'other framework'} leads): no Waymark opener or Cierre; departments are knowledge (waymark/references/coexistence.md → Guest entry). Offer to remove the Waymark hooks from the agent settings.`;
+  }
+  const missing = [...markers].filter(([ns]) => !(mode && frameworks.includes(ns)));
   if (missing.length) {
     const byFile = new Map();
     for (const [ns, f] of missing) byFile.set(f, [...(byFile.get(f) || []), ns]);
-    out.push(`Another agent framework is installed and coexistence is not configured for it: ${[...byFile].map(([f, ns]) => `${ns.join(', ')} in ${f}`).join('; ')}. ` +
-      'Before the task, offer to configure it with your choice window (waymark/references/coexistence.md: detect, classify, pick the mode). Until then never edit or override its rules.');
+    out.push(`Another agent framework appeared and coexistence is not configured for it: ${[...byFile].map(([f, ns]) => `${ns.join(', ')} in ${f}`).join('; ')}. ` +
+      'Before the task, ask the user with your choice window: keep Waymark leading (classify its rules into ~/.waymark/coexistence.md, mode waymark-leads) or make Waymark its guest (no Waymark hooks or block; register the skills in its registry). waymark/references/coexistence.md. Until then never edit or override its rules.');
+  }
+  const listed = frameworks.split(';').map((s) => s.split('·')[0].trim()).filter(Boolean);
+  const gone = listed.filter((n) => ![...markers.keys()].some((ns) => n.includes(ns) || ns.includes(n)));
+  if (mode && gone.length && gone.length === listed.length) {
+    out.push(`The framework(s) listed in ~/.waymark/coexistence.md (${gone.join(', ')}) no longer show markers in the instructions file. Ask the user whether they were uninstalled; if yes, offer to return to the full install (remove coexistence.md).`);
   }
   if (mode) {
     const rules = ['Adopted', 'Fallback', 'Resolved'].map((t) => [t, section(text, t).filter((l) => l.startsWith('-'))]).filter(([, l]) => l.length);

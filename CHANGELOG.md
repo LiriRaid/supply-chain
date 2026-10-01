@@ -5,6 +5,12 @@ The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version
 ## 1.6.0 — in progress (branch `develop`)
 Changes accumulate on `develop` and reach `main` in one release, so installs see one update notice per release instead of one per change.
 
+**Guest mode: Waymark adapts to whoever arrived first.** A real install next to gentle-ai showed that 1.5.0's `other-leads` still competed: the same Rule 0 block (only moved below) and Waymark's hooks kept claiming the turn. Waymark is not an orchestrator, so it now fits inside one:
+- **Orchestrator already installed → `guest`** (recommended): no Waymark hooks, no Rule 0 block. The skills are registered through the orchestrator's own registry (gentle-ai: `gentle-ai skill-registry refresh`, INSTALL §7.4) and project memory travels through engram (`topic_key waymark/<slug>/…`).
+- **Departments work without the block:** each `dept-*` runs a *Guest entry* (recall project memory, apply its rules and one procedure, reply in the orchestrator's format, update memory) when no Waymark block is in context.
+- **Waymark first, orchestrator later → `waymark-leads`:** the session hook asks once whether to keep leading (its skills become *Fallback* via `skill-registry.md`) or step down to guest; when the listed orchestrator's markers disappear it offers the full install back.
+- `other-leads` from 1.5.0 is read as `guest`; updates offer to remove the block and hooks it left.
+
 ## 1.5.0 — coexistence with other agent frameworks
 A real install met gentle-ai (persona, engram protocol, SDD orchestrator, review triggers) and could only offer "skills only" or "full install with conflicting rules". Now Waymark adapts instead of competing:
 - **Detect and classify** (INSTALL §1.1, `references/coexistence.md`): every rule of the other framework becomes *Adopted* (Waymark follows it), *Fallback* (its skill backs a capability, or *When stuck*) or *Resolved* (same-moment conflict, per mode).

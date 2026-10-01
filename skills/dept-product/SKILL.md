@@ -12,7 +12,7 @@ description: "Waymark · Product Management department. Use FIRST when a request
 **DoD:** Requirements unambiguous and testable, criteria mapped to tests, scope and out-of-scope written, gates green.
 
 ## Entry
-Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). Department-specific reads:
+Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). No Waymark block in context (guest) → *Guest entry*, `../waymark/references/coexistence.md` §3. Department-specific reads:
 - Learnings: `~/.waymark/learnings/dept-product.md` if it exists.
 - Stack profile: L1 *Commands*, L2+ full.
 - Tools: the **Tools** table below. Open `../waymark/skill-registry.md` only if a capability there has no installed provider.

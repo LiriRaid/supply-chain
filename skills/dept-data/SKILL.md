@@ -12,7 +12,7 @@ description: "Waymark · Data Engineering & State department. Use FIRST for sche
 **DoD:** gates green · migration rollback tested · query plan checked · cache invalidation defined · state derived, not duplicated
 
 ## Entry
-Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). Department-specific reads:
+Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). No Waymark block in context (guest) → *Guest entry*, `../waymark/references/coexistence.md` §3. Department-specific reads:
 - Learnings: `~/.waymark/learnings/dept-data.md` if it exists.
 - Stack profile: L1 *Commands* + *Data/State*, L2+ full.
 - Tools: the **Tools** table below. Open `../waymark/skill-registry.md` only if a capability there has no installed provider.

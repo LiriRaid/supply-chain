@@ -12,7 +12,7 @@ description: "Waymark · Security / DevSecOps department. Use FIRST for authenti
 **DoD:** gates green · `security-review` clean or findings resolved · no secret in diff · authz tests for 401/403 · audit has no high/critical
 
 ## Entry
-Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). Department-specific reads:
+Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). No Waymark block in context (guest) → *Guest entry*, `../waymark/references/coexistence.md` §3. Department-specific reads:
 - Learnings: `~/.waymark/learnings/dept-security.md` if it exists.
 - Stack profile: L1 *Commands* (audit) + *Security*, L2+ full.
 - Tools: the **Tools** table below. Open `../waymark/skill-registry.md` only if a capability there has no installed provider.

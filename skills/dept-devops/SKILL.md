@@ -12,7 +12,7 @@ description: "Waymark · DevOps / Platform department. Use FIRST for build, CI/C
 **DoD:** build green, lockfile consistent, conventional commits, CI valid, config externalized, rollback stated.
 
 ## Entry
-Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). Department-specific reads:
+Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). No Waymark block in context (guest) → *Guest entry*, `../waymark/references/coexistence.md` §3. Department-specific reads:
 - Learnings: `~/.waymark/learnings/dept-devops.md` if it exists.
 - Stack profile: *Commands*. L2+: also the existing CI files and build config.
 - Tools: the **Tools** table below. Open `../waymark/skill-registry.md` only if a capability there has no installed provider.
