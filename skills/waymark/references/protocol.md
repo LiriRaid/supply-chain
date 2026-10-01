@@ -14,14 +14,11 @@ The compact version lives in the instructions file and is enough for L1. Read th
 6. **Brief.** Print before the first edit:
 
 ```
-Waymark → L2 · dept-frontend (+ dept-ux-ui, dept-qa) · stack angular · arch screaming
-Qué: modal de confirmación para eliminar contacto
-Para qué / quién: evitar borrados accidentales del agente
-Dónde: features/contacts/components/delete-contact-dialog/ (scope rule: un solo feature)
-Memoria: leída ~/.waymark/projects/contacts-app.md (creada ahora si no existía)
-Reutiliza: shared/components/app-modal (base de todos los modales del proyecto)
-Cómo: procedure "New component" · skills: ui-build → browser-verify · docs: library-docs → angular-cli (Angular CDK dialog), primeng (Dialog)
+Waymark → L2 · dept-frontend (+dept-ux-ui) · skills: ui-build · browser-verify · library-docs
+Memoria: leída ~/.waymark/projects/contacts-app.md · Reutiliza: shared/components/app-modal · Evidencia: observada (botón borrar sin confirmación en /contacts) · Procedimiento: New component / screen
+Qué: modal de confirmación para eliminar contacto · Para qué: evitar borrados accidentales · Dónde: features/contacts/components/delete-contact-dialog/
 ```
+At L2+ add the *Qué · Para qué · Dónde* line; at L1 the two opening lines are enough.
 
 ## Exit (Definition of Done)
 

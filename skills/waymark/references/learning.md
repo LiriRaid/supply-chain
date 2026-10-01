@@ -2,7 +2,7 @@
 
 Part of the `waymark` core skill. Paths are relative to the core skill folder (`<skills-dir>/waymark/`). Read only when the instructions file or a department points here.
 
-Run at the end of every L1+ task (Exit → Learn).
+Run at the end of every L1+ task (Exit → Learn). **Work in progress:** rewrite only your task's entry; keep the pending items of other tasks (several tasks can be open in one project).
 
 After each L1+ task, collect what was **non-obvious and new**: something you had to discover, a correction from the user, a command or flag that was needed, a library quirk, a mistake you made. Discard anything already stated anywhere in Waymark.
 

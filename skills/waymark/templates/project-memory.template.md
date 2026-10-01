@@ -4,7 +4,7 @@ Path: <absolute path to project root>
 Updated: <YYYY-MM-DD>
 
 ## Work in progress
-Read first at Recall; rewritten after every task and every milestone (not at session end: sessions can stop without warning, e.g. out of tokens). Any agent can resume from here.
+Read first at Recall; one entry per open task, each rewritten after its own milestones (never delete another task's pending items) (not at session end: sessions can stop without warning, e.g. out of tokens). Any agent can resume from here.
 - Updated: <YYYY-MM-DD HH:mm> · by: <agent>
 - Task: <what the user asked, in their words> · goal: <done looks like…>
 - Done: <steps finished, files touched>

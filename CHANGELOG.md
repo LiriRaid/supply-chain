@@ -2,6 +2,15 @@
 
 The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version is published the agent offers the update; you can also say *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"* (INSTALL §9).
 
+## 1.3.0 — template instead of rules
+Three real tests: the right decision on the first try 3/3. What sits in the **first text and first tool call** is always done; rules placed "in the middle" (brief lines, procedure, memory search) kept being skipped, and every evaluation proposed more rules. So 1.3.0 turns rules into **fields**:
+- Every turn opens with two lines: the routing line and `Memoria · Reutiliza · Evidencia · Procedimiento`; every change closes with `Gates · Aprendido · engram`. Each field is a step that must be filled truthfully.
+- Evidence that cannot be observed is declared as *hipótesis* with the user's one-line check **before** the fix.
+- Only skills that will be invoked are listed; a support department only if its Quick ref was read; library internals count as API → `library-docs`.
+- Visual bugs route to `dept-frontend`; `dept-qa` owns tests, review and bugs with no clear layer.
+- *Work in progress* is per task; other tasks' pending items are kept.
+- Instructions block 5.7k → 4.7k characters; hook reminder matches the template.
+
 ## 1.2.0 — lessons from the second real test
 The second test confirmed 1.1.0 (routing line first, department skill as the first tool call, Spanish narration, build gate, reuse found, right result first try). Remaining gaps:
 - **Environment knowledge:** `profile.md` gets an *Environment* section (OS, shell, missing tools, how to edit files), read at Recall and filled by the learning loop, so no session wastes attempts (e.g. heredoc → missing python → Edit).

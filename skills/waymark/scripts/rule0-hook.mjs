@@ -14,9 +14,9 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const stateFile = path.join(process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark'), '.update-check.json');
 
 const reminder =
-  'Waymark Rule 0 — first text: "Waymark → L<n>|Q · <dept> · skills: …"; first tool call: the owner dept-* skill (questions too, read-only). ' +
-  'Then recall (create the project memory if missing) → skills → verify (L1: lint/typecheck of changed files) → learn (Work in progress, Solved problems). ' +
-  'All text in the user\'s language. Only L0 skips.';
+  'Waymark Rule 0 — open with the two lines from the instructions block: "Waymark → L<n>|Q · <dept> · skills: …" and ' +
+  '"Memoria: … · Reutiliza: … · Evidencia: observada|hipótesis (check) · Procedimiento: …"; first tool call: the owner dept-* skill. ' +
+  'Close changes with "## Cierre" (Gates after the last edit · Aprendido · engram). User\'s language. Only L0 skips.';
 
 const newer = (a, b) => {
   const pa = String(a).trim().split('.').map(Number), pb = String(b).trim().split('.').map(Number);
