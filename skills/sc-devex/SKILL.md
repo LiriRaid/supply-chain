@@ -62,7 +62,7 @@ Detailed steps live in `procedures.md` (same folder). **Read only the section yo
 | docs.project | `init` | Create a project CLAUDE.md | L1 |
 | claude.docs | `claude-code-guide` agent | Skills, plugins, MCP, settings or SDK behavior not verified this session | Q |
 | claude.api | `claude-api` | Tooling that calls the Claude API | L1 |
-| docs.library | `library-docs` (→ angular-cli / primeng / context7 MCP) | Docs for tooling libraries (script runners, doc generators) | Q |
+| docs.library | `library-docs` (→ the docs MCP servers the user has) | Docs for tooling libraries (script runners, doc generators) | Q |
 | memory | MCP `engram` | Session context, decisions, root causes | L1 |
 | search.codebase | `Explore` agent | Auditing names or contradictions across files | L1 |
 | skills.discovery | none yet → supply-chain `references/skills.md` | Finding new skills (`npx skills find`) | L1 |

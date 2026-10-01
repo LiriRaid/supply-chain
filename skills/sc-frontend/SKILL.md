@@ -8,7 +8,7 @@ description: "Supply chain · Frontend Engineering department. Use FIRST, before
 ## Quick ref
 **Mission:** Build client-side UI (web or mobile) that is correct, accessible, performant and consistent with the stack's conventions.
 **Must:** reactive state primitive and render optimization per stack profile · styling system first, tokens only · guard platform-only APIs when server-rendering · clean up subscriptions, listeners and animations · every UI state (loading, empty, error, success)
-**Skills by default:** `ui-build` · `browser-verify` · `run` · `library-docs` (+ `angular-cli`, `primeng` on Angular/PrimeNG projects)
+**Skills by default:** `ui-build` · `browser-verify` · `run` · `library-docs` (+ the stack's framework / UI-library MCP when the user has one)
 **DoD:** Works in the running app, a11y basics pass, all states handled, tests cover criteria, gates green.
 
 ## Entry
@@ -78,9 +78,9 @@ Detailed steps live in `procedures.md` (same folder). **Read only the section yo
 | `ui.system` | `ui-system` | Premium polish, hierarchy, dashboards, landing pages (when requested) | L2 |
 | `test.browser` | `browser-verify` | Flows, responsive regressions, console errors, screenshots | L2 |
 | `app.run` | `run` | See the change working in the real app | L2 (L1 for visible changes) |
-| `docs.library` | `library-docs` (→ angular-cli / primeng / context7 MCP) | Framework, styling or UI library API not verified this session | Q |
-| `framework.cli` | `angular-cli` MCP (stack angular); other stacks: none yet → supply-chain `references/skills.md` | Generators, best practices, migrations | L1 |
-| `ui.library` | `primeng` MCP (PrimeNG); other libraries: `library-docs` | Component API, props, examples, theming tokens | L1 |
+| `docs.library` | `library-docs` (→ the docs MCP servers the user has) | Framework, styling or UI library API not verified this session | Q |
+| `framework.cli` | the stack's framework CLI/docs MCP, if the user has one (e.g. `angular-cli` for Angular); none → `library-docs` | Generators, best practices, migrations | L1 |
+| `ui.library` | the UI library's MCP, if the user has one (e.g. `primeng`); else `library-docs` | Component API, props, examples, theming tokens | L1 |
 
 ## Definition of Done
 - [ ] Exit protocol of `supply-chain` (instructions file → Exit; L2+ full: `../supply-chain/references/protocol.md`) (gates, architecture conformance, review, learnings)

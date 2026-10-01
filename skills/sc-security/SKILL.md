@@ -66,7 +66,7 @@ Mapped to OWASP Top 10 (2021) and ASVS chapters.
 ## Tools
 | Capability | Skill / MCP / Agent | When | Level |
 |---|---|---|---|
-| docs.library | `library-docs` (→ angular-cli / primeng / context7 MCP) | Framework security APIs (auth, CSRF, CSP, sanitization) not verified this session | Q |
+| docs.library | `library-docs` (→ the docs MCP servers the user has) | Framework security APIs (auth, CSRF, CSP, sanitization) not verified this session | Q |
 | memory | `engram` (MCP) | `mem_save` security decisions and vulnerability root causes | L1 |
 | search.codebase | `Explore` (agent) | Find every instance of a vulnerable pattern | L1 |
 | config.claude | `update-config` | Adjust agent permissions (allow/deny lists) | L1 |

@@ -64,7 +64,7 @@ Detailed steps live in `procedures.md` (same folder). **Read only the section yo
 ## Tools
 | Capability | Skill / MCP / Agent | When | Level |
 |---|---|---|---|
-| docs.library | `library-docs` (→ angular-cli / primeng / context7 MCP) | ORM, migration DSL, DB engine, cache client, store/reactivity API not verified this session | Q |
+| docs.library | `library-docs` (→ the docs MCP servers the user has) | ORM, migration DSL, DB engine, cache client, store/reactivity API not verified this session | Q |
 | memory | `engram` (MCP) | `mem_search` before re-reading schema; `mem_save` after a data-model decision | L1 |
 | search.codebase | `Explore` (agent) | Find all readers/writers of a table, cache key or store (mandatory for destructive changes) | L1 |
 | review.diff | `code-review` | Before declaring done | L2 |

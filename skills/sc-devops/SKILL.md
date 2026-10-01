@@ -61,7 +61,7 @@ Detailed steps live in `procedures.md` (same folder). **Read only the section yo
 | app.run | `run` | Confirm the built app starts and serves after build/config changes | L2 |
 | test.browser | `browser-verify` | Hydration/SSR checks, post-deploy smoke tests | L2 |
 | review.diff | `code-review` | Before opening a PR or merging | L2 |
-| docs.library | `library-docs` (→ angular-cli / primeng / context7 MCP) | CI provider, container, build tool or SSR config syntax not verified this session | Q |
+| docs.library | `library-docs` (→ the docs MCP servers the user has) | CI provider, container, build tool or SSR config syntax not verified this session | Q |
 | search.codebase | `Explore` agent | Locating env variable usages or build scripts across the repo | L1 |
 | memory | MCP `engram` | `mem_save` deploy decisions and build root causes | L1 |
 | ci.authoring / containers / IaC | none yet → supply-chain `references/skills.md` | Dedicated CI, Docker or Terraform skill | L2 |

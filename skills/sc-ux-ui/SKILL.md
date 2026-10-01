@@ -25,7 +25,7 @@ The brief must answer:
 4. **Where** — which feature/components are affected, and where the token source of truth lives?
 5. **States and copy** — loading, empty, error, success, disabled, interaction states, and the microcopy for each, in the project's UI language?
 6. **Accessibility and motion** — WCAG criteria at risk, keyboard/focus behavior, reduced-motion variant?
-7. **How** — procedure, and which skills/MCP (`ui-system`, `ui-refine`, `ui-audit`, `primeng`, `library-docs`), and what is handed to `sc-frontend`?
+7. **How** — procedure, and which skills/MCP (`ui-system`, `ui-refine`, `ui-audit`, the UI library's MCP if any, `library-docs`), and what is handed to `sc-frontend`?
 8. **Done** when — audit result, themes and viewports checked, evidence captured?
 
 ## Scope
@@ -84,8 +84,8 @@ Detailed steps live in `procedures.md` (same folder). **Read only the section yo
 | `ui.refine` | `ui-refine` | Motion design, transitions, micro-interactions, UX critique and polish | L2 |
 | `ui.build` | `ui-build` (via `sc-frontend`) | Layout and responsive implementation | L1 |
 | `test.browser` | `browser-verify` | Evidence: keyboard pass, screenshots, responsive checks | L2 |
-| `ui.library` | `primeng` MCP (PrimeNG); other libraries: `library-docs` | Component a11y and theming tokens | L1 |
-| `docs.library` | `library-docs` (→ angular-cli / primeng / context7 MCP) | WCAG, ARIA APG, styling-system docs | Q |
+| `ui.library` | the UI library's MCP, if the user has one (e.g. `primeng`); else `library-docs` | Component a11y and theming tokens | L1 |
+| `docs.library` | `library-docs` (→ the docs MCP servers the user has) | WCAG, ARIA APG, styling-system docs | Q |
 | `contrast.check` | none yet → supply-chain `references/skills.md` | Automated contrast and color-blindness checks | — |
 
 ## Definition of Done

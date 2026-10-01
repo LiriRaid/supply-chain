@@ -7,6 +7,10 @@ Part of the `supply-chain` core skill. Paths are relative to the core skill fold
 1. The department's **Tools** table → the session's skill list → `skill-registry.md` (search the capability, not the whole file).
 2. Installed under another name or department → use it and fix its row in `skill-map.json` (department, capability), then run sync.
 
+## 1b. MCP servers this user has
+
+Every user connects different MCP servers. Sync indexes all of them; the ones not yet mapped appear in `skill-registry.md` → *Other MCP servers configured*. When a task could use one (or the list is not empty at Entry), identify what it serves from its tool list, add it to `skill-map.json` → `mcp` (`capability` such as `docs.library`, `framework.cli`, `ui.library`, `db`, `browser`; `departments`; `stack` when it only applies to one), run sync and use it. Never call a server that is not connected; never recommend the user's servers as if everyone had them.
+
 ## 2. Install a known external skill [ask]
 
 When `skill-registry.md` lists a provider as `missing` with a `source`:

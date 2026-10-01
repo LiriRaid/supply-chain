@@ -25,7 +25,7 @@ Loaded on demand from `SKILL.md` → *Procedures*. Read only the section the tas
 4. Report findings by WCAG success criterion, severity and file:line; fix or hand off.
 
 ### Theming / tokens change
-1. Locate the token source of truth (stack profile); never edit generated or vendor files. PrimeNG themes → `primeng` MCP for token names.
+1. Locate the token source of truth (stack profile); never edit generated or vendor files. UI-library themes → that library's MCP if the user has one (e.g. `primeng`), else `library-docs`, for token names.
 2. Change tokens at the semantic layer (surface, primary, text-muted), not raw palette usages.
 3. Validate contrast for every affected pair in light and dark themes.
 4. Runtime theming → verify the theme persists and applies before first paint where possible.

@@ -5,8 +5,8 @@ Loaded on demand from `SKILL.md` → *Procedures*. Read only the section the tas
 ### New component / screen (L2)
 1. Read acceptance criteria (`sc-product`) and UI states/specs (`sc-ux-ui`). Missing at L2+ → write them first.
 2. Place files per the architecture profile → *Placement rules*; reuse shared components before creating new ones (Grep the shared layer).
-3. Component library in use → check it covers the need first (`primeng` MCP on PrimeNG, else `library-docs`).
-4. Verify any framework API not used this session with `library-docs`; use the framework CLI MCP (`angular-cli`) generators when available.
+3. Component library in use → check it covers the need first (its MCP if the user has one, e.g. `primeng`; else `library-docs`).
+4. Verify any framework API not used this session with `library-docs`; use the framework CLI MCP generators when the user has one (e.g. `angular-cli`).
 5. Write the test first for the logic and the main criterion (`sc-qa`, stack profile → *Testing*).
 6. Implement with the stack's component conventions: typed inputs/outputs, reactive state primitive, optimized change detection, lifecycle cleanup.
 7. Invoke `ui-build` for layout, responsive behavior, forms, cards, navigation and visual polish.

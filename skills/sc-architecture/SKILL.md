@@ -72,8 +72,8 @@ Detailed steps live in `procedures.md` (same folder). **Read only the section yo
 | `memory` | `engram` MCP (mem_search / mem_save) | Before deciding: prior decisions. After any decision or ADR: save it | L1 |
 | `search.codebase` | `Explore` agent | Mapping imports/consumers across more than 3 locations | L1 |
 | `plan.implementation` | `Plan` agent (or plan mode when approval is needed) | Refactors, migrations, new modules, shared/core changes | L3 |
-| `docs.library` | `library-docs` (→ angular-cli / primeng / context7 MCP) | Framework patterns, module systems, migration guides not verified this session | Q |
-| `framework.cli` | `angular-cli` MCP (stack angular); other stacks: none yet → supply-chain `references/skills.md` | Generators, migrations, project structure | L1 |
+| `docs.library` | `library-docs` (→ the docs MCP servers the user has) | Framework patterns, module systems, migration guides not verified this session | Q |
+| `framework.cli` | the stack's framework CLI/docs MCP, if the user has one (e.g. `angular-cli` for Angular); none → `library-docs` | Generators, migrations, project structure | L1 |
 | `review.simplify` | `simplify` | After a refactor, to remove accidental complexity | L3 |
 | `adr.tooling` | none yet → supply-chain `references/skills.md` | ADR scaffolding or architecture lint | — |
 

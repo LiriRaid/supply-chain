@@ -61,7 +61,7 @@ Detailed steps live in `procedures.md` (same folder). **Read only the section yo
 | review.diff | `code-review` | Before done or opening a PR | L2 |
 | review.simplify | `simplify` | Clean-up after green, behavior-preserving | L3 |
 | ui.audit | `ui-audit` | Significant UI change; WCAG 2.2 AA check | L2 |
-| docs.library | `library-docs` (→ angular-cli / primeng / context7 MCP) | Test runner, assertion or mocking API not verified this session | Q |
+| docs.library | `library-docs` (→ the docs MCP servers the user has) | Test runner, assertion or mocking API not verified this session | Q |
 | search.codebase | `Explore` agent | Finding existing tests, fixtures, helpers across >3 locations | L1 |
 | memory | MCP `engram` | `mem_search` bug history; `mem_save` root causes | L1 |
 | mutation / load testing | none yet → supply-chain `references/skills.md` | Critical logic or performance budgets | L3 |

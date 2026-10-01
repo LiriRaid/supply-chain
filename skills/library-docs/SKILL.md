@@ -1,6 +1,6 @@
 ---
 name: library-docs
-description: "Supply chain tool skill (docs.library), shared by every department. Use before writing or changing code that depends on a library or framework API you have not verified in this session, and for setup, configuration, migration or version questions: \"cómo se usa\", \"cuál es la API de\", \"documentación de\", \"migrar a la versión\", \"configurar\", Angular, PrimeNG, Rails, NestJS, Tailwind, Vitest, GSAP, Supabase or any library. Routes to the angular-cli MCP for Angular, the primeng MCP for PrimeNG and context7 for everything else, using the installed version."
+description: "Supply chain tool skill (docs.library), shared by every department. Use before writing or changing code that depends on a library or framework API you have not verified in this session, and for setup, configuration, migration or version questions: \"cómo se usa\", \"cuál es la API de\", \"documentación de\", \"migrar a la versión\", \"configurar\", \"documentación oficial\", \"sigue sin funcionar\", any framework, library, ORM, database or CLI. Routes to the docs MCP servers the user has connected (a framework or vendor MCP first, then a general docs index), else the official site, always for the installed version."
 ---
 
 # Library Docs
@@ -29,14 +29,15 @@ Training data ages; libraries do not wait. Before code leans on an API, this ski
 ### Provider routing
 Check the session's tool list (or `ToolSearch`) for the exact tool names before calling; servers rename tools between releases. A server listed as failed to connect counts as unavailable.
 
-| Library | First provider | Tools (verify names in session) | Fallback |
-|---|---|---|---|
-| Angular framework, Angular CLI, `@angular/*` | `angular-cli` MCP | `list_projects` (workspaces and versions), `search_documentation` (official angular.dev, version-aware), `get_best_practices`, `find_examples`, `onpush_zoneless_migration` (migration guidance) | `context7` → official angular.dev |
-| PrimeNG, `@primeuix/themes` | `primeng` MCP | `search` (find components/guides), `list`, `get_component` (API: props, events, templates, a11y), `get_example`, `get_guide` (theming, styled/unstyled, pass-through), `get_setup`, `validate_usage` (check a usage against the installed version), `version` | `context7` → primeng.org |
-| Everything else: Rails, NestJS, Tailwind, Vitest, GSAP, Supabase, AnyCable, Redis, React, Prisma, any package or gem | `context7` MCP | `resolve-library-id` → `query-docs` | official docs via web fetch/search |
-| No docs MCP connected | web | fetch the official docs site or search scoped to it | memory, labelled as unverified |
+**Use the MCP servers this user actually has.** They are listed in `../supply-chain/skill-registry.md` → MCP sections (sync indexes every configured server) and in the session tool list. Never assume a server exists because another user or a stack profile mentions it.
 
-When the route falls back, say so in one line (for example: "angular-cli MCP not connected; used context7 + angular.dev").
+| Library | First provider | Fallback |
+|---|---|---|
+| The framework or library has its **own docs MCP connected** (vendor or framework server) | that MCP — check its exact tool names in the session | general docs index |
+| Any library | a **general docs-index MCP** the user has connected (e.g. `context7`) | official site |
+| No docs MCP connected | the **official site**, versioned pages (web fetch or search scoped to it) | memory, labelled as unverified |
+
+When the route falls back, say so in one line (for example: "framework MCP not connected; used the docs index + the official site").
 
 ### Guardrails
 - **MUST** detect the installed version before the first query.
@@ -57,7 +58,7 @@ When the route falls back, say so in one line (for example: "angular-cli MCP not
 Return to the department, in this shape:
 
 ```
-Docs · <library> <installed version> · provider: <angular-cli | primeng | context7 | web | memory (unverified)>
+Docs · <library> <installed version> · provider: <MCP name | web (official site) | memory (unverified)>
 Answer: <one or two sentences>
 Source: <tool + library id or doc page>
 Applied to: <file:line or "answer only">

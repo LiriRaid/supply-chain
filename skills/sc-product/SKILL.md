@@ -62,7 +62,7 @@ Detailed steps live in `procedures.md` (same folder). **Read only the section yo
 | `memory` | `engram` MCP (mem_search / mem_save) | Before eliciting: prior decisions. After a non-obvious scope decision: save it | L1 |
 | `search.codebase` | `Explore` agent | Scoping needs more than 3 locations | L1 |
 | `plan.implementation` | `Plan` agent (or plan mode when approval is needed) | Multi-layer features, shared/core changes, L3 breakdowns | L3 |
-| `docs.library` | `library-docs` (→ angular-cli / primeng / context7 MCP) | Feasibility depends on an unverified library/framework API | Q |
+| `docs.library` | `library-docs` (→ the docs MCP servers the user has) | Feasibility depends on an unverified library/framework API | Q |
 | `app.run` | `run` | Observe current behavior before a change request | L2 |
 | `requirements.authoring` | none yet → supply-chain `references/skills.md` | Story mapping / backlog tooling | — |
 

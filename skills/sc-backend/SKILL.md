@@ -68,7 +68,7 @@ Detailed steps live in `procedures.md` (same folder). **Read only the section yo
 ## Tools
 | Capability | Skill / MCP / Agent | When | Level |
 |---|---|---|---|
-| docs.library | `library-docs` (→ angular-cli / primeng / context7 MCP) | Any framework/ORM/queue API not verified this session; always for new APIs at L2+ | Q |
+| docs.library | `library-docs` (→ the docs MCP servers the user has) | Any framework/ORM/queue API not verified this session; always for new APIs at L2+ | Q |
 | memory | `engram` (MCP) | `mem_search` before re-reading a resource; `mem_save` after a non-obvious decision | L1 |
 | search.codebase | `Explore` (agent) | Pattern lookup across >3 locations | L1 |
 | claude.api | `claude-api` | Code that calls the Claude / Anthropic API | L1 |
