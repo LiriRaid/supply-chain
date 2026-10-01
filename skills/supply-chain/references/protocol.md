@@ -8,7 +8,7 @@ The compact version lives in the instructions file and is enough for L1. Read th
 
 1. **Project memory.** Identify the project root (nearest folder with a manifest: `package.json`, `Gemfile`, `pyproject.toml`, `go.mod`, `pom.xml`, `*.csproj`, `Cargo.toml`, `composer.json`, `pubspec.yaml`). Read `~/.supply-chain/projects/<project-slug>.md`. If it does not exist, read `~/.supply-chain/profile.md` (the user's defaults), run `references/project-detection.md` and create the memory from `templates/project-memory.template.md`. If the memory exists but has no *Project map*, run the minimal project scan of `references/project-detection.md` once and add it. Any private-layer file missing (`profile.md`, `preferences.md`, `subagents.md`, `projects.md`, `agent.md`) → create it from `templates/private-layer/` without asking.
 2. **Stack profile.** Read `stacks/<stack>.md` (L1: *Commands* + your department's section; L2+: full). Unknown stack → `stacks/generic.md`.
-3. **Architecture profile** (L2+). Read `architectures/<architecture>.md`. Unknown → ask once, record the answer in project memory.
+3. **Architecture profile** (L2+). Read `architectures/<architecture>.md`. Unknown → derive it from the project and generate the profile (`references/project-detection.md`); ask only if the code is ambiguous. Record it in project memory.
 4. **Learnings.** Read `~/.supply-chain/learnings/<department>.md` if it exists.
 5. **Tools.** Read `skill-registry.md` → your department section. Pick the skills/MCP whose *When* matches the task and whose *Level* ≤ current level. Missing provider → `references/skills.md`.
 6. **Brief.** Print before the first edit:

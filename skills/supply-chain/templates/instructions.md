@@ -31,7 +31,7 @@
 | skills, agent config, docs, this supply chain | `sc-devex` | skill-creator · references/skills.md |
 | unsure / first time in a project | `supply-chain` | references/project-detection.md |
 
-Levels: **L1** 1–2 known files → department + one procedure · **L2** feature or >2 files → + `supply-chain/references/protocol.md` + review · **L3** refactor/migration/new project → + `sc-architecture`, plan first, ADR. Docs for any library API not verified this session → `library-docs`. Never invent skill, tool or API names. `supply-chain/…` paths live in `<skills-dir>` (`~/.supply-chain/agent.md`).
+Levels: **L1** 1–2 known files → department + one procedure · **L2** feature or >2 files → + `supply-chain/references/protocol.md` + review · **L3** refactor/migration/new project → + `sc-architecture`, plan first, ADR. Official docs via `library-docs` (installed version): any API not verified this session, every L2+ task on framework features, and **always before retrying** a failed attempt or a request the user repeats. Never invent skill, tool or API names. `supply-chain/…` paths live in `<skills-dir>` (`~/.supply-chain/agent.md`).
 
 ## Self-filling memory `~/.supply-chain/` (never ask the user to fill it)
 

@@ -10,7 +10,7 @@ description: "Supply chain tool skill (docs.library), shared by every department
 ## Approach
 Training data ages; libraries do not wait. Before code leans on an API, this skill pins down which version the project really runs and asks a source that speaks for that version.
 - **Version first, question second.** The installed version decides the answer. A correct answer for the wrong major is a wrong answer.
-- **Most authoritative source wins.** A framework's own MCP beats a general docs index; a docs index beats web search; web search beats memory.
+- **Most authoritative source wins.** A framework's own MCP beats a general docs index; a docs index beats web search; web search beats memory. On the web, use the **official** site of the project (e.g. angular.dev, tailwindcss.com, docs.nestjs.com, supabase.com/docs, prisma.io/docs, postgresql.org/docs, react.dev) and its versioned pages; blogs, tutorials and Q&A sites only to locate the official page, never as the source.
 - **One concept per question.** Narrow queries return focused, citable snippets; broad ones return noise.
 - **Budget the lookups.** At most 3 docs calls per question. If three calls did not settle it, say what is still uncertain instead of guessing.
 - **Nothing private leaves the machine.** Queries carry API names and symptoms, never keys, tokens, connection strings, customer data or proprietary code.
@@ -20,6 +20,10 @@ Training data ages; libraries do not wait. Before code leans on an API, this ski
 - Before writing or changing code that calls a library API not verified in this session.
 - Setup, configuration, CLI flags, migration between versions, deprecations, breaking changes.
 - An error message that points at library behavior (wrong signature, removed option, changed default).
+- **Escalation — mandatory, even if the API "looks known":**
+  - L2+/L3 tasks that rely on framework or platform features (rendering, routing, forms, styling system, ORM, auth, realtime, database features), before the first edit;
+  - **after a failed attempt**, before trying again: re-read the official docs for the exact API and version instead of retrying variations;
+  - **the user asks for the same thing again** or says it still does not work ("sigue sin funcionar", "otra vez", "no quedó"): stop, consult official docs, re-diagnose, and record the cause in project memory → *Gotchas* so it is not repeated.
 - Skip it for general programming questions, business logic and code review that does not hinge on an API.
 
 ### Provider routing
