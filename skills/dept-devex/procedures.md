@@ -57,7 +57,7 @@ Loaded on demand from `SKILL.md` → *Procedures*. Read only the section the tas
 
 ### Settings, MCP and memory
 1. Settings, permissions, env vars: `update-config`; behavior questions: `claude-code-guide`.
-2. Load deferred tools via tool search first. Generic MCP servers (docs, memory) are global; a framework's server lives only in the projects that use that framework (agent's project-private scope; `../waymark/scripts/mcp-scope.mjs` plans and applies it after a yes). Never two copies of the same server at user and project scope.
+2. Load deferred tools via tool search first. Never move or remove the user's MCP servers. Generic servers (docs, memory) are available everywhere; a framework's server is blocked per project where that framework is not used (deny rule in the project's `.claude/settings.local.json`; `../waymark/scripts/mcp-fit.mjs` plans it and applies it after a yes).
 3. `engram`: `mem_search` before re-reading context; `mem_save` non-obvious decisions with what, why, where.
 
 ### Documentation (Diátaxis)

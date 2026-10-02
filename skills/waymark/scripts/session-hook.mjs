@@ -14,7 +14,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { frameworkOf, projectDeps, uses } from './mcp-scope.mjs';
+import { fitFor } from './mcp-fit.mjs';
 
 const HOME = process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark');
 const SCRIPTS = path.dirname(fileURLToPath(import.meta.url));
@@ -97,30 +97,22 @@ function foreignMarkers() {
   return found;
 }
 
-// Framework MCP servers (Claude Code): loaded here without being used, or used here but not registered.
-// Offered at most once a week per folder; mcp-scope.mjs does the change after the user's yes.
+// Framework MCP servers (Claude Code) this project does not use and that are not blocked here yet, or blocked
+// by Waymark but used now. Offered at most once a week per folder; mcp-fit.mjs applies it after the user's yes.
 function mcpFit(cwd) {
-  const cj = (() => { try { return JSON.parse(fs.readFileSync(process.env.WAYMARK_CLAUDE_JSON || path.join(os.homedir(), '.claude.json'), 'utf8')); } catch { return null; } })();
-  const hasManifest = ['package.json', 'Gemfile', 'pyproject.toml', 'requirements.txt', 'composer.json', 'pom.xml', 'build.gradle', 'pubspec.yaml', 'go.mod'].some((f) => fs.existsSync(path.join(cwd, f)));
-  if (!cj || !hasManifest) return '';
+  if (!fs.existsSync(process.env.WAYMARK_CLAUDE_JSON || path.join(os.homedir(), '.claude.json'))) return '';
   const stateFile = path.join(HOME, '.mcp-offer.json');
   let st = {};
   try { st = JSON.parse(fs.readFileSync(stateFile, 'utf8')); } catch {}
   if (st[norm(cwd)] && Date.now() - st[norm(cwd)] < 7 * 86400000) return '';
-  const deps = projectDeps(cwd);
-  const localKey = Object.keys(cj.projects || {}).find((k) => norm(k) === norm(cwd));
-  const local = cj.projects?.[localKey]?.mcpServers || {};
-  let catalog = {};
-  try { catalog = JSON.parse(fs.readFileSync(path.join(HOME, 'mcp-catalog.json'), 'utf8')); } catch {}
-  const idle = Object.keys(cj.mcpServers || {}).filter((n) => { const fw = frameworkOf(n); return fw && !uses(deps, fw); });
-  const missing = Object.keys({ ...catalog, ...(cj.mcpServers || {}) }).filter((n) => { const fw = frameworkOf(n); return fw && uses(deps, fw) && !local[n] && !cj.mcpServers?.[n]; });
-  if (!idle.length && !missing.length) return '';
+  const f = fitFor(cwd);
+  if (!f.add.length && !f.lift.length) return '';
   try { fs.mkdirSync(HOME, { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify({ ...st, [norm(cwd)]: Date.now() })); } catch {}
-  const script = path.join(SCRIPTS, 'mcp-scope.mjs').replace(/\\/g, '/');
+  const script = path.join(SCRIPTS, 'mcp-fit.mjs').replace(/\\/g, '/');
   const parts = [];
-  if (idle.length) parts.push(`${idle.join(', ')} load in every project but this one does not use their framework`);
-  if (missing.length) parts.push(`this project uses ${missing.join(', ')}'s framework but the server is not registered here`);
-  return `MCP fit: ${parts.join('; ')}. Offer once, with your choice window: show the plan (node "${script}"), then apply it on yes (--apply${missing.length && !idle.length ? ` --project "${cwd.replace(/\\/g, '/')}"` : ''}); it takes effect in the next session. Declined → do not ask again this week.`;
+  if (f.add.length) parts.push(`${f.add.map((a) => a.server).join(', ')} are visible here but this project does not use their framework`);
+  if (f.lift.length) parts.push(`${f.lift.map((l) => l.server).join(', ')} were blocked here and the project uses their framework now`);
+  return `MCP fit: ${parts.join('; ')}. Offer once, with your choice window: block/lift them for this project only (your servers stay registered; a deny rule in .claude/settings.local.json) — node "${script}" --project "${cwd.replace(/\\/g, '/')}" shows the plan, add --apply on yes; next session. Declined → do not ask again this week.`;
 }
 
 // Modes: waymark-leads | guest | skills-only (`other-leads` from 1.5.0 is read as guest).

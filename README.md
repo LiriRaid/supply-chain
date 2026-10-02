@@ -57,7 +57,7 @@ The bigger saving is not the size of each attempt but the **number of attempts**
 
 ### MCP servers only where their framework is used
 
-A framework's MCP server (Angular, PrimeNG, React, Vue, Tailwind, NestJS…) registered for every project costs context even in projects that never use it. `scripts/mcp-scope.mjs` reads each project's manifests and moves each framework server to the projects that use it (Claude Code local scope, through the official CLI, after your yes); docs and memory servers stay global. In a new project the session hook notices the mismatch and offers it once.
+Your MCP servers stay registered where you put them. In each project, `scripts/mcp-fit.mjs` reads its manifests and blocks (a deny rule in that project's private `.claude/settings.local.json`, after your yes) the framework servers it does not use: no Angular CLI or PrimeNG in a React app or a docs repo, no React docs in an Angular app. When the project adopts the framework the rule is lifted. Docs and memory servers are never blocked. In a new project the session hook notices and offers it once.
 
 ### Measure it
 
