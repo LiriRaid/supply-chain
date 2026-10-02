@@ -6,10 +6,10 @@
 //   with a broken script (twice). `# waymark:allow` in the command skips it.
 // - Recursive search through dependencies: `grep -r` / `find` over a folder holding node_modules without excluding
 //   it hung 120 s (four times). The Grep/Glob tools skip ignored folders.
-// - Edit without opener: a turn routed "Waymark → L1-L3" edits before writing "Pedido:" (the opener was skipped and
-//   files were created on the wrong layer). This one never denies: the transcript does not keep every reply text
-//   (text written after a thinking block in the same response is not persisted, checked on Claude Code 2.1.286), so
-//   it only adds a one-line note next to the edit. Memory and scratch files are exempt; L0 and Q turns have no opener.
+// - First L2+ edit with no mem_search yet (engram available): a one-line note, never a denial. Based on tool calls,
+//   which the transcript keeps reliably. (1.8.0 also noted a missing opener; removed in 1.9.0: reply text written after
+//   a thinking block is not persisted, so it fired on openers that were there — three false notes in one real task.)
+//   Memory and scratch files are exempt; L0 and Q turns are skipped.
 // Remove the hook from the agent's settings to disable it.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -56,7 +56,6 @@ export function checkEdit(file, lines) {
   const level = routedLevel(turn.texts);
   if (!level || level === 'Q') return null; // L0 (no routing line) or a question
   const notes = [];
-  if (!turn.texts.some((t) => /Pedido:/.test(t))) notes.push(`no opener found for this L${level} turn: if you skipped it, write "Pedido · Captura" and "Memoria · Reutiliza · Evidencia · Procedimiento" in your next text before more edits (if you wrote it, ignore this)`);
   // L2+: recall from engram before the first edit, when engram is available in this session.
   const engram = lines.some((d) => JSON.stringify(d.attachment || '').includes('mcp__engram__') || (d.message?.content || []).some?.((c) => c.type === 'tool_use' && c.name.startsWith('mcp__engram__')));
   const searched = lines.some((d) => (d.message?.content || []).some?.((c) => c.type === 'tool_use' && /mcp__engram__mem_(search|context)/.test(c.name)));

@@ -4,7 +4,9 @@
 // Cierre, and each claim must be backed by a tool call in the transcript (tool calls are persisted reliably; reply text
 // is not, so text is only read from the final reply, which the hook receives directly):
 // - Procedimiento naming a procedures.md section → that procedures.md was read or searched in this session;
-// - Tests "sin infra" → no spec/test file next to the changed files;
+// - Tests "sin infra" → no spec/test file next to the changed files; a spec next to the changed code → a Tests field at
+//   any level (bug fixes get a regression spec); "rojo→verde" → a spec edited and a test command run this turn;
+// - a failure called pre-existing → "copia limpia" (git worktree of HEAD) or "no comprobado" in the Cierre;
 // - L2+ with UI files changed → a real browser attempt this turn (browser-verify, run, or a browser tool);
 // - L2+ with code changed → code-review ran this turn (docs/config-only changes are exempt);
 // - engram "guardado" → a mem_save/mem_update call this turn;
@@ -96,6 +98,19 @@ export function checkCierre(turn, last, allTools = turn.tools, prompts = [turn.p
     if (spec) missing.push(`Tests says "sin infra" but ${spec} exists next to the changed files: add or extend a spec there (red → green), or say why it cannot cover this change`);
   }
   const code = changed.filter((f) => !NOT_CODE.test(f));
+  // A spec next to the changed code means the change can be tested, at any level (a bug fix gets a regression spec).
+  const near = code.length ? specsNear(code) : null;
+  if (near && !skip.Tests && !/Tests:/.test(reply)) missing.push(`${near} sits next to the changed code: add a regression spec (red → green) and a Tests: field, or Tests: no (<why it cannot cover this>)`);
+  if (/Tests:\s*rojo→verde/i.test(reply)) {
+    const specEdited = turn.tools.some((t) => EDITS.test(t.name) && SPEC.test(path.basename(fileOf(t))));
+    const testRun = turn.tools.some((t) => /^(Bash|PowerShell)$/.test(t.name) && /\b(test|tests|vitest|jest|karma|mocha|pytest|rspec|go test|dotnet test|mvn test|gradle test)\b/i.test(String(t.input.command || '')));
+    if (!specEdited || !testRun) missing.push(`Tests says rojo→verde but this turn ${!specEdited ? 'edited no spec/test file' : ''}${!specEdited && !testRun ? ' and ' : ''}${!testRun ? 'ran no test command' : ''}: write the spec, run it red then green, and quote the result`);
+  }
+  // "Pre-existing" failures need the clean-copy proof or an explicit "no comprobado".
+  const gates = reply.split('\n').filter((l) => /Gates:/.test(l)).join(' ');
+  if (/(error|falla|fallo|rojo|fail|warning)/i.test(gates) && /(pre-?existente|preexist|pre-existing|ya (fallaba|exist[ií]a)|en c[oó]digo que no cambi)/i.test(gates) && !/(copia limpia|worktree|no comprobado)/i.test(reply)) {
+    missing.push('the Cierre calls a failure pre-existing without proof: rerun it in a clean copy of HEAD (git worktree add <tmp> HEAD) and write "comprobado en copia limpia de HEAD", or write "previo: no comprobado (<why>)"');
+  }
   if (level >= 2 && !skip.Navegador && changed.some((f) => UI.test(f))) {
     const tried = skillCalled(turn.tools, /^(browser-verify|run)$/) || turn.tools.some((t) => /browser|playwright|chrome/i.test(t.name));
     if (!tried) missing.push('UI files changed but no browser attempt this turn: run browser-verify (or run) now; if it cannot reach the page, write Navegador: no (<what failed>; check: <one line for the user>)');
