@@ -31,9 +31,9 @@ try { mode = fs.readFileSync(path.join(HOME, 'coexistence.md'), 'utf8').match(/^
 // guest / skills-only (and 1.5.0's other-leads): the orchestrator owns the turn, so no reminder at all.
 const full =
   'Waymark Rule 0 — first text: "Waymark → L<n>|Q · <dept> · skills: …"; first tool call: the owner dept-* skill. ' +
-  'Before the first edit: "Pedido · Captura" (the ask; what each image marks) then "Memoria · Reutiliza · Evidencia · Procedimiento" (memory digest injected at session start: pointers, verify in code; obey Environment). ' +
-  'Close changes with "## Cierre" (Gates after the last edit · Aprendido · engram; L2+: Tests · Navegador · Review). User\'s language. Only L0 skips.';
-const short = 'Waymark Rule 0 as in your last reply: routing line + owner dept-* skill first; opener before the first edit; "## Cierre" after changes.';
+  'Before the first edit: "Pedido · Captura" (the ask; what each image marks; "like X" → Copia: only what was named) then "Memoria · Reutiliza · Evidencia · Procedimiento" (memory digest injected at session start: pointers, verify in code; obey Environment). ' +
+  'Close changes with "## Cierre" (Gates after the last edit · Aprendido = your rewritten Work in progress line · engram; L2+: Tests · Navegador = browser-verify tried · Review = code-review or why not). Independent tool calls in one response. User\'s language. Only L0 skips.';
+const short = 'Waymark Rule 0 as in your last reply: routing line + owner dept-* skill first; opener before the first edit; "## Cierre" after changes. Independent tool calls in one response.';
 const coexist = ' Coexistence: follow the injected Adopted/Fallback/Resolved rules; never edit the other framework\'s files.';
 const silent = ['guest', 'other-leads', 'skills-only'].includes(mode);
 
