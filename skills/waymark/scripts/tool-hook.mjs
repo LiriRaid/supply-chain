@@ -52,8 +52,14 @@ export function checkEdit(file, lines) {
   if (!turn.found) return null;
   const level = routedLevel(turn.texts);
   if (!level || level === 'Q') return null; // L0 (no routing line) or a question
-  if (turn.texts.some((t) => /Pedido:/.test(t))) return null;
-  return `Waymark: no opener found for this L${level} turn. If you skipped it, write "Pedido · Captura" and "Memoria · Reutiliza · Evidencia · Procedimiento" in your next text before more edits; if you wrote it, ignore this note.`;
+  const notes = [];
+  if (!turn.texts.some((t) => /Pedido:/.test(t))) notes.push(`no opener found for this L${level} turn: if you skipped it, write "Pedido · Captura" and "Memoria · Reutiliza · Evidencia · Procedimiento" in your next text before more edits (if you wrote it, ignore this)`);
+  // L2+: recall from engram before the first edit, when engram is available in this session.
+  const engram = lines.some((d) => JSON.stringify(d.attachment || '').includes('mcp__engram__') || (d.message?.content || []).some?.((c) => c.type === 'tool_use' && c.name.startsWith('mcp__engram__')));
+  const searched = lines.some((d) => (d.message?.content || []).some?.((c) => c.type === 'tool_use' && /mcp__engram__mem_(search|context)/.test(c.name)));
+  const firstEdit = !turn.tools.some((t) => /^(Edit|Write|MultiEdit|NotebookEdit)$/.test(t.name) && !exempt(t.input.file_path || t.input.notebook_path));
+  if (level >= 2 && engram && !searched && firstEdit) notes.push('L2+ and no mem_search yet in this session: run mem_search with the task\'s key terms before this edit (past decisions, rejected paths)');
+  return notes.length ? `Waymark: ${notes.join('; ')}.` : null;
 }
 
 // → { deny: reason } for commands, { note: text } for edits, or null.

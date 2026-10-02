@@ -36,6 +36,8 @@ export function currentTurn(lines) {
   while (i >= 0 && !isPrompt(lines[i])) i--;
   const texts = [], tools = [];
   for (const d of lines.slice(i + 1)) {
+    const cmd = d.type === 'user' && promptText(d).match(/<command-name>\/?([^<\s]+)<\/command-name>/)?.[1];
+    if (cmd) tools.push({ name: 'Skill', input: { skill: cmd, slash: true } }); // a slash command typed in the turn
     if (d.type !== 'assistant' || d.isSidechain) continue;
     for (const c of d.message?.content || []) {
       if (c.type === 'text' && c.text.trim()) texts.push(c.text);
