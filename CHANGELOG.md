@@ -2,7 +2,7 @@
 
 The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version is published the agent offers the update; you can also say *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"* (INSTALL §9).
 
-## 1.9.0 (in progress, `develop`) — evidence labels that match what happened
+## 1.9.0 — evidence labels that match what happened
 Ninth real test (1.8.0, an L1 bug in a real project: 1 attempt, no hallucinations, ~3% of the quota) still showed fields claiming more than was done, and two Waymark bugs:
 - **Fix: no more false "no opener" notes.** The pre-edit opener note (1.8.0) fired three times in one task with the opener written: Claude Code does not persist reply text written after a thinking block. Removed; the `mem_search` note stays (tool calls are reliable).
 - **Fix: `measure.mjs`** merges a prompt that got no response (recorded twice, or resent before any answer) into the next one, so it no longer counts as an attempt.
