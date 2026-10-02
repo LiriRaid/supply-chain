@@ -1,6 +1,6 @@
 ---
 name: dept-<department>
-description: "Waymark · <Department name> department. Use FIRST, before any tool skill, whenever the user asks <what this department owns, with concrete phrases in the user's language and English>. Loads the department rules (what, why, where, how) and decides which skills and MCP servers to use. Not for trivial edits."
+description: "Waymark · <Department name> department. Use FIRST, before any tool skill, for <what it owns>: <4–10 concrete phrases in the user's language plus key English terms>. <Not for … when confusion is likely.> (≤ ~300 characters)"
 ---
 
 # <Department name>

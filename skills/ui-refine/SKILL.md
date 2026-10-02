@@ -1,6 +1,6 @@
 ---
 name: ui-refine
-description: "Waymark tool skill (ui.refine), owned by dept-ux-ui. Use to improve existing interface through explicit modes: critique, polish, simplify, clarify, harden, adapt, animate, boldify or quieten: \"mejora esta pantalla\", \"se ve feo\", \"pulir detalles\", \"hazlo más limpio\", \"agrega animaciones\", \"transiciones\", \"microinteracciones\", \"no se adapta al móvil\", \"revisa la UX\". Load dept-ux-ui first if it is not loaded. Preserves behavior that was not asked to change. Not for building new UI from scratch (use ui-build)."
+description: "Waymark tool (ui.refine), owner dept-ux-ui. Improve existing UI by mode (critique, polish, simplify, harden, adapt, animate…): \"mejora esta pantalla\", \"pulir detalles\", \"hazlo más limpio\", \"agrega animaciones\", \"no se adapta al móvil\". Not new UI (ui-build)."
 ---
 
 # UI Refine

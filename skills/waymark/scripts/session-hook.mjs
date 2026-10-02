@@ -8,6 +8,7 @@
 // install back when the listed framework's markers are gone. In guest mode this hook is normally not registered.
 // It also notices when skill folders changed (this agent's, other agents', the project's) and refreshes
 // skill-registry.md in the background with sync.mjs, so third-party skills are usable without a manual sync.
+// Skill fit: offers (monthly) to list only the names of skills the user never invokes (skill-fit.mjs).
 // It never blocks. Remove it from the agent's settings to disable it.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -115,6 +116,26 @@ function mcpFit(cwd) {
   return `MCP fit: ${parts.join('; ')}. Offer once, with your choice window: block/lift them for this project only (your servers stay registered; a deny rule in .claude/settings.local.json) — node "${script}" --project "${cwd.replace(/\\/g, '/')}" shows the plan, add --apply on yes; next session. Declined → do not ask again this week.`;
 }
 
+// Skills the user never invokes that are still listed in every session (Claude Code). The plan is computed in the
+// background by skill-fit.mjs --cache (weekly) and offered at most once every 30 days; applied after the user's yes.
+function skillFit() {
+  if (!fs.existsSync(process.env.WAYMARK_CLAUDE_PROJECTS || path.join(os.homedir(), '.claude', 'projects'))) return '';
+  const cache = (() => { try { return JSON.parse(fs.readFileSync(path.join(HOME, '.skill-fit-plan.json'), 'utf8')); } catch { return null; } })();
+  if ((!cache || Date.now() - cache.at > 7 * 86400000) && !process.env.WAYMARK_NO_SYNC) {
+    try { spawn(process.execPath, [path.join(SCRIPTS, 'skill-fit.mjs'), '--cache'], { detached: true, stdio: 'ignore', windowsHide: true }).unref(); } catch {}
+  }
+  const n = (cache?.skills?.length || 0) + (cache?.plugins?.length || 0);
+  if (!cache || cache.skipped || !n) return '';
+  const offerFile = path.join(HOME, '.skill-offer.json');
+  let st = {};
+  try { st = JSON.parse(fs.readFileSync(offerFile, 'utf8')); } catch {}
+  if (st.at && Date.now() - st.at < 30 * 86400000) return '';
+  try { fs.mkdirSync(HOME, { recursive: true }); fs.writeFileSync(offerFile, JSON.stringify({ at: Date.now() })); } catch {}
+  const tokens = Math.round(([...(cache.skills || []), ...(cache.plugins || [])].reduce((a, x) => a + (x.chars || 0), 0)) / 4);
+  const script = path.join(SCRIPTS, 'skill-fit.mjs').replace(/\\/g, '/');
+  return `Skill fit: ${n} skills/plugins were not used in ${cache.days} days but are listed in every session (~${tokens} tokens per session in total). Offer once, with your choice window: list only their names (still invocable) / disable unused plugins — node "${script}" shows the plan, add --apply on yes (--restore undoes it); next session. Declined → do not ask again this month.`;
+}
+
 // Modes: waymark-leads | guest | skills-only (`other-leads` from 1.5.0 is read as guest).
 function coexistence() {
   const text = '\n' + read(path.join(HOME, 'coexistence.md'));
@@ -162,6 +183,7 @@ const emit = () => {
   if (text.length > MAX) text = text.slice(0, MAX) + '…';
   try { const s = skillsChanged(cwd); if (s) text += '\n' + s; } catch {}
   try { const m = mcpFit(cwd); if (m) text += '\n' + m; } catch {}
+  try { const s = skillFit(); if (s) text += '\n' + s; } catch {}
   let coexist = '';
   try { coexist = coexistence(); } catch {}
   if (coexist) text = (text ? text + '\n' : '') + coexist;

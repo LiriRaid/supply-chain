@@ -1,6 +1,6 @@
 ---
 name: dept-qa
-description: "Waymark · Quality Assurance & Testing department. Use FIRST, before browser-verify or code-review, for tests, verification and the Definition of Done in any stack: \"escribe tests\", \"agrega pruebas\", \"hay un bug\", \"no funciona\", \"regresión\", \"cobertura\", \"revisa mi código\", \"verifica que funcione\", unit, integration, e2e, TDD, code review. Also the supporting department that closes every L1+ task (Exit protocol). Loads the QA rules and decides which skills and MCP servers to use."
+description: "Waymark · QA department. Use FIRST, before browser-verify or code-review, for tests and verification: \"escribe tests\", \"hay un bug\", \"no funciona\", \"regresión\", \"cobertura\", \"revisa mi código\", \"verifica que funcione\", unit, e2e, TDD. Closes every L1+ task."
 ---
 
 # Quality Assurance & Testing

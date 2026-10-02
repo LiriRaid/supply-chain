@@ -1,6 +1,6 @@
 ---
 name: dept-product
-description: "Waymark · Product Management department. Use FIRST when a request is an idea to turn into scoped, testable work, before any implementation department: \"quiero un feature de…\", \"necesito que la app haga…\", \"historia de usuario\", \"criterios de aceptación\", \"alcance\", \"desglosa esto\", \"MVP\", \"roadmap\", \"qué debería incluir\", requirements, user stories, planning, prioritization. Loads the product rules (what, why, for whom, how to verify) and decides which skills and agents to use. Not for trivial edits."
+description: "Waymark · Product department. Use FIRST when an idea must become scoped, testable work: \"quiero un feature de…\", \"necesito que la app haga…\", \"historia de usuario\", \"criterios de aceptación\", \"alcance\", \"desglosa esto\", \"MVP\", \"roadmap\"."
 ---
 
 # Product Management

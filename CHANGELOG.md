@@ -2,6 +2,15 @@
 
 The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version is published the agent offers the update; you can also say *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"* (INSTALL §9).
 
+## 1.7.0 (in progress, `develop`) — fewer tokens per session and per prompt
+Measured in a real 500k-token session: resuming it after an hour idle cost 502k tokens of cache writes (8% of a 5-hour quota) for a one-line message; the Rule 0 reminder was re-sent in full on every prompt; the skill listing (Waymark's and the user's unused ones) is paid in every session.
+- **Resume guard** (`rule0-hook.mjs`): reads the session transcript; with ≥ 150k tokens of context and ≥ 60 min idle (the prompt cache expired), it stops that one prompt (0 tokens; the user sees why) and suggests a new session or `/compact`; resending continues. `WAYMARK_RESUME_TOKENS` / `WAYMARK_RESUME_MINUTES` (0 = off).
+- **Adaptive reminder:** the full Rule 0 reminder (~120 tokens) only when the last reply did not open with `Waymark →`; otherwise one line (~35).
+- **Shorter triggers:** the 17 Waymark descriptions went from 8,558 to 4,407 characters (~1,000 tokens per session); procedural notes moved to the bodies they already lived in; templates and the devex procedure cap them at ~300 characters.
+- **Skill fit** (`skill-fit.mjs`, Claude Code): skills you added (claude.ai synced, `~/.claude/skills`) with no invocation in 30 days → `skillOverrides: "name-only"` (still invocable); plugins with no skill used → `enabledPlugins: false`. Plan by default, `--apply` after a yes, `--restore`; never Waymark's skills, `skill-map.json` providers or bundled skills; needs 14 days of history. The session hook computes it in the background and offers it at most once a month. Verified: `name-only` drops a synced skill's description from the listing.
+- **Token economy** (`protocol.md`): small tool outputs, sub-agents are not free, `/compact` is safe with L3 checkpoints, new session over resuming a large idle one.
+- **`measure.mjs`:** new *Ctx* column, the context each prompt started with, to see growth per prompt.
+
 ## 1.6.0 — guest mode, third-party skills, one attempt per task (measured)
 Changes accumulate on `develop` and reach `main` in one release, so installs see one update notice per release instead of one per change.
 

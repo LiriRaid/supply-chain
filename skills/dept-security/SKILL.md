@@ -1,6 +1,6 @@
 ---
 name: dept-security
-description: "Waymark · Security / DevSecOps department. Use FIRST for authentication, authorization, secrets, input validation and dependency risk: \"login\", \"permisos\", \"roles\", \"JWT\", \"proteger una ruta\", \"CORS\", \"CSRF\", \"variables de entorno\", \"API key\", \"vulnerabilidad\", \"auditoría de dependencias\", RLS, OWASP, encryption. Also the supporting department whenever a feature touches user data or auth. Loads the security rules and decides which skills and MCP servers to use."
+description: "Waymark · Security department. Use FIRST for auth, secrets and risk: \"login\", \"permisos\", \"roles\", \"JWT\", \"proteger una ruta\", \"CORS\", \"CSRF\", \"variables de entorno\", \"API key\", \"vulnerabilidad\", \"auditoría de dependencias\", RLS, OWASP. Supports any task touching user data."
 ---
 
 # Security / DevSecOps

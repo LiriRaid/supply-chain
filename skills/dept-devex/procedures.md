@@ -10,7 +10,7 @@ Loaded on demand from `SKILL.md` → *Procedures*. Read only the section the tas
 - `~/.waymark/` — private layer, self-filling (templates in `../waymark/templates/private-layer/`): `agent.md`, `profile.md`, `preferences.md`, `subagents.md`, `projects.md`, `learnings/`, `projects/`, and `coexistence.md` only when another agent framework is installed (`../waymark/references/coexistence.md`). Never shared or published.
 - `<project>/<project-skills-dir>/<slug>-<topic>/` — project skills. `<skills-dir>` / `<project-skills-dir>` per agent: `~/.waymark/agent.md`.
 - As a plugin, names are prefixed (`waymark:dept-qa`); use the form the session lists.
-- Enforcement: description triggers + the instructions block (Rule 0) + the per-prompt Rule 0 reminder hook (`scripts/rule0-hook.mjs`) where the agent supports hooks. The hook only reminds; it never blocks or orchestrates.
+- Enforcement: description triggers + the instructions block (Rule 0) + the per-prompt Rule 0 reminder hook (`scripts/rule0-hook.mjs`) where the agent supports hooks. The hook reminds (one line once the last reply followed the routine) and, once, stops a costly resume of a large idle session; it never orchestrates.
 
 ### Write a trigger description (any skill)
 1. Single line, double-quoted, inner quotes escaped as `\"`.
@@ -18,7 +18,8 @@ Loaded on demand from `SKILL.md` → *Procedures*. Read only the section the tas
 3. List concrete phrases the user actually types, in the user's language (Spanish here) plus key English terms.
 4. Say what it is not for when confusion is likely (e.g. L0 edits).
 5. Avoid generic words ("code", "help"): they cause false triggers or misses.
-6. Test: a fresh prompt with one listed phrase must load the skill; an unrelated prompt must not.
+6. **≤ ~300 characters.** Every description is listed in every session; procedural notes ("load X first", "decides which skills to use") belong in the body. The 17 Waymark descriptions went from 8,558 to 4,407 characters in 1.7.0 (~1,000 tokens per session).
+7. Test: a fresh prompt with one listed phrase must load the skill; an unrelated prompt must not.
 
 ### Registry: skill-map.json + sync
 1. Edit only `../waymark/skill-map.json` (`skills` or `mcp`): `type`, `departments`, `capability`, `when`, `level`, `source`, optional `patch` (department whose precondition is injected), optional `stack`.

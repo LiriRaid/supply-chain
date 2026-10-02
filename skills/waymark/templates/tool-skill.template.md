@@ -1,6 +1,6 @@
 ---
 name: <capability-name>
-description: "Waymark tool skill (<capability>), owned by <dept-department>. Use when <concrete situations and phrases, English + Spanish>. Load <dept-department> first if it is not loaded. Works in any stack through the stack profile. Not for <what it is not for>."
+description: "Waymark tool (<capability>), owner <dept-department>. <What it does>: <concrete phrases, user's language + English>. Not for <what it is not for> (<the right skill>). (≤ ~300 characters)"
 ---
 
 # <Tool name>

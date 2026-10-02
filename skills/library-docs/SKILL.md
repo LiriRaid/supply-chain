@@ -1,6 +1,6 @@
 ---
 name: library-docs
-description: "Waymark tool skill (docs.library), shared by every department. Use before writing or changing code that depends on a library or framework API you have not verified in this session, and for setup, configuration, migration or version questions: \"cómo se usa\", \"cuál es la API de\", \"documentación de\", \"migrar a la versión\", \"configurar\", \"documentación oficial\", \"sigue sin funcionar\", any framework, library, ORM, database or CLI. Routes to the docs MCP servers the user has connected (a framework or vendor MCP first, then a general docs index), else the official site, always for the installed version."
+description: "Waymark tool (docs.library), any department. Use before code that relies on a library/framework API not verified this session, and for setup, config or migration: \"cómo se usa\", \"documentación de\", \"migrar a la versión\", \"sigue sin funcionar\". Docs MCP first, else official site."
 ---
 
 # Library Docs

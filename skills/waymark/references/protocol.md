@@ -30,6 +30,15 @@ Long tasks fail when the conversation is compacted and the agent loses what was 
 4. After a compaction or a new session, the session hook re-injects the entry: resume from `▶`, re-run its gate before continuing.
 5. Delegate only broad searches (an exploration agent returns the conclusion, not files); the main agent keeps the plan and the edits.
 
+## Token economy
+
+Every response re-reads the whole context, so what enters it is paid again on each later step (`measure.mjs` → *Ctx* column shows the growth per prompt):
+1. **Small tool outputs.** Ask for the part you need: `head`/`tail`, `grep -n` with `-m`, line ranges when reading, `git diff --stat` before the full diff, `--json` + a filter instead of whole dumps. Never print a log, lockfile or build output in full.
+2. **Sub-agents are not free.** Each one re-reads its own context on every step (measured: one broad research task cost 6.5M sub-agent tokens). Use one only for a broad search whose conclusion is all you need; read known files yourself.
+3. **`/compact` is safe mid-task** once the plan and its state are in *Work in progress* (L3 checkpoints above): the session hook re-injects them.
+4. **A large idle session is expensive to resume.** After about an hour without messages the prompt cache expires and the next message re-writes the whole context as new input (measured: 502k tokens for one line). The Rule 0 hook stops that first message once and suggests a new session; project memory carries over.
+5. **Unused listings cost every session:** `skill-fit.mjs` (skills never invoked) and `mcp-fit.mjs` (framework servers a project does not use); the session hook offers both.
+
 ## Hand-off between departments
 
 When a task moves to another department (each department's *Hand-offs* says when), pass one line in this form, so the next one starts from facts instead of re-reading:

@@ -1,6 +1,6 @@
 ---
 name: waymark
-description: "Waymark core for software work in any stack, framework or language. Use when unsure which department owns a task (\"qué departamento aplica\", \"usa waymark\"), the first time in a project or a new project from scratch (\"arranca el proyecto\"), to create or install a missing skill (\"crea una skill\", \"no hay skill para esto\"), to record learnings, or to sync the skill registry. Departments (dept-frontend, dept-backend, dept-data, dept-security, dept-qa, dept-devops, dept-architecture, dept-ux-ui, dept-product, dept-devex) point here only when needed. Not for trivial edits such as a color, a text or a single value."
+description: "Waymark core. Use when unsure which department owns a task (\"qué departamento aplica\", \"usa waymark\"), for a new project or the first time in one (\"arranca el proyecto\"), a missing skill (\"no hay skill para esto\"), recording learnings or syncing the skill registry. Not for trivial edits."
 ---
 
 # Waymark — core

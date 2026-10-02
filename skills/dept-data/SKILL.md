@@ -1,6 +1,6 @@
 ---
 name: dept-data
-description: "Waymark · Data Engineering & State department. Use FIRST for schema, migrations, queries, indexes, caching, data models and client-side state in any stack: \"migración\", \"nueva tabla\", \"columna\", \"índice\", \"consulta lenta\", \"N+1\", \"cache\", \"Redis\", \"modelo\", \"store\", \"estado global\", \"persistencia\", database, SQL, ORM, seed. Loads the data rules and decides which skills and MCP servers to use. Not for trivial edits."
+description: "Waymark · Data & State department. Use FIRST for schema, queries and state: \"migración\", \"nueva tabla\", \"columna\", \"índice\", \"consulta lenta\", \"N+1\", \"cache\", \"Redis\", \"modelo\", \"store\", \"estado global\", SQL, ORM, seed."
 ---
 
 # Data Engineering & State Management

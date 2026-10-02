@@ -1,6 +1,6 @@
 ---
 name: dept-backend
-description: "Waymark · Backend Engineering department. Use FIRST whenever the user asks to build or change server-side code in any language or framework: \"crear un endpoint\", \"nueva API\", \"webhook\", \"servicio\", \"job en background\", \"cola\", \"canal en tiempo real\", \"websocket\", \"integración con un proveedor\", controller, service, REST, GraphQL, worker, cron, realtime. Loads the backend rules (what, why, where, how) and decides which skills and MCP servers to use. Not for trivial edits."
+description: "Waymark · Backend department. Use FIRST to build or change server-side code: \"crear un endpoint\", \"nueva API\", \"webhook\", \"servicio\", \"job en background\", \"cola\", \"websocket\", \"integración con un proveedor\", REST, GraphQL, worker, cron, realtime."
 ---
 
 # Backend Engineering
