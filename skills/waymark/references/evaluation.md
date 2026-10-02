@@ -20,7 +20,8 @@ When the user says **"evalúa tu trabajo"** (or "evalúa tu trabajo con evaluati
 | Skills | the department's Tools used where they apply: `library-docs` (or the installed package source) for every API not verified this session; at L2+ with UI changes a real `browser-verify`/`run` attempt; at L2+ with code changes `code-review` on the task's files | Skill calls and their arguments |
 | Verificar | the project's gates after the last edit: typecheck/lint (L1), + tests and build (L2+); "pre-existing failure" proven in a clean copy of HEAD (or "no comprobado (sin permiso …)"), never by stashing the user's changes; "sin infra" only when no spec exists next to the changed files | commands and real output |
 | Aprender | *Work in progress* rewritten as `decision ← evidence`; *Solved problems* for a bug that took more than one attempt; memory the code contradicted fixed; `engram: guardado` only with a `mem_save` in that turn | files written; `mem_save` calls |
-| Cierre | `## Cierre` with every field for the level, each backed by a call | last reply |
+| Decisión | L2/L3: 2–3 options (files, risk, cost) in the choice window before the first edit, and the user's pick followed; or `del usuario ("…")` / `única (<why>)` when true | AskUserQuestion call and answer; first edit after it |
+| Cierre | `## Cierre · <task ID>` with every field for the level, each backed by a call; the task's line in `~/.waymark/provenance/<slug>.jsonl` with no `unresolved` claims | last reply; provenance log |
 
 Hooks run some of these checks themselves (resume guard, pre-tool checks, end-of-turn Cierre check). Report when one fired and whether the agent fixed the cause or only reworded the field.
 

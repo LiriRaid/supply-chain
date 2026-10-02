@@ -10,12 +10,16 @@
 //   which the transcript keeps reliably. (1.8.0 also noted a missing opener; removed in 1.9.0: reply text written after
 //   a thinking block is not persisted, so it fired on openers that were there — three false notes in one real task.)
 //   Memory and scratch files are exempt; L0 and Q turns are skipped.
+// - Decision gate (2.0, docs/adr/0001-provenance-chain.md): the first L2+ project edit of a prompt is denied once when
+//   the task has no choice-window question (AskUserQuestion) yet; the retry passes, for a single real option or a
+//   choice the user already wrote, which the Cierre then states (`Decisión: única (…)` / `del usuario ("…")`).
 // Remove the hook from the agent's settings to disable it.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { readTail, currentTurn, routedLevel } from './transcript.mjs';
+import { taskLines, askedChoice } from './provenance.mjs';
 
 const INLINE = /\bnode(?:\.exe)?["']?\s+(?:--[\w-]+(?:=\S+)?\s+)*(?:-e|--eval|-p|--print)\b/;
 const FRAGILE = /`|\$\{|\\[dDsSwWbB.\/()[\]{}|+*?^$nrt]/;
@@ -64,13 +68,33 @@ export function checkEdit(file, lines) {
   return notes.length ? `Waymark: ${notes.join('; ')}.` : null;
 }
 
-// → { deny: reason } for commands, { note: text } for edits, or null.
+// Decision gate: deny once per prompt (state keyed by session + prompt uuid), never for L0/L1/Q or exempt files.
+export function checkDecision(file, lines, session = 'unknown', stateFile = path.join(process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark'), '.decision-gate.json')) {
+  if (!file || exempt(file)) return null;
+  const turn = currentTurn(lines);
+  const level = routedLevel(turn.texts);
+  if (!turn.found || !(level >= 2) || askedChoice(taskLines(lines))) return null;
+  let seen = {};
+  try { seen = JSON.parse(fs.readFileSync(stateFile, 'utf8')); } catch {}
+  const key = `${session}:${turn.uuid || turn.prompt.slice(0, 80)}`;
+  if (seen[key]) return null;
+  for (const [k, at] of Object.entries(seen)) if (Date.now() - at > 7 * 86400000) delete seen[k];
+  seen[key] = Date.now();
+  try { fs.mkdirSync(path.dirname(stateFile), { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify(seen)); } catch { return null; } // no state → never deny (it could repeat)
+  return `Waymark: L${level} decision gate — before the first edit, give the user 2–3 options with your choice window (AskUserQuestion): for each one the files it touches, the risk and the cost; recommended first. Then do what the user picks. ` +
+    'If the user already chose in their message, or there is only one real option, retry this edit (this gate fires once per prompt) and write in the Cierre `Decisión: del usuario ("<their words>")` or `Decisión: única (<why>)`.';
+}
+
+// → { deny: reason } for commands and the decision gate, { note: text } for edits, or null.
 async function main(input) {
   const h = JSON.parse(input);
   const tool = h.tool_name || '';
   if (/^(Bash|PowerShell)$/.test(tool)) { const deny = checkCommand(h.tool_input?.command, h.cwd || process.cwd()); return deny ? { deny } : null; }
   if (/^(Edit|Write|MultiEdit|NotebookEdit)$/.test(tool)) {
-    const note = checkEdit(h.tool_input?.file_path || h.tool_input?.notebook_path, readTail(h.transcript_path, 512 * 1024));
+    const file = h.tool_input?.file_path || h.tool_input?.notebook_path, lines = readTail(h.transcript_path, 2 * 1024 * 1024);
+    const deny = checkDecision(file, lines, h.session_id);
+    if (deny) return { deny };
+    const note = checkEdit(file, lines);
     return note ? { note } : null;
   }
   return null;

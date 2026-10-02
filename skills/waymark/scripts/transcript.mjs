@@ -27,7 +27,8 @@ export const isPrompt = (d) => {
   const c = d.message?.content;
   if (Array.isArray(c) && c.some((x) => x.type === 'tool_result')) return false;
   const text = promptText(d);
-  return !!text.trim() && !/^\s*<(local-command|command-|system-reminder|task-notification)/.test(text) && !/^\[Request interrupted/.test(text);
+  // A Stop-hook block reason fed back to the agent is not the user's prompt (the blocked turn's edits stay in its turn).
+  return !!text.trim() && !/^\s*<(local-command|command-|system-reminder|task-notification)/.test(text) && !/^\[Request interrupted/.test(text) && !/^\s*(Stop hook feedback|Waymark: this L)/.test(text);
 };
 
 // The current turn: everything after the last prompt. Returns its assistant texts and tool calls (main agent only).
@@ -44,7 +45,7 @@ export function currentTurn(lines) {
       if (c.type === 'tool_use') tools.push({ name: c.name, input: c.input || {} });
     }
   }
-  return { found: i >= 0, prompt: i >= 0 ? promptText(lines[i]) : '', texts, tools };
+  return { found: i >= 0, prompt: i >= 0 ? promptText(lines[i]) : '', uuid: i >= 0 ? lines[i].uuid || '' : '', texts, tools };
 }
 
 // Context size and time of the last main-agent response, and whether the last answered turn opened with "Waymark →".

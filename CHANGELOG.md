@@ -2,6 +2,15 @@
 
 The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version is published the agent offers the update; you can also say *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"* (INSTALL §9).
 
+## 2.0.0 (in progress) — provenance chain of the agent's work
+Every task now leaves a record of what was asked, what the user chose, what was proven and how it ended, under an honest name: the provenance of the agent's work, not of dependencies (`docs/adr/0001-provenance-chain.md`). Step 1 of 4:
+- **Task ID** `YYYY-MM-DD · T<n>[a-z]`: the per-prompt hook offers the ID for a new task and for a follow-up of the last one (~25 tokens); the Cierre heading carries it (`## Cierre · 2026-10-02 · T3`).
+- **Decision gate (L2/L3):** before the first edit, 2–3 options in the choice window (files, risk, cost; recommended first) and the user picks. The pre-tool hook denies the first L2+ edit of a prompt once when nothing was asked; the retry passes for a single real option (`Decisión: única (<why>)`) or a choice the user already wrote (`del usuario ("<their words>")`).
+- **The Cierre is the provenance record:** new `Resultado:` (hecho | parcial | bloqueado) at every level and `Decisión: elegida … · descartadas …` at L2+, checked by the end-of-turn hook against the choice-window answer or the user's words.
+- **Provenance log:** the end-of-turn hook appends each closed task to `~/.waymark/provenance/<slug>.jsonl` with what the transcript proves (prompt, options and answer, files, commands, skills), the Cierre text and the claims it could not back (`unresolved`). Step 2 moves it into the project.
+- **Hook tests in the repo:** `node --test tests/*.test.mjs` (no dependencies, temporary `WAYMARK_HOME`).
+- **Fix:** `protocol.md` → *Closing report* was an empty, unclosed code block that turned *When stuck* into code; it now shows a full Cierre and the decision gate.
+
 ## 1.9.0 — evidence labels that match what happened
 Ninth real test (1.8.0, an L1 bug in a real project: 1 attempt, no hallucinations, ~3% of the quota) still showed fields claiming more than was done, and two Waymark bugs:
 - **Fix: no more false "no opener" notes.** The pre-edit opener note (1.8.0) fired three times in one task with the opener written: Claude Code does not persist reply text written after a thinking block. Removed; the `mem_search` note stays (tool calls are reliable).

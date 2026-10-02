@@ -54,9 +54,14 @@ The receiving department checks the evidence it relies on (memory and hand-offs 
 3. **Review** (L2+) — `code-review` skill on the diff. L3 — also `simplify` and, if security-relevant, `security-review`.
 4. **Department DoD** — tick the department's Definition of Done.
 5. **Learn** — `references/learning.md`; rewrite project memory → *Work in progress* (or mark it idle).
-6. **Closing report**:
+6. **Closing report** — the Cierre of the instructions block, headed by the task ID the per-prompt hook offered; the end-of-turn hook checks it and appends the task's provenance record to `~/.waymark/provenance/<slug>.jsonl` (docs/adr/0001-provenance-chain.md):
 
 ```
+## Cierre · 2026-10-02 · T3
+Resultado: hecho · Gates: npm run lint -- src/app/features/contacts ✔ · ng build ✔ · npm test -- delete-contact-dialog ✔ (4/4) · Aprendido: "confirmación con app-modal ← observado: borrado sin confirmar en /contacts" · engram: guardado
+L2+: Decisión: elegida modal compartido · descartadas confirm() nativo, deshacer con toast · Tests: rojo→verde delete-contact-dialog.spec.ts · Navegador: browser-verify smoke /contacts ✔ · Review: code-review delete-contact-dialog.* sin hallazgos
+```
+**Decision gate (L2/L3):** before the first edit, 2–3 options in the choice window (files, risk, cost; recommended first); the user picks and the Cierre names the chosen and the discarded ones. A choice the user already wrote → `del usuario ("<their words>")`; a single real option → `única (<why>)`. L1 goes direct (one question only when two readings change the result).
 
 ## When stuck (two-strike rule)
 
