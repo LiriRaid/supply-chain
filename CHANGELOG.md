@@ -2,7 +2,7 @@
 
 The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version is published the agent offers the update; you can also say *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"* (INSTALL §9).
 
-## 1.8.0 (in progress, `develop`) — fewer wrong-direction attempts, checks that run themselves
+## 1.8.0 — fewer wrong-direction attempts, checks that run themselves
 Seventh real test (1.7.0): the largest cost is not the size of each step but attempts in the wrong direction. A small front-end bug cost ~9% of the 5-hour quota, ~6% of it in the API after the user had said "solo FE" (3 attempts, 14.1M tokens); an L2 with 1 attempt cost ~7%. Skipped checks repeated from test 6 (no browser-verify/code-review and no reason given, opener skipped in a turn, inferred evidence labelled "observed").
 - **`Capa:`** in the opener: a layer the user named ("solo FE", "no toques la API") is binding; evidence pointing elsewhere → ask before leaving it.
 - **Quick bug triage** (dept-qa) new step: a stale view after an action → check what reloads it (another tab via `window.open`, a cache in a service, a reused route) before blaming the backend. It was the real cause.
