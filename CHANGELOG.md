@@ -2,6 +2,16 @@
 
 The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version is published the agent offers the update; you can also say *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"* (INSTALL §9).
 
+## 1.9.0 (in progress, `develop`) — evidence labels that match what happened
+Ninth real test (1.8.0, an L1 bug in a real project: 1 attempt, no hallucinations, ~3% of the quota) still showed fields claiming more than was done, and two Waymark bugs:
+- **Fix: no more false "no opener" notes.** The pre-edit opener note (1.8.0) fired three times in one task with the opener written: Claude Code does not persist reply text written after a thinking block. Removed; the `mem_search` note stays (tool calls are reliable).
+- **Fix: `measure.mjs`** merges a prompt that got no response (recorded twice, or resent before any answer) into the next one, so it no longer counts as an attempt.
+- **`Memoria: digest | leída | creada`**: `digest` when only the injected summary was used, `leída` only when the file was opened.
+- **`Evidencia: observada <what you saw> | inferida de <source> (check: …)`**: a cause deduced from code or docs is *inferida*, with the user's check before the fix (replaces *hipótesis*).
+- **`Cambia:`** in the opener: a visible behavior the user did not ask to change (order, layout, a default) is asked before it is implemented (it happened in tests 8 and 9).
+- **Specs next to the changed code, at any level:** the end-of-turn hook asks for a `Tests:` field (a regression spec, or why not) when a spec sits next to the changed code, also at L1; `rojo→verde` must be backed by a spec edited and a test command run in the turn.
+- **"Pre-existing" needs proof:** a Cierre that calls a failure pre-existing must say `comprobado en copia limpia de HEAD` or `previo: no comprobado (<why>)`.
+
 ## 1.8.0 — fewer wrong-direction attempts, checks that run themselves
 Seventh real test (1.7.0): the largest cost is not the size of each step but attempts in the wrong direction. A small front-end bug cost ~9% of the 5-hour quota, ~6% of it in the API after the user had said "solo FE" (3 attempts, 14.1M tokens); an L2 with 1 attempt cost ~7%. Skipped checks repeated from test 6 (no browser-verify/code-review and no reason given, opener skipped in a turn, inferred evidence labelled "observed").
 - **`Capa:`** in the opener: a layer the user named ("solo FE", "no toques la API") is binding; evidence pointing elsewhere → ask before leaving it.

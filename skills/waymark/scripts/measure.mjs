@@ -48,13 +48,16 @@ function usageOf(lines) {
 // Background-task notifications are not prompts: their responses count toward the turn that started the task.
 const lines = parse(file);
 
+// A prompt that got no response (recorded twice, or resent before any answer) merges into the next one: not an attempt.
 const turns = [];
-let cur = null;
+let cur = null, merged = 0;
 for (const d of lines) {
   if (isPrompt(d)) {
     const c = d.message.content;
     const text = typeof c === 'string' ? c : c.filter((x) => x.type === 'text').map((x) => x.text).join(' ');
-    cur = { n: turns.length + 1, prompt: text.replace(/\s+/g, ' ').trim().slice(0, 70), images: Array.isArray(c) ? c.filter((x) => x.type === 'image').length : 0, lines: [], tools: 0, agents: [] };
+    const images = Array.isArray(c) ? c.filter((x) => x.type === 'image').length : 0;
+    if (cur && !cur.lines.some((x) => x.type === 'assistant')) { cur.prompt = text.replace(/\s+/g, ' ').trim().slice(0, 70); cur.images += images; merged++; continue; }
+    cur = { n: turns.length + 1, prompt: text.replace(/\s+/g, ' ').trim().slice(0, 70), images, lines: [], tools: 0, agents: [] };
     turns.push(cur);
     continue;
   }
@@ -104,6 +107,6 @@ for (const r of rows) {
 }
 const line = (label, s) => `${label}: ${k(total(s.tokens) + total(s.subTokens))} tokens (new in ${k(fresh(s.tokens))} · cached in ${k(s.tokens.cacheRead)} · out ${k(s.tokens.output)}${s.subagents ? ` · sub-agents ${k(total(s.subTokens))} in ${s.subagents}` : ''}) · ${s.responses} responses · ${s.tools} tool calls`;
 console.log('');
-console.log(line(`Session (${rows.length} turns)`, session));
+console.log(line(`Session (${rows.length} turns${merged ? `; ${merged} prompt${merged > 1 ? 's' : ''} with no response merged into the next` : ''})`, session));
 if (task) console.log(line(`Task (turns ${task.turns}, attempts ${task.attempts})`, task));
 console.log('\nCtx is the context when the turn started: its growth per prompt is what every later response re-reads. Cached input is re-read context (cheaper and usually lighter on plan limits than new input). Attempts = user prompts spent on the task: 1 means right the first time.');
