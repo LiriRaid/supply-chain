@@ -30,6 +30,9 @@ export function checkCommand(command, cwd = process.cwd()) {
     return 'Waymark: inline node -e code with backticks, ${ or regex escapes gets mangled by shell quoting (Environment note). ' +
       'Write the script to a file with the Write tool (scratchpad) and run `node <file>`. If this command is really safe, add `# waymark:allow` to it.';
   }
+  if (/(?:^|[;&|(]\s*)git\s+stash\b(?!\s+(list|show)\b)/.test(c)) { // as a command, not inside a search pattern
+    return 'Waymark: do not stash the user\'s changes (staged state and new files can be lost). To prove a failure is pre-existing, use a clean copy of HEAD: `git worktree add <tmp> HEAD`, rerun the command there, `git worktree remove <tmp>`. If that is not allowed, report "no comprobado (sin permiso para <command>)". `# waymark:allow` skips this check when the user asked for a stash.';
+  }
   const deps = fs.existsSync(path.join(cwd, 'node_modules'));
   if (deps && GREP_R.test(c) && !/--exclude-dir[= ]\S*node_modules/.test(c)) {
     return 'Waymark: recursive grep here walks node_modules (it hung 120 s in real tests). Use the Grep tool (it skips ignored folders) or add --exclude-dir=node_modules. `# waymark:allow` skips this check.';

@@ -44,7 +44,7 @@ Commands come from project memory → *Quality gates* (`~/.waymark/projects/<slu
 
 1. Run non-interactively (no watch mode). Read the first error; fix top-down: typecheck → lint → test → build.
 2. Erroring file in your diff → it is yours, fix it.
-3. Not in your diff → prove it is pre-existing: `git stash --include-untracked` → rerun the exact failing command → `git stash pop`. Fails without your change = pre-existing; quote command and error in the report.
+3. Not in your diff → prove it is pre-existing in a clean copy of HEAD that never touches the user's changes: `git worktree add <tmp> HEAD` → install if needed → rerun the exact failing command there → `git worktree remove <tmp>`. Fails there too = pre-existing; quote command and error ("comprobado en copia limpia de HEAD: falla igual"). Never `git stash` the user's work (staged state and new files can be lost). The command is not allowed (permission denied, no git) → do not retry: write "previo: no comprobado (sin permiso para <command>)".
 4. Never skip, comment out or loosen a test or lint rule to get green.
 5. After 3 honest attempts, stop and report the remaining failures verbatim; do not claim done.
 
@@ -86,7 +86,7 @@ Output: table `# · Area · Score · Verdict`, then `Overall: XX/130 (X.X/10)` (
 - Declaring done without running the app or the tests.
 - Tests that assert on mocks instead of outcomes.
 - Flaky tests "fixed" with retries or sleeps.
-- Claiming "pre-existing" without `git stash` proof.
+- Claiming "pre-existing" without the clean-copy proof, or stashing the user's changes to get it.
 - Using gate commands that were never verified in this project.
 
 ## References

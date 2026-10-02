@@ -2,6 +2,8 @@
 
 When the user says **"evalúa tu trabajo"** (or "evalúa tu trabajo con evaluation.md"), audit the task(s) of this session **with evidence**: quote your own tool calls, files and outputs, not memory. Be strict; report what failed as clearly as what worked. Waymark aims at the **right decision with fewer attempts** (a task costs *attempts × cost per attempt*), without taking decisions away from the agent.
 
+**User decisions win, per task.** A check the user asked to skip ("no hagas tests") is ✔ when the field says `omitido (usuario: "<their words>")` and those words are in their messages; it applies to that task only — skipping it in the next task without being asked again is ✘.
+
 **Declared ≠ done.** Every field of the opener and the Cierre is a claim; it counts only if a tool call in the transcript backs it (a `Read` of the procedure section, a `browser-verify`/`run` call, a `code-review` call, a `mem_search`/`mem_save` call, the gate command and its output). A claim with no call behind it is ✘ and is reported as a false declaration.
 
 ## 0. Proportional to level
@@ -16,7 +18,7 @@ When the user says **"evalúa tu trabajo"** (or "evalúa tu trabajo con evaluati
 | Recordar | the injected digest cited; the project file read when the task relates to an entry; at L2+ (or a topic the digest lacks) `mem_search` before the first edit when engram is available | Read of `~/.waymark/projects/<slug>.md`; `mem_search` call |
 | Enrutar | owner `dept-*` loaded before any other skill or edit; the declared *Procedimiento* section was actually read (`procedures.md` Read/Grep) | order of Skill/Read calls |
 | Skills | the department's Tools used where they apply: `library-docs` (or the installed package source) for every API not verified this session; at L2+ with UI changes a real `browser-verify`/`run` attempt; at L2+ with code changes `code-review` on the task's files | Skill calls and their arguments |
-| Verificar | the project's gates after the last edit: typecheck/lint (L1), + tests and build (L2+); "pre-existing failure" proven with `git stash`; "sin infra" only when no spec exists next to the changed files | commands and real output |
+| Verificar | the project's gates after the last edit: typecheck/lint (L1), + tests and build (L2+); "pre-existing failure" proven in a clean copy of HEAD (or "no comprobado (sin permiso …)"), never by stashing the user's changes; "sin infra" only when no spec exists next to the changed files | commands and real output |
 | Aprender | *Work in progress* rewritten as `decision ← evidence`; *Solved problems* for a bug that took more than one attempt; memory the code contradicted fixed; `engram: guardado` only with a `mem_save` in that turn | files written; `mem_save` calls |
 | Cierre | `## Cierre` with every field for the level, each backed by a call | last reply |
 

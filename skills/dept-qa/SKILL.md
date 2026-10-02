@@ -73,7 +73,7 @@ Detailed steps live in `procedures.md` (same folder). Fast diagnosis of a report
 - [ ] Edge cases and error paths covered
 - [ ] UI verified in the browser (golden path + edge cases, console clean, mobile + desktop)
 - [ ] `code-review` findings resolved or justified (L2+)
-- [ ] Pre-existing failures proven with `git stash` and quoted
+- [ ] Pre-existing failures proven in a clean copy of HEAD (`git worktree`) and quoted, or "no comprobado (sin permiso …)"
 - [ ] Quality score with fixes for areas < 8 (L3 or on request)
 
 ## Hand-offs

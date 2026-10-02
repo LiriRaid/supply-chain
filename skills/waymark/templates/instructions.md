@@ -14,7 +14,8 @@ Memoria: leída|creada <~/.waymark/projects/<slug>.md> [· mem_search "<query>" 
 ```
 ## Cierre
 Gates: <commands run after the last edit + result> · Aprendido: <your Work in progress line, rewritten> · engram: <guardado | no disponible>
-L2+: Tests: rojo→verde <spec> | sin infra (<proof>) · Navegador: browser-verify <result> | no (<what failed when tried> | requiere <physical action>; check: …) · Review: code-review <task's files> <findings> | omitido (<why>)
+L2+: Tests: rojo→verde <spec> | sin infra (<proof>) · Navegador: browser-verify <result> | no (<what failed when tried>; check: …) · Review: code-review <task's files> <findings>
+(any of the three: omitido (usuario: "<their words>") — this task only)
 ```
 Each field is a step; fill it truthfully:
 - **Pedido · Captura** — the request in the user's terms and, per image, the screen, element and state it marks; that is the target. Two readings that change the result → one question before editing. "Like X" → *Copia* lists only what the user named from X, not X's whole rule. The user names a layer ("solo FE", "no toques la API") → *Capa*: evidence pointing elsewhere → ask before leaving it.
