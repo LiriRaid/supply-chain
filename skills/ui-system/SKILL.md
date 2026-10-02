@@ -1,6 +1,6 @@
 ---
 name: ui-system
-description: "Waymark tool skill (ui.system), owned by dept-ux-ui. Use for design systems and visual identity in any stack: \"paleta de colores\", \"tipografía\", \"design tokens\", \"tema oscuro\", \"sistema de diseño\", \"jerarquía visual\", \"hazlo más profesional\", \"qué estilo le queda\", \"qué gráfica uso\", palette, font pairing, spacing scale, theming, dashboards and landing direction. Load dept-ux-ui first if it is not loaded. Discovers and records the project's existing system before proposing anything new. Not for building a specific component (use ui-build)."
+description: "Waymark tool (ui.system), owner dept-ux-ui. Design systems and visual identity: \"paleta de colores\", \"tipografía\", \"design tokens\", \"tema oscuro\", \"sistema de diseño\", \"qué estilo le queda\", \"qué gráfica uso\", theming. Records the existing system first. Not a component (ui-build)."
 ---
 
 # UI System

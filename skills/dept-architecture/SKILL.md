@@ -1,6 +1,6 @@
 ---
 name: dept-architecture
-description: "Waymark · Software Architecture department. Use FIRST for structure and design decisions in any stack or language: \"refactoriza\", \"dónde pongo esto\", \"estructura de carpetas\", \"nuevo módulo\", \"arquitectura hexagonal / clean / screaming\", \"desacoplar\", \"capas\", \"patrón de diseño\", \"migrar de X a Y\", \"proyecto desde cero\", boundaries, dependencies, ADR, SOLID, clean code. Mandatory owner of every L3 task. Loads the architecture rules and decides which skills, agents and MCP servers to use. Not for trivial edits."
+description: "Waymark · Architecture department. Use FIRST for structure and design: \"refactoriza\", \"dónde pongo esto\", \"estructura de carpetas\", \"nuevo módulo\", hexagonal/clean, \"desacoplar\", \"capas\", \"migrar de X a Y\", \"proyecto desde cero\", ADR, SOLID. Owner of every L3 task."
 ---
 
 # Software Architecture & Design

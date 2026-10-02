@@ -1,6 +1,6 @@
 ---
 name: dept-ux-ui
-description: "Waymark · UX/UI Design department. Use FIRST, before ui-system, ui-refine or ui-audit, when the task is about how the interface looks, feels or is perceived: \"mejora el diseño\", \"se ve feo\", \"hazlo más profesional\", \"animación\", \"transición\", \"accesibilidad\", \"contraste\", \"jerarquía visual\", \"tipografía\", \"paleta de colores\", \"design tokens\", \"tema oscuro\", motion, WCAG, design system, UX copy, empty and error states. Loads the design rules and decides which skills and MCP servers to use. Not for a single color or text change."
+description: "Waymark · UX/UI department. Use FIRST, before ui-system/ui-refine/ui-audit, for how the UI looks and feels: \"mejora el diseño\", \"se ve feo\", \"más profesional\", \"animación\", \"accesibilidad\", \"contraste\", \"tipografía\", \"paleta\", \"design tokens\", \"tema oscuro\", WCAG."
 ---
 
 # UX/UI Design

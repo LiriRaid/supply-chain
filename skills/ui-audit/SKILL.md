@@ -1,6 +1,6 @@
 ---
 name: ui-audit
-description: "Waymark tool skill (ui.audit), owned by dept-ux-ui. Use to audit user interface code against accessibility (WCAG 2.2 AA) and interface guidelines: \"revisa la accesibilidad\", \"audita la UI\", \"cumple WCAG\", \"revisa el formulario\", \"problemas de foco o teclado\", \"revisa la UX\", review my UI, check accessibility, audit design. Load dept-ux-ui first if it is not loaded. Reports findings with rule id and file:line before changing anything. Not for redesigning (use ui-refine)."
+description: "Waymark tool (ui.audit), owner dept-ux-ui. Audit UI code against WCAG 2.2 AA and interface guidelines: \"revisa la accesibilidad\", \"audita la UI\", \"cumple WCAG\", \"problemas de foco o teclado\", \"revisa la UX\". Reports file:line findings first. Not redesign (ui-refine)."
 ---
 
 # UI Audit

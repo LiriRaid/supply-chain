@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Waymark · measure what a task really cost, from the agent's own session transcript (Claude Code .jsonl).
 // Runs locally and offline; it reads the transcript, never calls a model. Shows per user prompt (turn):
-// responses, tool calls, images sent, tokens (new input, cached input, output) and sub-agent tokens; the
+// context at the start of the turn, responses, tool calls, images sent, tokens (new input, cached input, output) and sub-agent tokens; the
 // fixed context the session started with; and, for a range of turns (one task), the number of attempts.
 // Usage:
 //   node measure.mjs                          latest session of the current folder
@@ -78,7 +78,9 @@ const startContext = (first.input_tokens || 0) + (first.cache_creation_input_tok
 const rows = turns.map((t) => {
   const { tokens, responses } = usageOf(t.lines);
   const sub = t.agents.reduce((acc, id) => { const u = subUsage(id); for (const k of Object.keys(acc)) acc[k] += u[k]; return acc; }, zero());
-  return { turn: t.n, prompt: t.prompt, images: t.images, responses, tools: t.tools, subagents: t.agents.length, tokens, subTokens: sub };
+  const u = t.lines.find((d) => d.type === 'assistant' && !d.isSidechain && d.message?.usage)?.message.usage || {};
+  const context = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0); // context when the turn started
+  return { turn: t.n, prompt: t.prompt, images: t.images, context, responses, tools: t.tools, subagents: t.agents.length, tokens, subTokens: sub };
 });
 const sum = (rs) => rs.reduce((acc, r) => { for (const k of Object.keys(acc.tokens)) { acc.tokens[k] += r.tokens[k]; acc.subTokens[k] += r.subTokens[k]; } acc.responses += r.responses; acc.tools += r.tools; acc.subagents += r.subagents; return acc; }, { tokens: zero(), subTokens: zero(), responses: 0, tools: 0, subagents: 0 });
 
@@ -100,13 +102,13 @@ const fresh = (t) => t.input + t.cacheWrite;
 console.log(`Transcript: ${file}`);
 console.log(`Fixed context at session start (system + tools + instructions + hooks + first prompt): ${k(startContext)} tokens`);
 console.log('');
-console.log('| # | Prompt | Img | Resp | Tools | Sub | New in | Cached in | Out | Sub-agents | Total |');
-console.log('|---|---|---|---|---|---|---|---|---|---|---|');
+console.log('| # | Prompt | Ctx | Img | Resp | Tools | Sub | New in | Cached in | Out | Sub-agents | Total |');
+console.log('|---|---|---|---|---|---|---|---|---|---|---|---|');
 for (const r of rows) {
-  console.log(`| ${r.turn} | ${r.prompt.replace(/\|/g, '/')} | ${r.images || ''} | ${r.responses} | ${r.tools} | ${r.subagents || ''} | ${k(fresh(r.tokens))} | ${k(r.tokens.cacheRead)} | ${k(r.tokens.output)} | ${r.subagents ? k(total(r.subTokens)) : ''} | ${k(total(r.tokens) + total(r.subTokens))} |`);
+  console.log(`| ${r.turn} | ${r.prompt.replace(/\|/g, '/')} | ${k(r.context)} | ${r.images || ''} | ${r.responses} | ${r.tools} | ${r.subagents || ''} | ${k(fresh(r.tokens))} | ${k(r.tokens.cacheRead)} | ${k(r.tokens.output)} | ${r.subagents ? k(total(r.subTokens)) : ''} | ${k(total(r.tokens) + total(r.subTokens))} |`);
 }
 const line = (label, s) => `${label}: ${k(total(s.tokens) + total(s.subTokens))} tokens (new in ${k(fresh(s.tokens))} · cached in ${k(s.tokens.cacheRead)} · out ${k(s.tokens.output)}${s.subagents ? ` · sub-agents ${k(total(s.subTokens))} in ${s.subagents}` : ''}) · ${s.responses} responses · ${s.tools} tool calls`;
 console.log('');
 console.log(line(`Session (${rows.length} turns)`, session));
 if (task) console.log(line(`Task (turns ${task.turns}, attempts ${task.attempts})`, task));
-console.log('\nCached input is re-read context (cheaper and usually lighter on plan limits than new input). Attempts = user prompts spent on the task: 1 means right the first time.');
+console.log('\nCtx is the context when the turn started: its growth per prompt is what every later response re-reads. Cached input is re-read context (cheaper and usually lighter on plan limits than new input). Attempts = user prompts spent on the task: 1 means right the first time.');

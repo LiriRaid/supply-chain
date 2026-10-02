@@ -2,6 +2,25 @@
 
 The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version is published the agent offers the update; you can also say *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"* (INSTALL §9).
 
+## 1.7.0 — fewer tokens per session and per prompt
+Measured in a real 500k-token session: resuming it after an hour idle cost 502k tokens of cache writes (8% of a 5-hour quota) for a one-line message; the Rule 0 reminder was re-sent in full on every prompt; the skill listing (Waymark's and the user's unused ones) is paid in every session.
+- **Resume guard** (`rule0-hook.mjs`): reads the session transcript; with ≥ 150k tokens of context and ≥ 60 min idle (the prompt cache expired), it stops that one prompt (0 tokens; the user sees why) and suggests a new session or `/compact`; resending continues. `WAYMARK_RESUME_TOKENS` / `WAYMARK_RESUME_MINUTES` (0 = off).
+- **Adaptive reminder:** the full Rule 0 reminder (~120 tokens) only when the last reply did not open with `Waymark →`; otherwise one line (~35).
+- **Shorter triggers:** the 17 Waymark descriptions went from 8,558 to 4,407 characters (~1,000 tokens per session); procedural notes moved to the bodies they already lived in; templates and the devex procedure cap them at ~300 characters.
+- **Skill fit** (`skill-fit.mjs`, Claude Code): skills you added (claude.ai synced, `~/.claude/skills`) with no invocation in 30 days → `skillOverrides: "name-only"` (still invocable); plugins with no skill used → `enabledPlugins: false`. Plan by default, `--apply` after a yes, `--restore`; never Waymark's skills, `skill-map.json` providers or bundled skills; needs 14 days of history. The session hook computes it in the background and offers it at most once a month. Verified: `name-only` drops a synced skill's description from the listing.
+- **Token economy** (`protocol.md`): small tool outputs, sub-agents are not free, `/compact` is safe with L3 checkpoints, new session over resuming a large idle one.
+- **`measure.mjs`:** new *Ctx* column, the context each prompt started with, to see growth per prompt.
+
+**Sixth real test (measured on 1.7.0-dev): L1 593k tokens, 1 attempt (~1% of the 5-hour quota); L2 1.7M + a 572k second attempt.** ~95% is cached context re-read on every response, so the levers are fewer round trips and fewer attempts. The fields the agent skipped become checkable:
+- **`Copia:`** in the opener when the ask is "like X": only the properties the user named (the second attempt copied X's whole rule).
+- **`Procedimiento: <section> (procedures.md:<line>)`**: shows the section was read, not just named.
+- **Cierre:** `Aprendido` quotes the rewritten *Work in progress* line (never "ninguno"); L2+ `Tests: rojo→verde <spec> | sin infra (<proof>)`, `Navegador: browser-verify <result> | no (<what failed when tried>)`, `Review: code-review <findings> | omitido (<why>)`.
+- **Batch independent tool calls** in one response (instructions and both reminders): each response re-reads the whole context.
+- **`mem_search`** only at L2+ or for a topic the injected digest lacks (the digest already covers L1).
+- **Inline-script guard** (`tool-hook.mjs`, PreToolUse): denies an inline `node -e` with backticks, `${` or regex escapes (mangled by shell quoting, twice in real tests) and asks for a script file; `# waymark:allow` skips it.
+- **Angular stack:** `ng build --configuration development` as the L1 compile check (templates included) instead of the full build.
+- The instructions block's index is one line instead of a table (same entries).
+
 ## 1.6.0 — guest mode, third-party skills, one attempt per task (measured)
 Changes accumulate on `develop` and reach `main` in one release, so installs see one update notice per release instead of one per change.
 

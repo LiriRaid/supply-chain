@@ -59,17 +59,21 @@ The bigger saving is not the size of each attempt but the **number of attempts**
 
 Your MCP servers stay registered where you put them. In each project, `scripts/mcp-fit.mjs` reads its manifests and blocks (a deny rule in that project's private `.claude/settings.local.json`, after your yes) the framework servers it does not use: no Angular CLI or PrimeNG in a React app or a docs repo, no React docs in an Angular app. When the project adopts the framework the rule is lifted. Docs and memory servers are never blocked. In a new project the session hook notices and offers it once.
 
+### Skills you never use, and costly resumes
+
+Each listed skill costs its description in every session. `scripts/skill-fit.mjs` finds the skills you added but have not invoked in 30 days and, after your yes, lists only their names (still invocable); unused plugins are disabled. Waymark's 17 descriptions were also cut from 8,558 to 4,407 characters (~1,000 tokens per session). Resuming a large session after an hour idle re-writes its whole context (the cache expired): the Rule 0 hook stops that first message once and suggests a new session.
+
 ### Measure it
 
 ```bash
 node ~/.claude/skills/waymark/scripts/measure.mjs --turns 3-5
 ```
 
-It reads the agent's own session transcript (offline, no model call) and shows, per prompt: responses, tool calls, images, new vs cached input tokens, output and sub-agent tokens; the fixed context the session started with; and for a range of prompts (one task) the number of **attempts**. Note the plan-quota % before and after a task to relate tokens to your limits.
+It reads the agent's own session transcript (offline, no model call) and shows, per prompt: the context it started with (its growth is what every later response re-reads), responses, tool calls, images, new vs cached input tokens, output and sub-agent tokens; the fixed context the session started with; and for a range of prompts (one task) the number of **attempts**. Note the plan-quota % before and after a task to relate tokens to your limits.
 
 ## How it triggers
 
-Three layers keep the agent on track, without an orchestrator: each skill's `description` (the trigger, with the phrases people actually type), the instructions block (Rule 0: every request runs recall → department → skills → verify → learn; questions run in read-only consult mode), and a tiny per-prompt **Rule 0 reminder hook** (`scripts/rule0-hook.mjs`, installed by default where the agent supports hooks). The hook runs locally, adds ~70 tokens per prompt and never blocks anything. Every reply starts with `Waymark → L<n> · <dept>`, so you can see at a glance that the routine ran.
+Three layers keep the agent on track, without an orchestrator: each skill's `description` (the trigger, with the phrases people actually type), the instructions block (Rule 0: every request runs recall → department → skills → verify → learn; questions run in read-only consult mode), and a tiny per-prompt **Rule 0 reminder hook** (`scripts/rule0-hook.mjs`, installed by default where the agent supports hooks). The hook runs locally, adds ~120 tokens per prompt (~35 once the previous reply followed the routine) and blocks nothing except, once, a costly resume of a large idle session. Every reply starts with `Waymark → L<n> · <dept>`, so you can see at a glance that the routine ran.
 
 ```
 "quiero crear un modal"      → dept-frontend → brief → ui-build → browser-verify → gates → learn

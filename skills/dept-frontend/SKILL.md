@@ -1,6 +1,6 @@
 ---
 name: dept-frontend
-description: "Waymark · Frontend Engineering department. Use FIRST, before ui-build, ui-refine, ui-system or any UI tool skill, whenever the user asks to build, change or fix user-interface code in any framework or language: \"quiero crear un modal\", \"nueva pantalla\", \"componente\", \"formulario\", \"tabla\", \"sidebar\", \"layout responsive\", \"estado del componente\", \"SSR\", screen, page, view, component, dialog, form, client routing. Loads the frontend rules (what, why, where, how) and decides which skills and MCP servers to use. Not for trivial edits such as a color, a text or one value."
+description: "Waymark · Frontend department. Use FIRST, before any ui-* skill, to build, change or fix UI code: \"crear un modal\", \"nueva pantalla\", \"componente\", \"formulario\", \"tabla\", \"sidebar\", \"layout responsive\", \"SSR\", page, view, client routing. Not for one color or text."
 ---
 
 # Frontend Engineering

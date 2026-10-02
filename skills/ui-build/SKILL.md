@@ -1,6 +1,6 @@
 ---
 name: ui-build
-description: "Waymark tool skill (ui.build), owned by dept-frontend. Use when building new user interface in any framework: \"crea un modal\", \"nueva pantalla\", \"construye el componente\", \"arma un dashboard\", \"formulario de registro\", \"landing\", build a component, page, dialog, form or layout with intentional, production-grade design. Load dept-frontend first if it is not loaded. Follows the project's design system; defines a direction only for greenfield projects. Not for restyling or polishing existing UI (use ui-refine)."
+description: "Waymark tool (ui.build), owner dept-frontend. Build new UI in any framework: \"crea un modal\", \"nueva pantalla\", \"construye el componente\", \"arma un dashboard\", \"formulario de registro\", \"landing\". Follows the project's design system. Not restyling (ui-refine)."
 ---
 
 # UI Build

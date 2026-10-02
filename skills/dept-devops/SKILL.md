@@ -1,6 +1,6 @@
 ---
 name: dept-devops
-description: "Waymark · DevOps / Platform department. Use FIRST for build, CI/CD, git workflow, environments, containers and deploy: \"deploy\", \"desplegar\", \"pipeline\", \"GitHub Actions\", \"Docker\", \"rama\", \"commit\", \"PR\", \"merge\", \"release\", \"variables por ambiente\", \"el build falla\", SSR or prerender deploy, observability, rollback. Loads the platform rules and decides which skills and MCP servers to use. Commits and pushes only when the user asks."
+description: "Waymark · DevOps department. Use FIRST for build, CI/CD, git and deploy: \"deploy\", \"pipeline\", \"GitHub Actions\", \"Docker\", \"rama\", \"commit\", \"PR\", \"merge\", \"release\", \"variables por ambiente\", \"el build falla\", rollback. Commits only when asked."
 ---
 
 # DevOps / Platform Engineering

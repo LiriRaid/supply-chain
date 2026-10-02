@@ -1,6 +1,6 @@
 ---
 name: browser-verify
-description: "Waymark tool skill (test.browser), owned by dept-qa. Use to verify a web change in a real browser: \"verifica que funcione\", \"pruébalo en el navegador\", \"revisa que se vea bien en móvil\", \"toma screenshots\", \"hay errores en consola\", smoke test, e2e check, visual regression, responsive check. Load dept-qa first if it is not loaded. Uses the session's browser tools first and Playwright as fallback; local dev hosts only. Not for writing unit tests."
+description: "Waymark tool (test.browser), owner dept-qa. Verify a web change in a real browser: \"verifica que funcione\", \"pruébalo en el navegador\", \"se ve bien en móvil\", screenshots, console errors, smoke/e2e, responsive. Local dev hosts only. Not unit tests."
 ---
 
 # Browser Verify

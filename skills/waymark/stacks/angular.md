@@ -9,6 +9,7 @@ Default commands the agent runs in the Exit protocol; verify each once, then rec
 | Gate | Command | Notes |
 |---|---|---|
 | typecheck | `<pm> run typecheck` if script `typecheck` exists; else if `tsconfig.app.json` exists `<pm> exec tsc --noEmit -p tsconfig.app.json`; else if `tsconfig.json` exists `<pm> exec tsc --noEmit` | Angular projects usually hit the `tsconfig.app.json` branch. Specs live in `tsconfig.spec.json` and are not covered by it. |
+| compile (L1 UI) | `<pm> exec ng build --configuration development` | The quickest check that also type-checks templates (`tsc` does not read them): no optimization or budgets, so faster than `build` and with a shorter output. Skip env/prebuild scripts unless the build needs their output. L2+ still runs `build`. |
 | lint | if `eslint` in dependencies: `<pm> exec eslint {files}`; else `<pm> run lint` if script exists | Changed files only. `ng lint` is not used by the default gate. |
 | test | `<pm> run test` with `CI=true` if script `test` exists | Non-watch. `ng test` with the Vitest builder respects `CI`. The Karma-era `ng test` stays in watch mode, so recommend a `test:ci` script and record it in project memory. |
 | build | `<pm> run build` if script exists | Runs `ng build`. In SSR projects with a preindex or prerender script, check `package.json` and run the preindex first. |

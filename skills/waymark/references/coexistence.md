@@ -22,7 +22,7 @@ The user can always pick another mode **[ask]**: a guest can lead if they prefer
 
 For every agent being installed (`~/.waymark/agent.md` → `<instructions-file>`):
 1. Instructions file: HTML-comment markers with a namespace other than `waymark` (`<!-- <name>:<section> -->`, `<!-- BEGIN <name> -->`) and sections that define a persona, an orchestrator, a memory protocol or triggers.
-2. Agent settings: hooks whose command does not run `rule0-hook.mjs` or `session-hook.mjs`.
+2. Agent settings: hooks whose command does not run `rule0-hook.mjs`, `session-hook.mjs` or `tool-hook.mjs`.
 3. Skills, plugins and agents of the same framework; its **skill registry** and how it is refreshed (its docs; known ones in §4).
 
 Read each section once and write its rules as one line each; never guess rules you did not read. Then ask per rule: **does it act at the same moment as a Waymark rule?** (first text of the turn, before the first edit, delegation, memory, language of code and commits, commits/PRs, closing a change).
