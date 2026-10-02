@@ -10,7 +10,7 @@
 //   which the transcript keeps reliably. (1.8.0 also noted a missing opener; removed in 1.9.0: reply text written after
 //   a thinking block is not persisted, so it fired on openers that were there — three false notes in one real task.)
 //   Memory and scratch files are exempt; L0 and Q turns are skipped.
-// - Decision gate (2.0, docs/adr/0001-provenance-chain.md): the first L2+ project edit of a prompt is denied once when
+// - Decision gate (2.0, docs/adr/0001, 0002): the first L1–L3 project edit of a prompt is denied once when
 //   the task has no choice-window question (AskUserQuestion) yet; the retry passes, for a single real option or a
 //   choice the user already wrote, which the Cierre then states (`Decisión: única (…)` / `del usuario ("…")`).
 // Remove the hook from the agent's settings to disable it.
@@ -68,12 +68,12 @@ export function checkEdit(file, lines) {
   return notes.length ? `Waymark: ${notes.join('; ')}.` : null;
 }
 
-// Decision gate: deny once per prompt (state keyed by session + prompt uuid), never for L0/L1/Q or exempt files.
+// Decision gate: deny once per prompt (state keyed by session + prompt uuid), never for L0/Q or exempt files.
 export function checkDecision(file, lines, session = 'unknown', stateFile = path.join(process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark'), '.decision-gate.json')) {
   if (!file || exempt(file)) return null;
   const turn = currentTurn(lines);
   const level = routedLevel(turn.texts);
-  if (!turn.found || !(level >= 2) || askedChoice(taskLines(lines))) return null;
+  if (!turn.found || !(level >= 1) || askedChoice(taskLines(lines))) return null;
   let seen = {};
   try { seen = JSON.parse(fs.readFileSync(stateFile, 'utf8')); } catch {}
   const key = `${session}:${turn.uuid || turn.prompt.slice(0, 80)}`;
@@ -81,7 +81,7 @@ export function checkDecision(file, lines, session = 'unknown', stateFile = path
   for (const [k, at] of Object.entries(seen)) if (Date.now() - at > 7 * 86400000) delete seen[k];
   seen[key] = Date.now();
   try { fs.mkdirSync(path.dirname(stateFile), { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify(seen)); } catch { return null; } // no state → never deny (it could repeat)
-  return `Waymark: L${level} decision gate — before the first edit, give the user 2–3 options with your choice window (AskUserQuestion): for each one the files it touches, the risk and the cost; recommended first. Then do what the user picks. ` +
+  return `Waymark: L${level} decision gate — the user decides every real decision, you never decide alone. Before the first edit, list the optimal options in your choice window (AskUserQuestion): for each one the files it touches, the risk and the cost; mark the recommended one (it may not be what the user needs). Then do what the user picks. ` +
     'If the user already chose in their message, or there is only one real option, retry this edit (this gate fires once per prompt) and write in the Cierre `Decisión: del usuario ("<their words>")` or `Decisión: única (<why>)`.';
 }
 

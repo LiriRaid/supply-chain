@@ -1,10 +1,10 @@
 # Waymark
 
-**Guides your coding agent to the right decision.** Departments, project memory and rules mark the path; the agent still decides.
+**A supply chain for your coding agent's work.** Every change goes through defined stages: the department that owns it, **your** decision among the optimal options, evidence, gates and review. It comes out with a verifiable record: what it was built with, who decided what and when, what was proven, which commit it produced.
 
 For Claude Code, Codex, Cursor, Gemini CLI, OpenCode and any agent that reads [Agent Skills](https://agentskills.io) (`SKILL.md`).
 
-A *waymark* is the sign that marks a trail: it shows the way, the walker still takes the steps. Agents often reach the right answer only after many attempts: they guess APIs, edit the wrong element, rebuild what the project already has and forget yesterday's fix. Waymark shortens that path without taking decisions away from the agent.
+A *waymark* is the sign that marks a trail: it shows the way, and you choose the path. Agents often reach the right answer only after many attempts: they guess APIs, edit the wrong element, rebuild what the project already has, forget yesterday's fix and take decisions you would not have taken. Waymark shortens that path. At every real decision the agent lays out the optimal options with their files, risk and cost and marks the one it recommends; **you decide**, because the recommended one may not be what you need.
 
 It is not an orchestrator and it spawns no agent pipelines. It is a set of skills that makes the agent work like a software company. Every non-trivial task goes through the **department** that owns it. The department decides:
 
@@ -15,6 +15,21 @@ It is not an orchestrator and it spawns no agent pipelines. It is a set of skill
 The task then closes with a Definition of Done (typecheck, lint, tests, build, architecture conformance). Finally the agent **learns** from the result.
 
 Stack- and language-agnostic: department rules are generic. Stack and architecture specifics live in profiles.
+
+## A supply chain of the agent's work
+
+A software supply chain tracks how an artifact was built: its inputs, the steps it went through and who approved them, with records that cannot be altered unnoticed. Waymark applies that to the agent's work. The hooks build the record locally from what the session transcript proves, not from what the agent says, and cost 0 model tokens.
+
+| Link | What Waymark records | How it is verified |
+|---|---|---|
+| **Inputs** | your request in your words; the project memory; a manifest per task: Waymark and agent version, model, MCP servers used, hashes of the instruction files | read from the transcript and the files at the end of the turn |
+| **Decision** | the options put to you, the one you picked and the ones you discarded, on a dated task ID (`2026-10-02 · T3`) | your answer in the choice window, or your quoted words; a single real way is recorded as `única (<why>)` |
+| **Evidence** | what was observed vs inferred, and the check you were given before the fix | the Cierre's fields, checked against the tool calls |
+| **Gates and review** | lint, typecheck, tests, build, browser check, code review | the commands and skills that actually ran; a claim with nothing behind it is blocked once, then recorded as unresolved |
+| **Output** | the files changed and the commits | each commit carries `Waymark-Task: <task ID>`; the record keeps its hash |
+| **Record** | one line per task in `~/.waymark/provenance/<project>.jsonl` | each line holds the hash of the previous one: editing or deleting a past task breaks the chain |
+
+What it is not: an SBOM or a dependency audit. Dependencies are `dept-security`'s job; this chain covers the work the agent does on your code. Decisions: [`docs/adr/`](docs/adr).
 
 ## Install
 

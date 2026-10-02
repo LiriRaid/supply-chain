@@ -1,6 +1,6 @@
 # Self-evaluation
 
-When the user says **"evalúa tu trabajo"** (or "evalúa tu trabajo con evaluation.md"), audit the task(s) of this session **with evidence**: quote your own tool calls, files and outputs, not memory. Be strict; report what failed as clearly as what worked. Waymark aims at the **right decision with fewer attempts** (a task costs *attempts × cost per attempt*), without taking decisions away from the agent.
+When the user says **"evalúa tu trabajo"** (or "evalúa tu trabajo con evaluation.md"), audit the task(s) of this session **with evidence**: quote your own tool calls, files and outputs, not memory. Be strict; report what failed as clearly as what worked. Waymark aims at the **right decision with fewer attempts** (a task costs *attempts × cost per attempt*), with every real decision taken by the user among the optimal options.
 
 **User decisions win, per task.** A check the user asked to skip ("no hagas tests") is ✔ when the field says `omitido (usuario: "<their words>")` and those words are in their messages; it applies to that task only — skipping it in the next task without being asked again is ✘.
 
@@ -20,8 +20,8 @@ When the user says **"evalúa tu trabajo"** (or "evalúa tu trabajo con evaluati
 | Skills | the department's Tools used where they apply: `library-docs` (or the installed package source) for every API not verified this session; at L2+ with UI changes a real `browser-verify`/`run` attempt; at L2+ with code changes `code-review` on the task's files | Skill calls and their arguments |
 | Verificar | the project's gates after the last edit: typecheck/lint (L1), + tests and build (L2+); "pre-existing failure" proven in a clean copy of HEAD (or "no comprobado (sin permiso …)"), never by stashing the user's changes; "sin infra" only when no spec exists next to the changed files | commands and real output |
 | Aprender | *Work in progress* rewritten as `decision ← evidence`; *Solved problems* for a bug that took more than one attempt; memory the code contradicted fixed; `engram: guardado` only with a `mem_save` in that turn | files written; `mem_save` calls |
-| Decisión | L2/L3: 2–3 options (files, risk, cost) in the choice window before the first edit, and the user's pick followed; or `del usuario ("…")` / `única (<why>)` when true | AskUserQuestion call and answer; first edit after it |
-| Cierre | `## Cierre · <task ID>` with every field for the level, each backed by a call; the task's line in `~/.waymark/provenance/<slug>.jsonl` with no `unresolved` claims | last reply; provenance log |
+| Decisión | every level: each real decision put to the user with the optimal options (files, risk, cost; recommended marked) before acting, and the pick followed; no decision taken alone; `del usuario ("…")` / `única (<why>)` only when true | AskUserQuestion calls and answers; edits after them |
+| Cierre | `## Cierre · <task ID>` with every field for the level, each backed by a call; commits with `Waymark-Task: <id>`; the task's line in `~/.waymark/provenance/<slug>.jsonl` with no `unresolved` claims | last reply; `git log`; provenance log |
 
 Hooks run some of these checks themselves (resume guard, pre-tool checks, end-of-turn Cierre check). Report when one fired and whether the agent fixed the cause or only reworded the field.
 

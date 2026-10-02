@@ -2,7 +2,7 @@
 
 Read when the installer (INSTALL §1.1), an update (§9) or the session hook finds another framework that also governs the agent: a marked block in the instructions file that is not Waymark's (e.g. `<!-- gentle-ai:persona -->`), hooks that do not run Waymark scripts, or skills/agents that orchestrate work (SDD flows, persona, delegation rules, its own skill registry).
 
-**Waymark is not an orchestrator.** An orchestrator decides *who* does the work (sub-agents, phases, models). Waymark is the criteria and the memory the work is done with: departments (what, why, where, how), rules, project memory and learning. The agent still decides. So Waymark fits two shapes: it **leads** when the agent works alone, and it is a **guest** inside an orchestrator, giving its workers the departments and the memory. It never competes for control of the turn.
+**Waymark is not an orchestrator.** An orchestrator decides *who* does the work (sub-agents, phases, models). Waymark is the criteria and the memory the work is done with: departments (what, why, where, how), rules, project memory and learning. The user decides: the agent puts each real decision to them with the optimal options. So Waymark fits two shapes: it **leads** when the agent works alone, and it is a **guest** inside an orchestrator, giving its workers the departments and the memory. It never competes for control of the turn.
 
 **Principle: Waymark adapts; the other framework is never edited.** Its blocks, hooks, skills, agents and registries stay byte-for-byte as they are. Uninstalling Waymark leaves it exactly as it was.
 

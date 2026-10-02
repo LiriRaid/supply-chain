@@ -12,7 +12,7 @@
 // - Size notice: while the session is active, at 300k tokens of context and every 200k more, a message shown only to
 //   the user (systemMessage: not added to the model's context) says each response re-reads all of it and a new
 //   session is cheaper for a new task. Nothing is blocked. WAYMARK_CONTEXT_NOTICE / WAYMARK_CONTEXT_STEP (0 = off).
-// - Task ID (2.0, docs/adr/0001-provenance-chain.md): with the reminder, the ID of a new task and of a follow-up of the
+// - Task ID (2.0, docs/adr/0001, 0002): with the reminder, the ID of a new task and of a follow-up of the
 //   last recorded one (~25 tokens), computed from the project's provenance log; the Cierre heading carries it.
 // Remove it from the agent's settings to disable it.
 import fs from 'node:fs';
@@ -47,9 +47,9 @@ try { mode = fs.readFileSync(path.join(HOME, 'coexistence.md'), 'utf8').match(/^
 const full =
   'Waymark Rule 0 — first text: "Waymark → L<n>|Q · <dept> · skills: …"; first tool call: the owner dept-* skill. ' +
   'Before the first edit: "Pedido · Captura" (the ask; what each image marks; "like X" → Copia: only what was named; a layer the user named → Capa, ask before leaving it) then "Memoria · Reutiliza · Evidencia · Procedimiento" (memory digest injected at session start: pointers, verify in code; obey Environment; code read ≠ observed). ' +
-  'L2/L3: before the first edit, 2–3 options (files, risk, cost) in the choice window; the user picks. ' +
-  'Close changes with "## Cierre · <task ID>" (Resultado · Gates after the last edit · Aprendido = your rewritten Work in progress line · engram; L2+: Decisión · Tests · Navegador = browser-verify tried · Review = code-review on the task\'s files or why not). Independent tool calls in one response. User\'s language. Only L0 skips.';
-const short = 'Waymark Rule 0 as in your last reply: routing line + owner dept-* skill first; opener before the first edit; L2/L3 options before editing; "## Cierre · <task ID>" after changes. Independent tool calls in one response.';
+  'Every real decision, any level: the optimal options (files, risk, cost; recommended marked) in the choice window before acting; the user decides, never you. Commits of the task carry "Waymark-Task: <task ID>". ' +
+  'Close changes with "## Cierre · <task ID>" (Resultado · Decisión · Gates after the last edit · Aprendido = your rewritten Work in progress line · engram; L2+: Tests · Navegador = browser-verify tried · Review = code-review on the task\'s files or why not). Independent tool calls in one response. User\'s language. Only L0 skips.';
+const short = 'Waymark Rule 0 as in your last reply: routing line + owner dept-* skill first; opener before the first edit; the user decides every real decision (options first); "## Cierre · <task ID>" after changes. Independent tool calls in one response.';
 export function taskLine(cwd, now = new Date()) {
   const ids = taskIds(cwd, now);
   return ` Task ID for the Cierre heading: new task → ${ids.next}${ids.followUp ? ` · follow-up of ${ids.last} → ${ids.followUp}` : ''}.`;

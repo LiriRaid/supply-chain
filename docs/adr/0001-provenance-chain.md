@@ -1,6 +1,6 @@
 # 0001 · Provenance chain of the agent's work
 
-**Status:** accepted (2026-10-02, Waymark 2.0.0-dev, step 1)
+**Status:** accepted (2026-10-02, Waymark 2.0.0-dev, step 1) · naming and the L2/L3-only gate superseded by [0002](0002-supply-chain-of-the-agents-work.md)
 
 ## Context
 Real tests 6–10 closed tasks whose Cierre claimed steps that never ran, and the largest cost was work in the wrong direction (a whole turn on the API after the user said "solo FE"; a 2nd attempt after copying a whole rule from "like X"). The Cierre was text in a reply: nothing kept it after the session, nothing tied it to a task, and nothing recorded which option the user chose and which were ruled out. The user wants every change to carry its task ID, the user's decision, the evidence, the gates and the result, under an honest name. Constraints: hooks run locally with 0 model tokens; reply text written after a thinking block is not persisted in the transcript, tool calls and prompts are; Waymark already adds ~3,750 tokens at session start, so the routine must not grow much.

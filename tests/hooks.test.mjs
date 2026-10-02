@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const SCRIPTS = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'waymark', 'scripts');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'waymark-test-'));
 process.env.WAYMARK_HOME = home;
-const { taskIds, validId, decisionsIn, projectSlug, readLog, appendRecord, taskLines } = await import(`file://${SCRIPTS}/provenance.mjs`);
+const { taskIds, validId, decisionsIn, projectSlug, readLog, appendRecord, taskLines, verifyChain, turnInputs, commitsFor } = await import(`file://${SCRIPTS}/provenance.mjs`);
 const { checkDecision } = await import(`file://${SCRIPTS}/tool-hook.mjs`);
 const { checkCierre, cierreGaps, provenanceRecord } = await import(`file://${SCRIPTS}/stop-hook.mjs`);
 const { taskLine } = await import(`file://${SCRIPTS}/rule0-hook.mjs`);
@@ -56,6 +56,47 @@ test('project slug: the project memory whose Path holds the folder, else the fol
 test('decisions: chosen and discarded options from the choice window', () => {
   const d = decisionsIn([answered('¿Dónde?', ['Hook (Recomendado)', 'Respuesta', 'Agente'], 'Hook (Recomendado)')]);
   assert.deepEqual(d, [{ question: '¿Dónde?', chosen: 'Hook (Recomendado)', discarded: ['Respuesta', 'Agente'] }]);
+  // Multi-select: Claude Code joins the labels with "," and no space (observed in this repo's own session).
+  const m = decisionsIn([answered('¿Qué piezas?', ['Manifiesto (Recomendado)', 'Trailer (Recomendado)', 'Cadena', 'Verify'], 'Manifiesto (Recomendado),Trailer (Recomendado),Cadena')]);
+  assert.deepEqual(m[0].discarded, ['Verify']);
+  const s = decisionsIn([answered('¿Cómo?', ['Cola', 'Cola con reintentos'], 'Cola con reintentos')]);
+  assert.deepEqual(s[0].discarded, ['Cola'], 'a label inside another label is still discarded');
+});
+
+test('chained log: each record links the previous one; an edited record breaks the chain', () => {
+  const { cwd, log } = fresh();
+  record(cwd, `${DAY} · T1`); record(cwd, `${DAY} · T2`); record(cwd, `${DAY} · T3`);
+  const recs = readLog(cwd);
+  assert.equal(recs[0].prev, null);
+  assert.equal(recs[1].prev, recs[0].hash);
+  assert.deepEqual(verifyChain(recs), { ok: true });
+  const tampered = fs.readFileSync(log, 'utf8').replace(`${DAY} · T2"`, `${DAY} · T9"`);
+  fs.writeFileSync(log, tampered);
+  assert.deepEqual(verifyChain(readLog(cwd)), { ok: false, at: 1 });
+  assert.deepEqual(verifyChain(readLog(cwd).filter((_, i) => i !== 1)), { ok: false, at: 1 }, 'a deleted record breaks it too');
+});
+
+test('inputs manifest: Waymark and agent version, model, MCP servers used', () => {
+  const lines = [{ ...prompt('x'), version: '2.1.300' }, { type: 'assistant', message: { model: 'claude-opus-5-5', content: [{ type: 'tool_use', name: 'mcp__engram__mem_search', input: {} }, { type: 'tool_use', name: 'Read', input: {} }] } }];
+  const inputs = turnInputs(lines, home);
+  assert.equal(inputs.waymark, fs.readFileSync(path.join(SCRIPTS, '..', 'VERSION'), 'utf8').trim());
+  assert.equal(inputs.agent, '2.1.300');
+  assert.equal(inputs.model, 'claude-opus-5-5');
+  assert.deepEqual(inputs.mcp, ['engram']);
+  assert.equal(inputs.instructions.project, null);
+});
+
+test('commits: found by their Waymark-Task trailer', () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'waymark-git-'));
+  const git = (...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: repo, encoding: 'utf8' });
+  git('init', '-q');
+  git('commit', '-q', '--allow-empty', '-m', `feat: x\n\nWaymark-Task: ${DAY} · T4`);
+  git('commit', '-q', '--allow-empty', '-m', 'chore: no trailer');
+  const hits = commitsFor(repo, `${DAY} · T4`);
+  assert.equal(hits.length, 1);
+  assert.match(hits[0], /^[0-9a-f]{40}$/);
+  assert.deepEqual(commitsFor(repo, `${DAY} · T5`), []);
+  assert.deepEqual(commitsFor(path.join(home, 'no-repo'), `${DAY} · T4`), []);
 });
 
 test('task lines: from the third-last prompt', () => {
@@ -73,11 +114,11 @@ test('decision gate: denies the first L2 edit of a prompt once, then lets it thr
   assert.match(checkDecision(FILE, [...lines, prompt('otra cosa', 'u2'), say('Waymark → L2 · dept-backend')], 's1', state) || '', /decision gate/, 'a new prompt is gated again');
 });
 
-test('decision gate: silent after a choice, at L1, for Q and for memory files', () => {
+test('decision gate: L1 too (the user decides every real decision); silent after a choice, for Q and for memory files', () => {
   const state = path.join(home, `gate-${n++}.json`);
   const asked = [prompt('agrega reintentos'), say('Waymark → L2 · dept-backend'), call('AskUserQuestion', { questions: [] }), answered('Q', ['A', 'B'], 'A')];
   assert.equal(checkDecision(FILE, asked, 's2', state), null);
-  assert.equal(checkDecision(FILE, [prompt('typo'), say('Waymark → L1 · dept-frontend')], 's2', state), null);
+  assert.match(checkDecision(FILE, [prompt('typo'), say('Waymark → L1 · dept-frontend')], 's2', state) || '', /L1 decision gate/);
   assert.equal(checkDecision(FILE, [prompt('¿cómo?'), say('Waymark → Q · dept-qa')], 's2', state), null);
   assert.equal(checkDecision(path.join(os.homedir(), '.waymark', 'projects', 'x.md'), [prompt('x'), say('Waymark → L3 · dept-architecture')], 's2', state), null);
 });
@@ -121,9 +162,19 @@ test('Cierre: Decisión must be backed', () => {
   assert.match(checkCierre(l2(), cierre(id, 'única'), undefined, prompts, ctxFor(cwd, [])), /única \(<why/);
 });
 
-test('Cierre: L1 needs no Decisión; older callers without ctx skip the ID check', () => {
+test('Cierre: L1 needs Decisión too; older callers without ctx skip the ID check', () => {
   const turn = currentTurn([prompt('typo en el título'), say('Waymark → L1 · dept-frontend'), call('Edit', { file_path: FILE })]);
-  assert.equal(checkCierre(turn, '## Cierre\nResultado: hecho · Gates: node --check ✔ · Aprendido: "x ← y" · engram: no disponible'), null);
+  const base = '## Cierre\nResultado: hecho · Gates: node --check ✔ · Aprendido: "x ← y" · engram: no disponible';
+  assert.match(checkCierre(turn, base), /Decisión:/);
+  assert.equal(checkCierre(turn, `${base}\nDecisión: única (un solo texto que corregir)`), null);
+});
+
+test('Cierre: a commit made in the turn needs the Waymark-Task trailer', () => {
+  const { cwd } = fresh();
+  const id = taskIds(cwd).next, withCommit = l2([call('Bash', { command: 'git add -A && git commit -F msg.txt' })]);
+  assert.match(checkCierre(withCommit, cierre(id), undefined, undefined, { ...ctxFor(cwd), commits: [] }), /Waymark-Task/);
+  assert.equal(checkCierre(withCommit, cierre(id), undefined, undefined, { ...ctxFor(cwd), commits: ['abc'] }), null);
+  assert.equal(checkCierre(l2(), cierre(id), undefined, undefined, { ...ctxFor(cwd), commits: [] }), null, 'no commit, no trailer needed');
 });
 
 test('provenance record: what the transcript proves, the hook assigns an ID when the reply has none', () => {

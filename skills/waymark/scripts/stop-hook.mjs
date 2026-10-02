@@ -12,9 +12,9 @@
 // - engram "guardado" → a mem_save/mem_update call this turn;
 // - a check the user asked to skip for this task ("no hagas tests") → `omitido (usuario: "<their words>")`, accepted
 //   only when those words are in the user's messages (prompts are persisted reliably).
-// - 2.0 provenance (docs/adr/0001-provenance-chain.md): the heading carries the task ID the per-prompt hook offered
-//   (`## Cierre · <id>`), `Resultado:` at every level; L2+ `Decisión:` backed by a choice-window answer (elegida),
-//   the user's quoted words (del usuario) or a reason (única).
+// - 2.0 supply chain (docs/adr/0001, 0002): the heading carries the task ID the per-prompt hook offered
+//   (`## Cierre · <id>`); at every level `Resultado:` and `Decisión:` backed by a choice-window answer (elegida), the
+//   user's quoted words (del usuario) or a reason (única); a commit made in the turn carries `Waymark-Task: <id>`.
 // Missing → the agent is asked once to do it or correct the field (decision "block": it continues with the reason).
 // Measured: tests 6–8 closed L2 tasks declaring steps that never ran (a skipped browser check caused a 2nd attempt).
 // It never fires twice in a row (stop_hook_active), for L0/Q turns, or for turns that only wrote memory/scratch files.
@@ -25,7 +25,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readTail, currentTurn, routedLevel, isPrompt, promptText } from './transcript.mjs';
-import { ID, taskIds, validId, taskLines, decisionsIn, appendRecord } from './provenance.mjs';
+import { ID, taskIds, validId, taskLines, decisionsIn, appendRecord, turnInputs, commitsFor } from './provenance.mjs';
 
 const norm = (p) => String(p || '').replace(/\\/g, '/').toLowerCase();
 const exempt = (file) => {
@@ -101,14 +101,18 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
       if (!id) missing.push(`the task ID in the heading: "## Cierre · <id>" (${offer})`);
       else if (!validId(id, ctx.ids)) missing.push(`the heading's task ID ${id} is already recorded or was never offered: use ${offer}`);
     }
+    // Every level: the user decides every real decision; the agent never decides alone.
+    const d = reply.match(/Decisi[oó]n:\s*([^\n]*)/i)?.[1] || '';
+    const quoted = d.match(/^del usuario \(\s*[“"«]([^”"»]{3,200})[”"»]/i)?.[1];
+    if (!d) missing.push('Decisión: elegida <option> · descartadas <options> (the user\'s pick in the choice window) | del usuario ("<their words>") | única (<why>)');
+    else if (/^elegida/i.test(d) && ctx.decisions && !ctx.decisions.length) missing.push('Decisión says "elegida" but no choice-window answer exists in this task: ask with the optimal options (AskUserQuestion), or write del usuario ("<their words>") / única (<why>)');
+    else if (/^del usuario/i.test(d) && !(quoted && prompts.some((p) => plain(p).includes(plain(quoted))))) missing.push('Decisión: del usuario needs the user\'s own words in quotes, as they wrote them');
+    else if (/^[uú]nica/i.test(d) && !/^[uú]nica \(.{3,}\)/i.test(d)) missing.push('Decisión: única (<why there is only one real option>)');
+    else if (!/^(elegida|del usuario|[uú]nica)/i.test(d)) missing.push('Decisión: elegida … · descartadas … | del usuario ("<their words>") | única (<why>)');
+    if (ctx.commits && !ctx.commits.length && turn.tools.some((t) => /^(Bash|PowerShell)$/.test(t.name) && /\bgit\b[^|;&\n]*\scommit\b/.test(String(t.input.command || '')))) {
+      missing.push('a commit was made this turn but none of the last commits carries the trailer "Waymark-Task: <the heading\'s task ID>": put it in the next commit of this task; amend a commit only if it is not pushed and the user says yes');
+    }
     if (level >= 2) {
-      const d = reply.match(/Decisi[oó]n:\s*([^\n]*)/i)?.[1] || '';
-      const quoted = d.match(/^del usuario \(\s*[“"«]([^”"»]{3,200})[”"»]/i)?.[1];
-      if (!d) missing.push('Decisión: elegida <option> · descartadas <options> (the user\'s pick in the choice window) | del usuario ("<their words>") | única (<why>)');
-      else if (/^elegida/i.test(d) && ctx.decisions && !ctx.decisions.length) missing.push('Decisión says "elegida" but no choice-window answer exists in this task: ask with 2–3 options (AskUserQuestion), or write del usuario ("<their words>") / única (<why>)');
-      else if (/^del usuario/i.test(d) && !(quoted && prompts.some((p) => plain(p).includes(plain(quoted))))) missing.push('Decisión: del usuario needs the user\'s own words in quotes, as they wrote them');
-      else if (/^[uú]nica/i.test(d) && !/^[uú]nica \(.{3,}\)/i.test(d)) missing.push('Decisión: única (<why there is only one real option>)');
-      else if (!/^(elegida|del usuario|[uú]nica)/i.test(d)) missing.push('Decisión: elegida … · descartadas … | del usuario ("<their words>") | única (<why>)');
       if (!/Tests:/.test(reply)) missing.push('Tests: rojo→verde <spec> | sin infra (<proof>)');
       if (!/Navegador:\s*(browser-verify|no \(|omitido \(usuario)/.test(reply)) missing.push('Navegador: browser-verify <result> | no (<what failed when tried>)');
       if (!/Review:\s*(code-review|omitido \()/.test(reply)) missing.push('Review: code-review <task\'s files> <findings> | omitido (<why>)');
@@ -161,6 +165,7 @@ export function provenanceRecord(turn, gaps, ctx, meta = {}) {
     files: [...new Set(gaps.changed)],
     commands: turn.tools.filter((t) => /^(Bash|PowerShell)$/.test(t.name)).map((t) => String(t.input.command || '').slice(0, 200)).slice(0, 30),
     skills: [...new Set(turn.tools.filter((t) => t.name === 'Skill').map((t) => String(t.input.skill || '')))],
+    inputs: ctx.inputs, commits: ctx.commits || [],
     cierre: (gaps.reply.match(/##\s*Cierre[\s\S]*/)?.[0] || '').slice(0, 2000),
     unresolved: gaps.missing,
   };
@@ -176,6 +181,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       const lines = readTail(h.transcript_path, 4 * 1024 * 1024), cwd = h.cwd || process.cwd();
       const prompts = lines.filter(isPrompt).map(promptText).slice(-3); // this task: the current prompt and the two before it
       const turn = currentTurn(lines), ctx = { ids: taskIds(cwd), decisions: decisionsIn(taskLines(lines)) };
+      const claimed = String(h.last_assistant_message || '').match(/##\s*Cierre\s*·\s*(.+)/)?.[1]?.match(ID)?.[0];
+      ctx.commits = commitsFor(cwd, claimed);
+      ctx.inputs = turnInputs(taskLines(lines, 1), cwd);
       const gaps = cierreGaps(turn, h.last_assistant_message, sessionTools(lines), prompts, ctx);
       if (!gaps) return;
       if (gaps.missing.length && !h.stop_hook_active) {

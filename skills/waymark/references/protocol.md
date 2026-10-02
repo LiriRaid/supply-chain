@@ -54,14 +54,15 @@ The receiving department checks the evidence it relies on (memory and hand-offs 
 3. **Review** (L2+) — `code-review` skill on the diff. L3 — also `simplify` and, if security-relevant, `security-review`.
 4. **Department DoD** — tick the department's Definition of Done.
 5. **Learn** — `references/learning.md`; rewrite project memory → *Work in progress* (or mark it idle).
-6. **Closing report** — the Cierre of the instructions block, headed by the task ID the per-prompt hook offered; the end-of-turn hook checks it and appends the task's provenance record to `~/.waymark/provenance/<slug>.jsonl` (docs/adr/0001-provenance-chain.md):
+6. **Closing report** — the Cierre of the instructions block, headed by the task ID the per-prompt hook offered; the end-of-turn hook checks it and appends the task's record to the hash-chained `~/.waymark/provenance/<slug>.jsonl`, the supply chain of the agent's work (docs/adr/0002-supply-chain-of-the-agents-work.md):
 
 ```
 ## Cierre · 2026-10-02 · T3
-Resultado: hecho · Gates: npm run lint -- src/app/features/contacts ✔ · ng build ✔ · npm test -- delete-contact-dialog ✔ (4/4) · Aprendido: "confirmación con app-modal ← observado: borrado sin confirmar en /contacts" · engram: guardado
-L2+: Decisión: elegida modal compartido · descartadas confirm() nativo, deshacer con toast · Tests: rojo→verde delete-contact-dialog.spec.ts · Navegador: browser-verify smoke /contacts ✔ · Review: code-review delete-contact-dialog.* sin hallazgos
+Resultado: hecho · Decisión: elegida modal compartido · descartadas confirm() nativo, deshacer con toast
+Gates: npm run lint -- src/app/features/contacts ✔ · ng build ✔ · npm test -- delete-contact-dialog ✔ (4/4) · Aprendido: "confirmación con app-modal ← observado: borrado sin confirmar en /contacts" · engram: guardado
+L2+: Tests: rojo→verde delete-contact-dialog.spec.ts · Navegador: browser-verify smoke /contacts ✔ · Review: code-review delete-contact-dialog.* sin hallazgos
 ```
-**Decision gate (L2/L3):** before the first edit, 2–3 options in the choice window (files, risk, cost; recommended first); the user picks and the Cierre names the chosen and the discarded ones. A choice the user already wrote → `del usuario ("<their words>")`; a single real option → `única (<why>)`. L1 goes direct (one question only when two readings change the result).
+**Decision gate (any level):** the user decides, never the agent. Whenever there are 2+ valid ways (approach, placement, library, visible behavior), list the optimal options in the choice window before acting (files, risk, cost; mark the recommended one, which may not be what the user needs); the user picks and the Cierre names the chosen and the discarded ones. A choice the user already wrote → `del usuario ("<their words>")`; a single real way → `única (<why>)`. Commits of the task carry the trailer `Waymark-Task: <task ID>`.
 
 ## When stuck (two-strike rule)
 

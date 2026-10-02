@@ -2,14 +2,15 @@
 
 The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version is published the agent offers the update; you can also say *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"* (INSTALL §9).
 
-## 2.0.0 (in progress) — provenance chain of the agent's work
-Every task now leaves a record of what was asked, what the user chose, what was proven and how it ended, under an honest name: the provenance of the agent's work, not of dependencies (`docs/adr/0001-provenance-chain.md`). Step 1 of 4:
-- **Task ID** `YYYY-MM-DD · T<n>[a-z]`: the per-prompt hook offers the ID for a new task and for a follow-up of the last one (~25 tokens); the Cierre heading carries it (`## Cierre · 2026-10-02 · T3`).
-- **Decision gate (L2/L3):** before the first edit, 2–3 options in the choice window (files, risk, cost; recommended first) and the user picks. The pre-tool hook denies the first L2+ edit of a prompt once when nothing was asked; the retry passes for a single real option (`Decisión: única (<why>)`) or a choice the user already wrote (`del usuario ("<their words>")`).
-- **The Cierre is the provenance record:** new `Resultado:` (hecho | parcial | bloqueado) at every level and `Decisión: elegida … · descartadas …` at L2+, checked by the end-of-turn hook against the choice-window answer or the user's words.
-- **Provenance log:** the end-of-turn hook appends each closed task to `~/.waymark/provenance/<slug>.jsonl` with what the transcript proves (prompt, options and answer, files, commands, skills), the Cierre text and the claims it could not back (`unresolved`). Step 2 moves it into the project.
+## 2.0.0 (in progress) — a supply chain of the agent's work
+Waymark is now a supply chain of the agent's work: every task goes through defined stages and comes out with a verifiable record of its inputs, the user's decision, the evidence, the gates and the commits it produced (README → *A supply chain of the agent's work*; `docs/adr/0001`, `0002`). **The user decides, never the agent:** the old "the agent still decides" is gone. Step 1 of 4:
+- **The user decides every real decision, at any level:** whenever there are 2+ valid ways, the agent lists the optimal options in the choice window (files, risk, cost) and marks the recommended one, which may not be what the user needs; the user picks. The pre-tool hook denies the first L1–L3 edit of a prompt once when nothing was asked; the retry passes for a single real way (`Decisión: única (<why>)`) or a choice the user already wrote (`del usuario ("<their words>")`).
+- **Task ID** `YYYY-MM-DD · T<n>[a-z]`: the per-prompt hook offers the ID for a new task and for a follow-up of the last one (~25 tokens); the Cierre heading carries it (`## Cierre · 2026-10-02 · T3`), and so do the task's commits (trailer `Waymark-Task: <id>`).
+- **The Cierre is the task's record:** new `Resultado:` (hecho | parcial | bloqueado) and `Decisión: elegida … · descartadas …` at every level, checked by the end-of-turn hook against the choice-window answer or the user's words; a commit made in the turn without the trailer is flagged.
+- **The chain:** the end-of-turn hook appends each closed task to `~/.waymark/provenance/<slug>.jsonl`: the inputs manifest (Waymark and agent version, model, MCP servers used, hashes of the instruction files), what the transcript proves (prompt, options and pick, files, commands, skills), the commits carrying its ID, the Cierre text and the claims it could not back (`unresolved`). Each line holds the hash of the previous one, so editing or deleting a past task breaks the chain. Step 2 moves the log into the project.
 - **Hook tests in the repo:** `node --test tests/*.test.mjs` (no dependencies, temporary `WAYMARK_HOME`).
 - **Fix:** `protocol.md` → *Closing report* was an empty, unclosed code block that turned *When stuck* into code; it now shows a full Cierre and the decision gate.
+- **Fix:** a multi-select answer in the choice window joins labels with "," (no space); the record no longer lists chosen options as discarded.
 
 ## 1.9.0 — evidence labels that match what happened
 Ninth real test (1.8.0, an L1 bug in a real project: 1 attempt, no hallucinations, ~3% of the quota) still showed fields claiming more than was done, and two Waymark bugs:

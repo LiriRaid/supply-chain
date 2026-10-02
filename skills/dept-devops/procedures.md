@@ -6,7 +6,7 @@ Loaded on demand from `SKILL.md` → *Procedures*. Read only the section the tas
 1. `git status` and `git diff`; never stage unrelated files, build output or secrets.
 2. On the default branch with a non-trivial change: create a branch `<type>/<short-kebab-description>` first.
 3. Conventional Commit: `<type>(<scope>): <imperative summary ≤ 72 chars>`, blank line, body with the why. Types: `feat` `fix` `refactor` `perf` `test` `docs` `build` `ci` `chore` `revert`. Breaking: `!` plus `BREAKING CHANGE:` footer.
-4. Append the attribution lines the session requires, if any.
+4. Add the trailer `Waymark-Task: <task ID>` (the ID the per-prompt hook offered; it links the commit to the task's record) and the attribution lines the session requires, if any.
 5. New commit; no `--amend` unless asked. A failing pre-commit check: fix the cause and commit again.
 
 ### Git: pull request (only when the user asks)
