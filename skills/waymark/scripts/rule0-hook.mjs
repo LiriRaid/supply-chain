@@ -1,17 +1,23 @@
 #!/usr/bin/env node
-// Waymark · Rule 0 reminder + resume guard + daily update check. Registered by INSTALL.md as a per-prompt hook
+// Waymark · Rule 0 reminder + context notices + daily update check. Registered by INSTALL.md as a per-prompt hook
 // (Claude Code: UserPromptSubmit). Runs locally (0 tokens); only the text below reaches the model:
-// - the reminder: full (~90 tokens) when the last reply did not open with "Waymark →", one line (~25) when it did;
+// - the reminder: full (~130 tokens) when the last reply did not open with "Waymark →", one line (~40) when it did;
 // - at most once a day while a newer VERSION exists, one update line.
-// Resume guard: when the session already holds a large context (≥ 150k tokens) and was idle longer than the
-// prompt-cache lifetime (60 min), resuming re-writes the whole context as new input (measured: 502k tokens for one
-// line). The hook then stops that one prompt (0 tokens; Claude Code shows the reason to the user) and suggests a new
-// session; resending the prompt continues here. WAYMARK_RESUME_TOKENS / WAYMARK_RESUME_MINUTES tune it (0 = off).
-// It never reads or changes the prompt text. Remove it from the agent's settings to disable it.
+// Context notices (never change the prompt):
+// - Resume guard: the session holds ≥ 150k tokens and was idle longer than the prompt-cache lifetime (60 min), so
+//   resuming re-writes the whole context as new input (measured: 502k tokens for one line). The hook stops that one
+//   prompt (0 tokens; the user sees why) and saves it to ~/.waymark/.pending-prompt.json: a new session in the same
+//   folder within 30 min receives it (session-hook.mjs); resending it here continues. WAYMARK_RESUME_TOKENS /
+//   WAYMARK_RESUME_MINUTES tune it (0 = off).
+// - Size notice: while the session is active, at 300k tokens of context and every 200k more, a message shown only to
+//   the user (systemMessage: not added to the model's context) says each response re-reads all of it and a new
+//   session is cheaper for a new task. Nothing is blocked. WAYMARK_CONTEXT_NOTICE / WAYMARK_CONTEXT_STEP (0 = off).
+// Remove it from the agent's settings to disable it.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { readTail, sessionState } from './transcript.mjs';
 
 const REPO = process.env.WAYMARK_REPO || 'LiriRaid/waymark';
 const DAY = 24 * 60 * 60 * 1000;
@@ -19,10 +25,16 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const HOME = process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark');
 const stateFile = path.join(HOME, '.update-check.json');
 const guardFile = path.join(HOME, '.resume-guard.json');
+const noticeFile = path.join(HOME, '.context-notice.json');
+export const PENDING = path.join(HOME, '.pending-prompt.json');
 const num = (v, d) => (v === undefined || v === '' || Number.isNaN(Number(v)) ? d : Number(v));
 const RESUME_TOKENS = num(process.env.WAYMARK_RESUME_TOKENS, 150000);
 const RESUME_MINUTES = num(process.env.WAYMARK_RESUME_MINUTES, 60);
-const TAIL = 2 * 1024 * 1024; // bytes read from the end of the transcript
+const NOTICE_TOKENS = num(process.env.WAYMARK_CONTEXT_NOTICE, 300000);
+const NOTICE_STEP = num(process.env.WAYMARK_CONTEXT_STEP, 200000);
+const readJson = (p) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return {}; } };
+const writeJson = (p, v) => { fs.mkdirSync(HOME, { recursive: true }); fs.writeFileSync(p, JSON.stringify(v)); };
+const prune = (o) => { for (const [k, v] of Object.entries(o)) if (Date.now() - (v.at ?? v) > 7 * DAY) delete o[k]; return o; };
 
 // Coexistence mode (~/.waymark/coexistence.md, waymark/references/coexistence.md) decides the reminder.
 let mode = '';
@@ -31,60 +43,41 @@ try { mode = fs.readFileSync(path.join(HOME, 'coexistence.md'), 'utf8').match(/^
 // guest / skills-only (and 1.5.0's other-leads): the orchestrator owns the turn, so no reminder at all.
 const full =
   'Waymark Rule 0 — first text: "Waymark → L<n>|Q · <dept> · skills: …"; first tool call: the owner dept-* skill. ' +
-  'Before the first edit: "Pedido · Captura" (the ask; what each image marks; "like X" → Copia: only what was named) then "Memoria · Reutiliza · Evidencia · Procedimiento" (memory digest injected at session start: pointers, verify in code; obey Environment). ' +
-  'Close changes with "## Cierre" (Gates after the last edit · Aprendido = your rewritten Work in progress line · engram; L2+: Tests · Navegador = browser-verify tried · Review = code-review or why not). Independent tool calls in one response. User\'s language. Only L0 skips.';
+  'Before the first edit: "Pedido · Captura" (the ask; what each image marks; "like X" → Copia: only what was named; a layer the user named → Capa, ask before leaving it) then "Memoria · Reutiliza · Evidencia · Procedimiento" (memory digest injected at session start: pointers, verify in code; obey Environment; code read ≠ observed). ' +
+  'Close changes with "## Cierre" (Gates after the last edit · Aprendido = your rewritten Work in progress line · engram; L2+: Tests · Navegador = browser-verify tried · Review = code-review on the task\'s files or why not). Independent tool calls in one response. User\'s language. Only L0 skips.';
 const short = 'Waymark Rule 0 as in your last reply: routing line + owner dept-* skill first; opener before the first edit; "## Cierre" after changes. Independent tool calls in one response.';
 const coexist = ' Coexistence: follow the injected Adopted/Fallback/Resolved rules; never edit the other framework\'s files.';
 const silent = ['guest', 'other-leads', 'skills-only'].includes(mode);
+const kTok = (n) => `${Math.round(n / 1000)}k`;
 
-// Last lines of the transcript (Claude Code .jsonl): context size, idle time and how the last reply opened.
-function readTail(file) {
-  if (!file || !fs.existsSync(file)) return [];
-  const size = fs.statSync(file).size, start = Math.max(0, size - TAIL), buf = Buffer.alloc(size - start);
-  const fd = fs.openSync(file, 'r');
-  try { fs.readSync(fd, buf, 0, buf.length, start); } finally { fs.closeSync(fd); }
-  const rows = buf.toString('utf8').split('\n');
-  if (start > 0) rows.shift(); // first line is partial
-  return rows.filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
-}
-const isPrompt = (d) => {
-  if (d.type !== 'user' || d.isMeta || d.isSidechain) return false;
-  const c = d.message?.content;
-  if (Array.isArray(c) && c.some((x) => x.type === 'tool_result')) return false;
-  const text = typeof c === 'string' ? c : (c || []).filter((x) => x.type === 'text').map((x) => x.text).join(' ');
-  return !!text.trim() && !/^\s*<(local-command|command-|system-reminder)/.test(text) && !/^\[Request interrupted/.test(text);
-};
-export function sessionState(lines) {
-  let context = 0, lastAt = 0, opener = null, turn = null;
-  for (const d of lines) {
-    if (isPrompt(d)) { turn = { first: null }; continue; }
-    if (d.type !== 'assistant' || d.isSidechain) continue;
-    const u = d.message?.usage;
-    if (u) {
-      context = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
-      lastAt = Date.parse(d.timestamp || '') || lastAt;
-    }
-    const text = (d.message?.content || []).find((x) => x.type === 'text' && x.text.trim())?.text;
-    if (turn && text && turn.first === null) { turn.first = text.trim(); opener = turn.first; }
-  }
-  return { context, lastAt, openedWithWaymark: !!opener && opener.startsWith('Waymark →') };
-}
-
-function resumeGuard(sessionId, st) {
+function resumeGuard(hook, st) {
   if (!RESUME_TOKENS || !RESUME_MINUTES || !st.lastAt || st.context < RESUME_TOKENS) return '';
   const idle = Date.now() - st.lastAt;
   if (idle < RESUME_MINUTES * 60000) return '';
-  let seen = {};
-  try { seen = JSON.parse(fs.readFileSync(guardFile, 'utf8')); } catch {}
-  const key = sessionId || 'unknown';
-  if (seen[key] === st.lastAt) return ''; // already stopped once for this pause: the resent prompt goes through
-  for (const [k, v] of Object.entries(seen)) if (Date.now() - v > 7 * DAY) delete seen[k];
+  const seen = prune(readJson(guardFile)), key = hook.session_id || 'unknown';
+  if (seen[key] === st.lastAt) { // already stopped once for this pause: the resent prompt goes through here
+    try { if (readJson(PENDING).session === key) fs.rmSync(PENDING); } catch {}
+    return '';
+  }
   seen[key] = st.lastAt;
-  try { fs.mkdirSync(HOME, { recursive: true }); fs.writeFileSync(guardFile, JSON.stringify(seen)); } catch { return ''; }
-  const k = `${Math.round(st.context / 1000)}k`, min = Math.round(idle / 60000);
+  try {
+    writeJson(guardFile, seen);
+    if (hook.prompt) writeJson(PENDING, { at: Date.now(), session: key, cwd: hook.cwd || process.cwd(), prompt: String(hook.prompt).slice(0, 4000) });
+  } catch { return ''; }
+  const k = kTok(st.context), min = Math.round(idle / 60000);
   return `Waymark: esta sesión ya tiene ~${k} tokens de contexto y estuvo ${min} min inactiva; la caché del modelo venció, así que seguir aquí vuelve a escribir todo ese contexto (~${k} tokens de tu cuota) antes de responder. ` +
-    'Recomendado: abre una sesión nueva (la memoria del proyecto se inyecta sola) o usa /compact. Para seguir aquí igualmente, vuelve a enviar tu mensaje (este aviso sale una sola vez). ' +
-    `· This session holds ~${k} tokens and was idle ${min} min; the cache expired, so continuing re-writes all of it. Open a new session, or resend your message to continue here.`;
+    'Recomendado: abre una sesión nueva en esta carpeta en los próximos 30 min; tu mensaje pasa solo (la memoria del proyecto también). Para seguir aquí igualmente, vuelve a enviarlo (este aviso sale una sola vez). ' +
+    `· This session holds ~${k} tokens and was idle ${min} min; the cache expired. Open a new session here within 30 min and your message carries over, or resend it to continue here.`;
+}
+
+function sizeNotice(hook, st) {
+  if (!NOTICE_TOKENS || st.context < NOTICE_TOKENS) return '';
+  const level = NOTICE_STEP ? Math.floor((st.context - NOTICE_TOKENS) / NOTICE_STEP) : 0;
+  const seen = prune(readJson(noticeFile)), key = hook.session_id || 'unknown';
+  if (seen[key] && seen[key].level >= level) return '';
+  try { writeJson(noticeFile, { ...seen, [key]: { at: Date.now(), level } }); } catch { return ''; }
+  const k = kTok(st.context);
+  return `Waymark: esta sesión ya tiene ~${k} tokens de contexto y cada respuesta los vuelve a leer. Si lo que sigue es una tarea nueva, abre otra sesión para ahorrar (la memoria del proyecto se pasa sola); si es la misma tarea, sigue aquí. · ~${k} tokens of context, re-read on every response: a new task is cheaper in a new session.`;
 }
 
 const newer = (a, b) => {
@@ -122,13 +115,16 @@ async function main(input) {
   try { hook = JSON.parse(input); } catch {}
   let st = { context: 0, lastAt: 0, openedWithWaymark: false };
   try { st = sessionState(readTail(hook.transcript_path)); } catch {}
-  let block = '';
-  try { block = resumeGuard(hook.session_id, st); } catch {}
+  let block = '', notice = '';
+  try { block = resumeGuard(hook, st); } catch {}
   if (block) return { decision: 'block', reason: block };
+  try { notice = sizeNotice(hook, st); } catch {}
   const reminder = silent ? '' : (st.openedWithWaymark ? short : full) + (mode === 'waymark-leads' ? coexist : '');
   const extra = await updateLine();
-  if (!(reminder + extra).trim()) return null;
-  return { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: (reminder + extra).trim() } };
+  const out = {};
+  if ((reminder + extra).trim()) out.hookSpecificOutput = { hookEventName: 'UserPromptSubmit', additionalContext: (reminder + extra).trim() };
+  if (notice) out.systemMessage = notice;
+  return Object.keys(out).length ? out : null;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

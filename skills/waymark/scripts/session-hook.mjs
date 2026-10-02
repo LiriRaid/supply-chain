@@ -9,6 +9,7 @@
 // It also notices when skill folders changed (this agent's, other agents', the project's) and refreshes
 // skill-registry.md in the background with sync.mjs, so third-party skills are usable without a manual sync.
 // Skill fit: offers (monthly) to list only the names of skills the user never invokes (skill-fit.mjs).
+// Pending prompt: hands over a message the resume guard stopped in a large idle session of this folder (< 30 min).
 // It never blocks. Remove it from the agent's settings to disable it.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -116,6 +117,18 @@ function mcpFit(cwd) {
   return `MCP fit: ${parts.join('; ')}. Offer once, with your choice window: block/lift them for this project only (your servers stay registered; a deny rule in .claude/settings.local.json) — node "${script}" --project "${cwd.replace(/\\/g, '/')}" shows the plan, add --apply on yes; next session. Declined → do not ask again this week.`;
 }
 
+// A prompt the resume guard (rule0-hook.mjs) stopped in a large idle session of this folder, less than 30 min ago:
+// the new session takes it over, so the user does not retype it. Consumed once.
+function pendingPrompt(cwd) {
+  const file = path.join(HOME, '.pending-prompt.json');
+  let p = null;
+  try { p = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return ''; }
+  if (!p?.prompt || Date.now() - p.at > 30 * 60000 || norm(p.cwd) !== norm(cwd)) return '';
+  try { fs.rmSync(file); } catch {}
+  return `Pending message from the previous session (stopped by the resume guard ${Math.round((Date.now() - p.at) / 60000)} min ago so it would not re-write that session's context): «${p.prompt}». ` +
+    'If the user\'s first message is short ("continúa", "sigue", "ok", "hazlo") or refers to it, treat this as their request; if it is unrelated, mention the pending message in one line and follow the new one.';
+}
+
 // Skills the user never invokes that are still listed in every session (Claude Code). The plan is computed in the
 // background by skill-fit.mjs --cache (weekly) and offered at most once every 30 days; applied after the user's yes.
 function skillFit() {
@@ -181,6 +194,7 @@ const emit = () => {
     text = 'Waymark session memory (already recalled, cite it in "Memoria:"). Pointers, not facts: verify against the code before relying on them; if the code disagrees, the code wins and you fix or remove the entry.\n' + digest(cwd);
   } catch { text = ''; }
   if (text.length > MAX) text = text.slice(0, MAX) + '…';
+  try { const p = pendingPrompt(cwd); if (p) text += '\n' + p; } catch {}
   try { const s = skillsChanged(cwd); if (s) text += '\n' + s; } catch {}
   try { const m = mcpFit(cwd); if (m) text += '\n' + m; } catch {}
   try { const s = skillFit(); if (s) text += '\n' + s; } catch {}

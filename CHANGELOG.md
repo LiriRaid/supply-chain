@@ -2,6 +2,16 @@
 
 The installed version is in `<skills-dir>/waymark/VERSION`. When a newer version is published the agent offers the update; you can also say *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"* (INSTALL §9).
 
+## 1.8.0 (in progress, `develop`) — fewer wrong-direction attempts, checks that run themselves
+Seventh real test (1.7.0): the largest cost is not the size of each step but attempts in the wrong direction. A small front-end bug cost ~9% of the 5-hour quota, ~6% of it in the API after the user had said "solo FE" (3 attempts, 14.1M tokens); an L2 with 1 attempt cost ~7%. Skipped checks repeated from test 6 (no browser-verify/code-review and no reason given, opener skipped in a turn, inferred evidence labelled "observed").
+- **`Capa:`** in the opener: a layer the user named ("solo FE", "no toques la API") is binding; evidence pointing elsewhere → ask before leaving it.
+- **Quick bug triage** (dept-qa) new step: a stale view after an action → check what reloads it (another tab via `window.open`, a cache in a service, a reused route) before blaming the backend. It was the real cause.
+- **Sharper fields:** `Evidencia: observada <what you saw>` (code you read is not observed behavior); `Memoria: … · mem_search "<query>"` at L2+; `Navegador: … | no (requiere <physical action>; check: …)`; `Review: code-review <task's files> …` (a review without paths reviewed someone else's changes).
+- **Cierre check** (`stop-hook.mjs`, Stop): a turn routed L1–L3 that changed project files must end with the Cierre; at L2+ `Navegador`/`Review` name browser-verify/code-review or say why; otherwise the agent is asked once to complete it.
+- **Pre-tool checks** (`tool-hook.mjs`, now also on edits): recursive `grep`/`find` that walks `node_modules` is denied with the fix (hung 120 s, four times); an edit in an L1–L3 turn with no opener found gets a one-line note. Not a denial: Claude Code does not persist reply text written after a thinking block (checked on 2.1.286), so the transcript cannot prove the opener is missing.
+- **Context notices:** the resume guard (150k tokens + 60 min idle, unchanged) now saves the stopped prompt and a new session in the same folder within 30 min takes it over, so nothing is retyped. While a session is active nothing is blocked: past 300k tokens of context (and every 200k more) a notice shown only to the user (`systemMessage`, 0 model tokens) says a new task is cheaper in a new session.
+- **`measure.mjs`:** background-task notifications are no longer counted as prompts (they inflated attempts); a shared `transcript.mjs` reads transcripts for the hooks and `measure.mjs`.
+
 ## 1.7.0 — fewer tokens per session and per prompt
 Measured in a real 500k-token session: resuming it after an hour idle cost 502k tokens of cache writes (8% of a 5-hour quota) for a one-line message; the Rule 0 reminder was re-sent in full on every prompt; the skill listing (Waymark's and the user's unused ones) is paid in every session.
 - **Resume guard** (`rule0-hook.mjs`): reads the session transcript; with ≥ 150k tokens of context and ≥ 60 min idle (the prompt cache expired), it stops that one prompt (0 tokens; the user sees why) and suggests a new session or `/compact`; resending continues. `WAYMARK_RESUME_TOKENS` / `WAYMARK_RESUME_MINUTES` (0 = off).

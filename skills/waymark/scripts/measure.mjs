@@ -13,6 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { parseLines, isPrompt } from './transcript.mjs';
 
 const args = process.argv.slice(2);
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : null; };
@@ -27,7 +28,7 @@ function latestFor(cwd) {
 const file = args.find((a) => a.endsWith('.jsonl')) || latestFor(process.cwd());
 if (!file || !fs.existsSync(file)) { console.error(`No transcript found${file ? `: ${file}` : ` for ${process.cwd()}`}. Pass the .jsonl path (~/.claude/projects/<folder>/<session>.jsonl).`); process.exit(1); }
 
-const parse = (f) => fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+const parse = (f) => parseLines(fs.readFileSync(f, 'utf8'));
 const zero = () => ({ input: 0, cacheWrite: 0, cacheRead: 0, output: 0 });
 const add = (t, u) => { t.input += u.input_tokens || 0; t.cacheWrite += u.cache_creation_input_tokens || 0; t.cacheRead += u.cache_read_input_tokens || 0; t.output += u.output_tokens || 0; return t; };
 const total = (t) => t.input + t.cacheWrite + t.cacheRead + t.output;
@@ -44,14 +45,8 @@ function usageOf(lines) {
   return { tokens: t, responses: seen.size };
 }
 
+// Background-task notifications are not prompts: their responses count toward the turn that started the task.
 const lines = parse(file);
-const isPrompt = (d) => {
-  if (d.type !== 'user' || d.isMeta || d.isSidechain) return false;
-  const c = d.message?.content;
-  if (Array.isArray(c) && c.some((x) => x.type === 'tool_result')) return false;
-  const text = typeof c === 'string' ? c : (c || []).filter((x) => x.type === 'text').map((x) => x.text).join(' ');
-  return !!text.trim() && !/^\s*<(local-command|command-|system-reminder)/.test(text) && !/^\[Request interrupted/.test(text);
-};
 
 const turns = [];
 let cur = null;

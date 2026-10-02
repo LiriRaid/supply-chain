@@ -61,7 +61,7 @@ Your MCP servers stay registered where you put them. In each project, `scripts/m
 
 ### Skills you never use, and costly resumes
 
-Each listed skill costs its description in every session. `scripts/skill-fit.mjs` finds the skills you added but have not invoked in 30 days and, after your yes, lists only their names (still invocable); unused plugins are disabled. Waymark's 17 descriptions were also cut from 8,558 to 4,407 characters (~1,000 tokens per session). Resuming a large session after an hour idle re-writes its whole context (the cache expired): the Rule 0 hook stops that first message once and suggests a new session.
+Each listed skill costs its description in every session. `scripts/skill-fit.mjs` finds the skills you added but have not invoked in 30 days and, after your yes, lists only their names (still invocable); unused plugins are disabled. Waymark's 17 descriptions were also cut from 8,558 to 4,407 characters (~1,000 tokens per session). Resuming a large session after an hour idle re-writes its whole context (the cache expired): the Rule 0 hook stops that first message once and hands it to a new session in the same folder. Past 300k tokens of context an active session only shows a notice. Before commands, a hook stops fragile inline scripts and recursive searches through `node_modules`; at the end of a turn another checks the Cierre.
 
 ### Measure it
 

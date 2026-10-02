@@ -7,23 +7,23 @@ Every request runs this, any size or session length. Only L0 skips it (a color, 
 **First text of the turn, before any tool call or narration:** `Waymark → L<n>|Q · <dept> · skills: <only skills you will invoke>`; then call the owner `dept-*` skill as your first tool.
 **Before the first edit**, once you know them:
 ```
-Pedido: <the ask in one line> · Captura: <what each image shows + the element it points to | sin captura> [· Copia: <only the properties named from X>]
-Memoria: leída|creada <~/.waymark/projects/<slug>.md> · Reutiliza: <piece + path | ninguno → patrón de <file>> · Evidencia: observada | hipótesis (check: <one line>) · Procedimiento: <section> (procedures.md:<line>)
+Pedido: <the ask in one line> · Captura: <what each image shows + the element it points to | sin captura> [· Copia: <only what was named from X>] [· Capa: <layer the user set>]
+Memoria: leída|creada <~/.waymark/projects/<slug>.md> [· mem_search "<query>" (L2+)] · Reutiliza: <piece + path | ninguno → patrón de <file>> · Evidencia: observada <what you saw> | hipótesis (check: <one line>) · Procedimiento: <section> (procedures.md:<line>)
 ```
 **Close every change with:**
 ```
 ## Cierre
 Gates: <commands run after the last edit + result> · Aprendido: <your Work in progress line, rewritten> · engram: <guardado | no disponible>
-L2+: Tests: rojo→verde <spec> | sin infra (<proof>) · Navegador: browser-verify <result> | no (<what failed when tried>) · Review: code-review <findings> | omitido (<why>)
+L2+: Tests: rojo→verde <spec> | sin infra (<proof>) · Navegador: browser-verify <result> | no (<what failed when tried> | requiere <physical action>; check: …) · Review: code-review <task's files> <findings> | omitido (<why>)
 ```
 Each field is a step; fill it truthfully:
-- **Pedido · Captura** — the request in the user's terms and, per image, the screen, element and state it marks; that is the target. Two readings that change the result → one question before editing. "Like X" → *Copia* lists only what the user named from X, not X's whole rule.
+- **Pedido · Captura** — the request in the user's terms and, per image, the screen, element and state it marks; that is the target. Two readings that change the result → one question before editing. "Like X" → *Copia* lists only what the user named from X, not X's whole rule. The user names a layer ("solo FE", "no toques la API") → *Capa*: evidence pointing elsewhere → ask before leaving it.
 - **Memoria** — the session hook already injected this machine's *Environment* and the project's memory digest; obey it (e.g. tools marked missing). Memory points, the code decides: verify an entry before relying on it; code disagrees → fix the entry. Full file: `~/.waymark/projects/<slug>.md`; also `preferences.md`; L2+ or a topic the digest lacks: `mem_search`. Missing → create it now (`waymark/references/project-detection.md` → *Minimal bootstrap*); never ask the user to fill it.
 - **Reutiliza** — *Project map → Reusables* before creating anything (components, features, services, utils, models, animations, styles/tokens).
-- **Evidencia** — observe the real state before changing (computed style and its source, actual value, log, response). Cannot (no browser, login) → *hipótesis* with the user's one-line check, given **before** the fix.
+- **Evidencia** — observe the real state before changing (computed style and its source, actual value, log, response) and name it; code you read is not observed behavior. Cannot (no browser, login) → *hipótesis* with the user's one-line check, given **before** the fix.
 - **Procedimiento** — the one section of the department's `procedures.md` you read and followed, with its line (bugs: `dept-qa` → *Quick bug triage*).
 - **skills** — only skills you invoke (a support department only if you read its Quick ref). Independent tool calls go in one response: each response re-reads the whole context. Unverified library API or internal → official docs (`library-docs`) or the installed package source, cited. Missing skill → `waymark/references/skills.md`.
-- **Gates** — L1: lint/typecheck of changed files (UI: quickest compile check); L2+: + tests, build, review. No spec → add one where the project tests that kind of file, else "sin infraestructura de test" + one-line check. 2nd failed attempt → *When stuck* (`waymark/references/protocol.md`).
+- **Gates** — L1: lint/typecheck of changed files (UI: the stack's quick compile); L2+: + tests (no spec → add one where the project tests that kind of file), build, review. The end-of-turn hook checks the Cierre. 2nd failed attempt → *When stuck* (`waymark/references/protocol.md`).
 - **Aprendido** — rewrite **your task's** entry in *Work in progress* as `decision ← evidence` and quote it (never "ninguno"; keep other tasks' items); L3: the plan's steps live there (`✔1 · ▶2 · 3`, next step + its gate), a step is ✔ only after its gate. New facts → `waymark/references/learning.md`; fixed bug → *Solved problems* (symptom, cause, fix, dead ends).
 - **Coexistence** — obey the injected `~/.waymark/coexistence.md` (*Resolved* wins over this block); never edit the other framework's files; not configured → offer it (`waymark/references/coexistence.md`).
 
