@@ -12,7 +12,7 @@ description: "Waymark · Developer Experience department. Use FIRST for Claude C
 **DoD:** templates followed, sizes within limits, registry regenerated, trigger descriptions concrete, no contradictory instructions.
 
 ## Entry
-Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). Department-specific reads:
+Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). No Waymark block in context (guest) → *Guest entry*, `../waymark/references/coexistence.md` §3. Department-specific reads:
 - Learnings: `~/.waymark/learnings/dept-devex.md` if it exists.
 - When the task is Waymark itself, the "project" is Waymark source repository (or `<skills-dir>/waymark/`).
 - Tools: the **Tools** table below. Open `../waymark/skill-registry.md` only if a capability there has no installed provider.

@@ -12,7 +12,7 @@ Repository: `https://github.com/LiriRaid/waymark`
 
 | The user said… | Do |
 |---|---|
-| "instálame / install Waymark" | §1 (incl. §1.1 other frameworks, §1.2 confirm) → §8 |
+| "instálame / install Waymark" | §1 (incl. §1.1 orchestrators, §1.2 confirm) → §8 |
 | "actualiza / update Waymark" | §9 |
 | "desinstala / uninstall Waymark" | §10 |
 
@@ -32,11 +32,13 @@ Agente: Claude Code · skills: ~/.claude/skills · instrucciones: ~/.claude/CLAU
 También encontré: Codex (~/.codex) · Cursor (~/.cursor)
 ```
 
-**1.1 Other agent frameworks.** Before the plan, check whether another framework already governs each agent (e.g. gentle-ai): marked blocks in `<instructions-file>` that are not Waymark's (`<!-- <name>:<section> -->`), hooks in the agent settings that do not run Waymark scripts, orchestrator/persona/trigger skills. If you find one, follow the repository's `skills/waymark/references/coexistence.md` §1–§2: read its sections, write each rule as one line and classify it as **Adopted** (Waymark follows it), **Fallback** (its skill becomes Waymark's backup for a capability) or **Resolved** (same-moment conflict). **Never edit that framework's files**; Waymark adapts on its own side. Tell the user in one line:
+**1.1 Orchestrators and other agent frameworks.** Before the plan, check whether another framework already governs each agent (e.g. gentle-ai): marked blocks in `<instructions-file>` that are not Waymark's (`<!-- <name>:<section> -->`), hooks in the agent settings that do not run Waymark scripts, orchestrator/persona/trigger skills, its own skill registry. Waymark is not an orchestrator: **if one is already installed, Waymark becomes its guest** (no hooks, no Rule 0 block; its skills and memory reach the orchestrator through the orchestrator's own registry and engram). Follow the repository's `skills/waymark/references/coexistence.md` §1–§4: read its sections, write each rule as one line and classify it (Adopted · Fallback · Resolved), and find how its registry is refreshed. **Never edit that framework's files.** Tell the user in one line:
 
 ```
-Otro framework: gentle-ai (bloques gentle-ai:persona, …) · 9 reglas compatibles · 4 de respaldo · 4 en conflicto → Waymark se adapta, no toco sus archivos
+Orquestador ya instalado: gentle-ai (bloques gentle-ai:*, hooks propios, registro .atl/skill-registry.md) → Waymark entra como invitado: sin hooks ni bloque, sus skills por el registro de gentle-ai, memoria por engram. No toco sus archivos.
 ```
+
+Nothing found → the normal plan below; Waymark leads.
 
 **1.2 Plan and confirm [ask].** Before downloading or touching anything, show the user the plan and wait for an explicit yes:
 
@@ -56,13 +58,13 @@ Ask it with your **choice window** if the agent has one (Claude Code: `AskUserQu
 - **Cambiar algo** — the user says what (another folder, skip the hook, skip a step).
 - **Cancelar**.
 
-**§1.1 found another framework →** the question is who leads instead, with the conflict count in it (`coexistence.md` §3), one question only:
-- **Waymark lidera, <framework> de respaldo (Recomendado)** — full plan; compatible rules adopted, its skills as fallback, conflicts resolved for Waymark.
-- **<framework> lidera, Waymark de apoyo** — block below its content, no opener, session hook only; departments used as knowledge.
-- **Solo skills** — skills + private layer; no block, no hooks.
+**§1.1 found an orchestrator →** the plan becomes the guest plan (items 2 and 4 disappear; a new step refreshes its registry) and the question offers, one question only:
+- **Invitado de <framework> (Recomendado)** — skills + private layer; no block, no hooks; `<framework>` keeps its flow and loads Waymark's departments through its registry; memory through engram.
+- **Waymark lidera, <framework> de respaldo** — full plan; its compatible rules adopted, its skills as fallback, turn conflicts resolved for Waymark (the user prefers Waymark's routine).
+- **Solo skills** — skills + private layer; no registry step, no block, no hooks.
 - **Cancelar**.
 
-Then show the three lists (Adopted · Fallback · Resolved) and let the user move any rule **[ask]**; they become `~/.waymark/coexistence.md` in §6.1.
+Then show the lists (Adopted · Fallback · Resolved) and let the user move any rule **[ask]**; they become `~/.waymark/coexistence.md` in §6.1 with `Mode: guest | waymark-leads | skills-only`.
 
 Agents without a choice window: show the plan and end with *"¿Continúo?"*.
 
@@ -138,7 +140,7 @@ These files start generic on purpose. **Do not ask the user to fill them**: Waym
 
 - File missing → create it with the block.
 - Block already present → replace it in place.
-- Mode `skills-only` → no block. Mode `other-leads` → the block goes **after** the other framework's content instead of at the top.
+- Mode `guest` or `skills-only` → **no block**: nothing in the instructions file competes with the orchestrator.
 - File exists without the block → add the block **at the top** and leave the rest of the file untouched. Another framework's blocks are never moved, edited or offered for moving. Then read the rest of the file and list for the user the parts that are now covered by the block or the private layer (an older Waymark section, rules about subagents, delivery preferences, project descriptions, links to files such as `Agents.md` or `user-preferences.md`). Offer **[ask]**: move each part into the matching private-layer file (`subagents.md`, `preferences.md` → *Learned preferences*, `projects.md`, `profile.md`) and remove it from the instructions file. Never delete content the user did not approve.
 - Agents whose instructions are not a file (e.g. Cursor user rules): show the block and ask the user to paste it.
 
@@ -154,6 +156,8 @@ These files start generic on purpose. **Do not ask the user to fill them**: Waym
 
 The stack-specific entries shipped today are **examples** for Angular (`angular-cli`: `npx -y @angular/cli mcp`, `primeng`: `npx -y @primeng/mcp`). On a fresh machine the stack is usually unknown: skip them, and let `dept-devex` propose the right server later, when a project of that stack is detected (`waymark` §5).
 
+**Framework servers only where their framework is used.** The user's MCP servers stay where they registered them (user scope, `.mcp.json`, local); nothing is moved or removed. A framework's server (Angular, PrimeNG, React, Vue, Tailwind, NestJS, Prisma…) is visible in every project, so in projects that do not use that framework the agent can waste calls on it and its names and instructions sit in context. `node "<skills-dir>/waymark/scripts/mcp-fit.mjs"` reads each known project's manifests (`package.json`, `Gemfile`, `pyproject.toml`, `composer.json`, `pom.xml`, `.csproj`…; none up to the repository root = no framework) and plans a permission deny rule (`mcp__<server>`) in that project's own `.claude/settings.local.json` (private, normally git-ignored) for each framework server it does not use, and lifts the rules it added when the project adopts the framework. Show the plan **[ask]**; on yes re-run it with `--apply` (it merges into the existing settings file with a `.waymark-bak` copy, never overwrites one it cannot parse, and never removes a rule the user wrote). Generic servers (`context7`, `engram`) are never blocked. Afterwards the session hook offers the same in each project, at most once a week per folder. Takes effect in the next session. Measured on Claude Code 2.1.287: a deny rule hides the server from tool search and drops its names and instructions from context (~120 tokens per server per request); the larger saving is the calls the agent no longer makes to the wrong framework.
+
 **7.2 Hooks (installed by default).** Two small local scripts. **Session memory** (`session-hook.mjs`, at session start, after `/clear` and after a context summary): injects a capped digest (≤ 2,500 chars, usually ~400 tokens) of this machine's *Environment* and the current project's memory, so Recall never depends on the agent remembering to read it. **Rule 0 reminder** (`rule0-hook.mjs`, per prompt). The instructions block can be ignored in long sessions; a per-prompt reminder keeps Waymark on every request. Once a day it also checks the repository's `VERSION` (1.5 s timeout, silent offline) and, only when a newer version exists, tells the agent to offer the update (§9) at most once a day; commits without a version change never trigger it. It runs locally (0 tokens to execute) and adds ~70 tokens of context per prompt; it never blocks or changes the prompt. Include it in the §1.2 plan. With `coexistence.md` the session hook also injects its rules (≤ 1,800 chars) and the reminder follows the mode.
 
 - **Claude Code:** merge into `~/.claude/settings.json` (keep every existing key and hook; do not duplicate a hook whose command already runs `rule0-hook.mjs` or `session-hook.mjs`):
@@ -166,7 +170,7 @@ The stack-specific entries shipped today are **examples** for Angular (`angular-
 ```
 
   Use the absolute path with forward slashes. Verify: `echo {} | node "<skills-dir>/waymark/scripts/rule0-hook.mjs"` and `echo {} | node "<skills-dir>/waymark/scripts/session-hook.mjs"` each print JSON with `additionalContext`.
-- **Coexistence mode:** `skills-only` → register neither hook. `other-leads` → session hook only (it injects `coexistence.md` and the project memory). Never remove or reorder the other framework's hooks; add Waymark's after them.
+- **Coexistence mode:** `guest` or `skills-only` → register **neither** hook (the orchestrator's hooks own the turn). `waymark-leads` → both hooks, added after the other framework's; never remove or reorder its hooks.
 - **Other agents:** if the adapter documents a per-prompt hook, register the same script there; otherwise skip it (the instructions block still applies) and say so in the report.
 - Report it under *Archivos modificados* (`settings.json — hook Rule 0 agregado`).
 
@@ -176,13 +180,15 @@ The stack-specific entries shipped today are **examples** for Angular (`angular-
 node "<skills-dir>/waymark/scripts/sync.mjs"
 ```
 
-It indexes installed skills and MCP servers into `skill-registry.md`, applies the department precondition to tool skills and creates the private layer folders. Show its output. Entries marked `auto: true` or under *Unassigned* are third-party skills it found; report them, do not fix them silently.
+It indexes installed skills (this agent's, other agents' skill folders such as `~/.cursor/skills` or `~/.agents/skills`, plugins and project skill folders, each with its path) and MCP servers into `skill-registry.md`, applies the department precondition to tool skills and creates the private layer folders. Show its output. Entries marked `auto: true` or under *Unassigned* are third-party skills it found; report them, do not fix them silently. In `waymark-leads` this is how the other framework's skills become available as *Fallback*. Afterwards the session hook re-runs it in the background whenever skill folders change; no manual sync is needed for new third-party skills.
+
+**7.4 Orchestrator registry (`guest` only).** Run the orchestrator's refresh so it indexes the copied skills (`coexistence.md` §4; gentle-ai: `gentle-ai skill-registry refresh`). Check that its registry now lists `waymark` and the `dept-*` skills and report it. If it does not scan `<skills-dir>`, tell the user where it scans and ask **[ask]** before copying the skills there too. Never edit its registry by hand.
 
 ## 8. Verify and report
 
-1. Confirm these exist: `<skills-dir>/waymark/SKILL.md`, `<skills-dir>/dept-frontend/SKILL.md`, `<skills-dir>/ui-build/SKILL.md`, `~/.waymark/agent.md`, `~/.waymark/preferences.md`, and the block in `<instructions-file>`.
+1. Confirm these exist: `<skills-dir>/waymark/SKILL.md`, `<skills-dir>/dept-frontend/SKILL.md`, `<skills-dir>/ui-build/SKILL.md`, `~/.waymark/agent.md`, `~/.waymark/preferences.md`, and the block in `<instructions-file>` (in `guest`: `~/.waymark/coexistence.md` and the orchestrator's registry listing the skills, instead of the block).
 2. Tell the user that skills load at session start: **they must restart the agent** (new session).
-3. Smoke test for the new session: *"quiero crear un modal de confirmación"* → the agent must load `dept-frontend`, print Waymark brief, then use `ui-build`.
+3. Smoke test for the new session: *"quiero crear un modal de confirmación"* → the agent must load `dept-frontend`, print Waymark brief, then use `ui-build`. In `guest`: the orchestrator's flow runs as before and loads `dept-frontend` from its registry, with no Waymark opener.
 4. Report, listing **every file created or modified** (from §6 on), so the user knows what changed:
 
 ```
@@ -199,7 +205,8 @@ It indexes installed skills and MCP servers into `skill-registry.md`, applies th
 - Movido a la capa privada con tu permiso: …
 - Coexistencia: <framework> · modo … · adoptadas N · respaldo N · resueltas N · sus archivos: sin cambios   (solo si §1.1 encontró otro)
 - MCP: registrados … · omitidos …
-- Sync: … · Pendiente: reiniciar el agente y probar la frase de humo
+- Sync: … (skills de otros agentes: N) · Medir una tarea: node <skills-dir>/waymark/scripts/measure.mjs --turns a-b
+- Pendiente: reiniciar el agente y probar la frase de humo
 ```
 
 ## 9. Update
@@ -209,8 +216,8 @@ It indexes installed skills and MCP servers into `skill-registry.md`, applies th
 3. For each skill folder: copy new and changed files, delete files the repository removed (only inside the 17 Waymark skills), but **merge** `## Learned rules`, `## Learned notes`, `patterns/`, `rules/` and `facts/`: keep the user's entries, add the repository's.
 4. `~/.waymark/`: only create missing files or folders from the templates; never edit existing ones. Existing `projects/<slug>.md` files gain new template sections (e.g. *Work in progress*) the next time a task runs there; do not rewrite them now.
    `skill-map.json`: take every entry from the repository, then add back the installed entries the repository does not have (skills and MCP servers the user created or mapped, project skills).
-5. Re-run §1.1: a framework or rules that `~/.waymark/coexistence.md` does not list yet → classify only those and ask **[ask]** (before 1.5.0 there was no such file: a framework found now goes through the §1.2 mode question).
-6. Replace the instructions block (§6.2, position per mode), make sure the hooks the mode needs are registered (§7.2; versions before 1.4.0 only had the Rule 0 one) and run sync (§7.3).
+5. Re-run §1.1: a framework or rules that `~/.waymark/coexistence.md` does not list yet → classify only those and ask **[ask]** (no such file yet and a framework found now → the §1.2 question: keep leading or become guest). `Mode: other-leads` from 1.5.0 → offer to switch to `guest`: remove Waymark's block and hooks (backup first).
+6. Per mode: leading → replace the instructions block (§6.2) and make sure both hooks are registered (§7.2; versions before 1.4.0 only had the Rule 0 one); `guest` → no block, no hooks, re-run the orchestrator's refresh (§7.4). Then run sync (§7.3).
 7. Report with the same list of modified files as §8, plus `Versión: <old> → <new>`.
 
 ## 10. Uninstall **[ask]**
@@ -218,5 +225,5 @@ It indexes installed skills and MCP servers into `skill-registry.md`, applies th
 1. Back up (§3).
 2. Remove from `<skills-dir>`: `waymark`, `dept-*` and the six tool skills from §5.
 3. Remove the block between the `waymark` markers from `<instructions-file>`; leave the rest. Remove the hook entries that run `rule0-hook.mjs` and `session-hook.mjs` from the agent settings.
-4. Ask whether to keep `~/.waymark/` (it is the user's memory; default: keep). A coexisting framework needs nothing: its files were never changed.
+4. Ask whether to keep `~/.waymark/` (it is the user's memory; default: keep). A coexisting framework needs nothing: its files were never changed. In `guest`, re-run its registry refresh so it stops listing Waymark's skills.
 5. MCP servers: list the ones the install registered and ask before removing any.

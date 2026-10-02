@@ -13,7 +13,7 @@ description: "Waymark · Frontend Engineering department. Use FIRST, before ui-b
 **DoD:** Works in the running app, a11y basics pass, all states handled, tests cover criteria, gates green.
 
 ## Entry
-Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). Department-specific reads:
+Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). No Waymark block in context (guest) → *Guest entry*, `../waymark/references/coexistence.md` §3. Department-specific reads:
 - Learnings: `~/.waymark/learnings/dept-frontend.md` if it exists.
 - Stack profile: L1 *Commands* + *Conventions by department → Frontend*, L2+ full. UI work: also the *Quick ref* of `dept-ux-ui`.
 - Tools: the **Tools** table below. Open `../waymark/skill-registry.md` only if a capability there has no installed provider.

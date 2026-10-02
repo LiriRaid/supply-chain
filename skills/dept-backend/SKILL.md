@@ -12,7 +12,7 @@ description: "Waymark · Backend Engineering department. Use FIRST whenever the 
 **DoD:** gates green · request test per endpoint · contract unchanged or versioned · no N+1 · jobs idempotent · no secret in diff
 
 ## Entry
-Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). Department-specific reads:
+Run the *Waymark protocol → Entry* from the instructions file (already in context; do not load the `waymark` skill for it). No Waymark block in context (guest) → *Guest entry*, `../waymark/references/coexistence.md` §3. Department-specific reads:
 - Learnings: `~/.waymark/learnings/dept-backend.md` if it exists.
 - Stack profile: L1 *Commands* + *Backend*, L2+ full.
 - Tools: the **Tools** table below. Open `../waymark/skill-registry.md` only if a capability there has no installed provider.

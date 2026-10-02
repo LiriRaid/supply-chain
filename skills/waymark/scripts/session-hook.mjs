@@ -3,15 +3,23 @@
 // fires on startup, resume, clear and after a context summary). Runs locally; it injects once per session a
 // compact digest of what the agent must recall: this machine's Environment and the current project's memory
 // (Work in progress, Solved problems symptoms, Quality gates). Missing project memory → a one-line instruction.
-// When another agent framework is installed it also injects ~/.waymark/coexistence.md, or asks the agent to
-// offer configuring it if the instructions file carries a framework marker that file does not list.
+// When another agent framework is installed it also injects ~/.waymark/coexistence.md, asks the agent to offer
+// the choice (keep leading / become guest) for a framework marker that file does not list, and offers the full
+// install back when the listed framework's markers are gone. In guest mode this hook is normally not registered.
+// It also notices when skill folders changed (this agent's, other agents', the project's) and refreshes
+// skill-registry.md in the background with sync.mjs, so third-party skills are usable without a manual sync.
 // It never blocks. Remove it from the agent's settings to disable it.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { fitFor } from './mcp-fit.mjs';
 
 const HOME = process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark');
-const MAX = 2500; // characters of injected project memory, hard cap
+const SCRIPTS = path.dirname(fileURLToPath(import.meta.url));
+const MAX = 2700; // characters of injected project memory, hard cap
+const STALE_DAYS = 14; // Work in progress entries older than this are flagged for confirmation
 const MAX_COEXIST = 1800; // characters of injected coexistence rules, hard cap
 const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
 const read = (p) => { try { return fs.readFileSync(p, 'utf8'); } catch { return ''; } };
@@ -42,9 +50,34 @@ function digest(cwd) {
   if (solved.length) out.push('Solved problems (symptoms; details in the file):\n' + solved.slice(-10).join('\n'));
   const gates = section('\n' + best.text, 'Quality gates').filter((l) => l.startsWith('|') && !/^\|\s*(Gate|---)/.test(l));
   if (gates.length) out.push('Gates: ' + gates.map((l) => l.split('|').slice(1, 3).map((s) => s.trim()).join(': ')).join(' · '));
-  const wip = section('\n' + best.text, 'Work in progress').filter((l) => l.startsWith('-')).map((l) => (l.length > 260 ? l.slice(0, 257) + '…' : l));
+  const wip = section('\n' + best.text, 'Work in progress').filter((l) => l.startsWith('-')).map((l) => {
+    const date = Date.parse(l.match(/\b(20\d\d-\d\d-\d\d)\b/)?.[1] || '');
+    const stale = date && Date.now() - date > STALE_DAYS * 86400000 ? ` [>${STALE_DAYS} d old: confirm it still applies before acting on it]` : '';
+    return (l.length > 300 ? l.slice(0, 297) + '…' : l) + stale;
+  });
   if (wip.length) out.push('Work in progress:\n' + wip.join('\n'));
   return out.join('\n');
+}
+
+// Skill folders that sync.mjs indexes: this agent's, other agents', the current project's.
+function skillsChanged(cwd) {
+  const roots = [path.resolve(SCRIPTS, '..', '..'), ...['.claude', '.agents', '.codex', '.cursor', '.gemini', '.config/opencode'].map((d) => path.join(os.homedir(), ...d.split('/'), 'skills')),
+    ...['.claude', '.agents', '.codex', '.cursor', '.gemini', '.opencode'].map((d) => path.join(cwd, d, 'skills'))];
+  const names = [...new Set(roots)].flatMap((r) => { try { return fs.readdirSync(r).filter((n) => fs.existsSync(path.join(r, n, 'SKILL.md'))).map((n) => `${norm(r)}/${n}`); } catch { return []; } }).sort();
+  const sigFile = path.join(HOME, '.skills-signature.json');
+  let before = null;
+  try { before = JSON.parse(fs.readFileSync(sigFile, 'utf8')); } catch {}
+  const prev = new Set(before?.[norm(cwd)] || []);
+  const added = names.filter((n) => !prev.has(n)), removed = [...prev].filter((n) => !names.includes(n));
+  if (before?.[norm(cwd)] && !added.length && !removed.length) return '';
+  try {
+    fs.mkdirSync(HOME, { recursive: true });
+    fs.writeFileSync(sigFile, JSON.stringify({ ...before, [norm(cwd)]: names }));
+    if (!process.env.WAYMARK_NO_SYNC) spawn(process.execPath, [path.join(SCRIPTS, 'sync.mjs'), '--quiet'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+  } catch { return ''; }
+  if (!before?.[norm(cwd)]) return ''; // first run here: just index silently
+  const short = (l) => l.map((n) => n.split('/').pop()).join(', ');
+  return `Skills changed since the last session (${added.length ? '+' + short(added) : ''}${added.length && removed.length ? ' · ' : ''}${removed.length ? '-' + short(removed) : ''}): skill-registry.md is being refreshed in the background. Third-party skills are listed there with their path: read and follow that SKILL.md when its capability fits.`;
 }
 
 // Framework namespaces marked in the agents' instructions files (`<!-- name:section -->`, `<!-- BEGIN name -->`).
@@ -64,17 +97,47 @@ function foreignMarkers() {
   return found;
 }
 
+// Framework MCP servers (Claude Code) this project does not use and that are not blocked here yet, or blocked
+// by Waymark but used now. Offered at most once a week per folder; mcp-fit.mjs applies it after the user's yes.
+function mcpFit(cwd) {
+  if (!fs.existsSync(process.env.WAYMARK_CLAUDE_JSON || path.join(os.homedir(), '.claude.json'))) return '';
+  const stateFile = path.join(HOME, '.mcp-offer.json');
+  let st = {};
+  try { st = JSON.parse(fs.readFileSync(stateFile, 'utf8')); } catch {}
+  if (st[norm(cwd)] && Date.now() - st[norm(cwd)] < 7 * 86400000) return '';
+  const f = fitFor(cwd);
+  if (!f.add.length && !f.lift.length) return '';
+  try { fs.mkdirSync(HOME, { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify({ ...st, [norm(cwd)]: Date.now() })); } catch {}
+  const script = path.join(SCRIPTS, 'mcp-fit.mjs').replace(/\\/g, '/');
+  const parts = [];
+  if (f.add.length) parts.push(`${f.add.map((a) => a.server).join(', ')} are visible here but this project does not use their framework`);
+  if (f.lift.length) parts.push(`${f.lift.map((l) => l.server).join(', ')} were blocked here and the project uses their framework now`);
+  return `MCP fit: ${parts.join('; ')}. Offer once, with your choice window: block/lift them for this project only (your servers stay registered; a deny rule in .claude/settings.local.json) — node "${script}" --project "${cwd.replace(/\\/g, '/')}" shows the plan, add --apply on yes; next session. Declined → do not ask again this week.`;
+}
+
+// Modes: waymark-leads | guest | skills-only (`other-leads` from 1.5.0 is read as guest).
 function coexistence() {
   const text = '\n' + read(path.join(HOME, 'coexistence.md'));
-  const mode = text.match(/\nMode:\s*(waymark-leads|other-leads|skills-only)\b/)?.[1];
+  let mode = text.match(/\nMode:\s*(waymark-leads|guest|other-leads|skills-only)\b/)?.[1];
+  if (mode === 'other-leads') mode = 'guest';
   const frameworks = (text.match(/\nFrameworks:\s*([^\n]+)/)?.[1] || '').toLowerCase();
+  const markers = foreignMarkers();
   const out = [];
-  const missing = [...foreignMarkers()].filter(([ns]) => !(mode && frameworks.includes(ns)));
+  if (mode === 'guest' || mode === 'skills-only') {
+    // Normally no hook runs in these modes; if one is still registered, stay out of the orchestrator's way.
+    return `Coexistence mode ${mode} (${frameworks || 'other framework'} leads): no Waymark opener or Cierre; departments are knowledge (waymark/references/coexistence.md → Guest entry). Offer to remove the Waymark hooks from the agent settings.`;
+  }
+  const missing = [...markers].filter(([ns]) => !(mode && frameworks.includes(ns)));
   if (missing.length) {
     const byFile = new Map();
     for (const [ns, f] of missing) byFile.set(f, [...(byFile.get(f) || []), ns]);
-    out.push(`Another agent framework is installed and coexistence is not configured for it: ${[...byFile].map(([f, ns]) => `${ns.join(', ')} in ${f}`).join('; ')}. ` +
-      'Before the task, offer to configure it with your choice window (waymark/references/coexistence.md: detect, classify, pick the mode). Until then never edit or override its rules.');
+    out.push(`Another agent framework appeared and coexistence is not configured for it: ${[...byFile].map(([f, ns]) => `${ns.join(', ')} in ${f}`).join('; ')}. ` +
+      'Before the task, ask the user with your choice window: keep Waymark leading (classify its rules into ~/.waymark/coexistence.md, mode waymark-leads) or make Waymark its guest (no Waymark hooks or block; register the skills in its registry). waymark/references/coexistence.md. Until then never edit or override its rules.');
+  }
+  const listed = frameworks.split(';').map((s) => s.split('·')[0].trim()).filter(Boolean);
+  const gone = listed.filter((n) => ![...markers.keys()].some((ns) => n.includes(ns) || ns.includes(n)));
+  if (mode && gone.length && gone.length === listed.length) {
+    out.push(`The framework(s) listed in ~/.waymark/coexistence.md (${gone.join(', ')}) no longer show markers in the instructions file. Ask the user whether they were uninstalled; if yes, offer to return to the full install (remove coexistence.md).`);
   }
   if (mode) {
     const rules = ['Adopted', 'Fallback', 'Resolved'].map((t) => [t, section(text, t).filter((l) => l.startsWith('-'))]).filter(([, l]) => l.length);
@@ -93,8 +156,12 @@ const emit = () => {
   let cwd = process.cwd();
   try { cwd = JSON.parse(input).cwd || cwd; } catch {}
   let text = '';
-  try { text = 'Waymark session memory (already recalled, cite it in "Memoria:"):\n' + digest(cwd); } catch { text = ''; }
+  try {
+    text = 'Waymark session memory (already recalled, cite it in "Memoria:"). Pointers, not facts: verify against the code before relying on them; if the code disagrees, the code wins and you fix or remove the entry.\n' + digest(cwd);
+  } catch { text = ''; }
   if (text.length > MAX) text = text.slice(0, MAX) + '…';
+  try { const s = skillsChanged(cwd); if (s) text += '\n' + s; } catch {}
+  try { const m = mcpFit(cwd); if (m) text += '\n' + m; } catch {}
   let coexist = '';
   try { coexist = coexistence(); } catch {}
   if (coexist) text = (text ? text + '\n' : '') + coexist;

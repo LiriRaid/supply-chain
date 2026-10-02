@@ -15,10 +15,28 @@ The compact version lives in the instructions file and is enough for L1. Read th
 
 ```
 Waymark → L2 · dept-frontend (+dept-ux-ui) · skills: ui-build · browser-verify · library-docs
+Pedido: confirmar antes de borrar un contacto · Captura: /contacts, fila de la tabla, botón papelera rojo marcado con un círculo
 Memoria: leída ~/.waymark/projects/contacts-app.md · Reutiliza: shared/components/app-modal · Evidencia: observada (botón borrar sin confirmación en /contacts) · Procedimiento: New component / screen
 Qué: modal de confirmación para eliminar contacto · Para qué: evitar borrados accidentales · Dónde: features/contacts/components/delete-contact-dialog/
 ```
-At L2+ add the *Qué · Para qué · Dónde* line; at L1 the two opening lines are enough.
+At L2+ add the *Qué · Para qué · Dónde* line; at L1 the opening lines are enough. *Captura* names what the image points at (screen, element, state, the mark the user drew), not a description of the whole picture; if the image and the text disagree, ask once.
+
+## L3: plan as checkpoints
+
+Long tasks fail when the conversation is compacted and the agent loses what was done, what is next and what was ruled out; it then fills the gaps by guessing. Keep that state on disk, not in the conversation:
+1. Plan first (`Plan` agent or plan mode) and split it into steps that are each an L1/L2 change with its own gate.
+2. Write the steps into the task's *Work in progress* entry: `Plan: ✔1 <step> · ▶2 <step> · 3 <step> — next gate: <command>`.
+3. Mark a step ✔ only after its gate passed; add what was ruled out to the entry (`Descartado: …`).
+4. After a compaction or a new session, the session hook re-injects the entry: resume from `▶`, re-run its gate before continuing.
+5. Delegate only broad searches (an exploration agent returns the conclusion, not files); the main agent keeps the plan and the edits.
+
+## Hand-off between departments
+
+When a task moves to another department (each department's *Hand-offs* says when), pass one line in this form, so the next one starts from facts instead of re-reading:
+```
+Hand-off → dept-<x>: hecho <what is decided/done> · necesita <what the next department must decide or build> · evidencia <paths, file:line, outputs> · abierto <open questions | ninguno>
+```
+The receiving department checks the evidence it relies on (memory and hand-offs point, the code decides) and continues with its own Entry.
 
 ## Exit (Definition of Done)
 

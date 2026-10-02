@@ -35,4 +35,11 @@ Format: `- [YYYY-MM-DD] <lesson> — <why> (source: <project>)`.
 
 **6.** If an `engram` (or other memory) MCP is available, also `mem_save` architecture decisions and bug root causes.
 
+**7. Memory hygiene (memory points, the code decides).** Persistent memory makes an agent hallucinate when it is stale, retrieved for the wrong project, too large, or holds guesses written as facts. So:
+- Write only what was verified, with its evidence (`decision ← evidence`, `file:line`, the command that proved it) and the date; a hypothesis is written as one (`hipótesis: …`) or not at all.
+- When a memory entry and the code disagree, the code wins: fix or delete the entry in the same task and say so.
+- A *Solved problems* entry whose file, component or dependency no longer exists, or whose fix was reverted, is deleted. *Work in progress* entries the session hook flags as old are confirmed with the user or closed (`Status: idle`).
+- The project file `~/.waymark/projects/<slug>.md` is the source of truth; engram holds the history and search. If they disagree, update the project file and `mem_update` the observation.
+- Keep each list short: past ~10 *Solved problems*, merge entries with the same root cause and drop the ones that cannot recur.
+
 Mention in the closing report every file written by this loop.
