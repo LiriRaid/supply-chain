@@ -13,6 +13,13 @@ Waymark is now a supply chain of the agent's work: every task goes through defin
   - Four decisions were taken mid-task without asking, one against the user's words. `Sub-decisiones:` in the Cierre lists each one (`preguntada | del usuario ("…") | no preguntada`); one taken alone is sent back to the user, and the claimed asked count must match the choice-window answers.
   - **The department is a link of the chain:** the owner named in the routing line must have been invoked in the session (test 7 declared one that never loaded), and the record keeps `department: { declared, invoked }`. README table: new *Department* row.
   - Replayed on that session, the end-of-turn hook now flags the routing, the missing Sub-decisiones and the missing code-review.
+- **Second real test (L1 in a real project, 1 attempt, ~2% of the 5-hour quota):** the first record was written, but the evaluation still marked Recordar, Enrutar and Verificar, and the transcript showed a gap the evaluation missed:
+  - **The output was incomplete.** The modal files were restored with `git checkout HEAD --` through the shell: no gate stopped it and the record listed only the spec written with Write. Now the per-prompt hook takes a `git status` snapshot and the end-of-turn hook records every file that changed by any tool; shell commands that change files go through the decision gate like edits.
+  - **The decision gate is strict:** no change until the user was asked in this task; a single real way is confirmed in the choice window. The retry that used to pass let the agent apply two decisions before asking.
+  - **Memoria and Procedimiento move to the Cierre**, checked against real reads. The opener is written after a thinking block, which Claude Code does not persist, so `Memoria: leída` without a Read and an unread procedure passed. The owner's `procedures.md` must be read before the first change.
+  - **Gates in order:** a typecheck, lint or build after the last code change, tests after the last spec change (the typecheck had run before the last edit).
+  - **Re-route by tool call:** a routing line written mid-turn is not persisted either, so a question that becomes a change re-routes by invoking the owner department with args `L<n>`.
+  - Replayed on that session, the end-of-turn hook flags Procedimiento, Memoria and the typecheck order.
 - **Hook tests in the repo:** `node --test tests/*.test.mjs` (no dependencies, temporary `WAYMARK_HOME`).
 - **Fix:** `protocol.md` → *Closing report* was an empty, unclosed code block that turned *When stuck* into code; it now shows a full Cierre and the decision gate.
 - **Fix:** a multi-select answer in the choice window joins labels with "," (no space); the record no longer lists chosen options as discarded.

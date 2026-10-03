@@ -20,7 +20,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { readTail, sessionState } from './transcript.mjs';
-import { taskIds } from './provenance.mjs';
+import { taskIds, saveSnapshot } from './provenance.mjs';
 
 const REPO = process.env.WAYMARK_REPO || 'LiriRaid/waymark';
 const DAY = 24 * 60 * 60 * 1000;
@@ -47,8 +47,8 @@ try { mode = fs.readFileSync(path.join(HOME, 'coexistence.md'), 'utf8').match(/^
 const full =
   'Waymark Rule 0 — first text: "Waymark → L<n>|Q · <dept> · skills: …"; first tool call: the owner dept-* skill. ' +
   'Before the first edit: "Pedido · Captura" (the ask; what each image marks; "like X" → Copia: only what was named; a layer the user named → Capa, ask before leaving it) then "Memoria · Reutiliza · Evidencia · Procedimiento" (memory digest injected at session start: pointers, verify in code; obey Environment; code read ≠ observed). ' +
-  'Every real decision, any level, also mid-task: the optimal options (files, risk, cost; recommended marked) in the choice window before acting; the user decides, never you. A question that becomes a change: new routing line first. Commits of the task carry "Waymark-Task: <task ID>". ' +
-  'Close changes with "## Cierre · <task ID>" (Resultado · Decisión · Sub-decisiones · Gates after the last edit · Aprendido = your rewritten Work in progress line · engram; L2+: Tests · Navegador = browser-verify tried · Review = code-review on the task\'s files or why not). Independent tool calls in one response. User\'s language. Only L0 skips.';
+  'Every real decision, any level, also mid-task: the optimal options (files, risk, cost; recommended marked) in the choice window before acting; the user decides, never you; changes stay blocked until asked. A question that becomes a change: re-route by invoking the owner dept-* skill with args "L<n>". Read its procedures.md section before the first change. Commits of the task carry "Waymark-Task: <task ID>". ' +
+  'Close changes with "## Cierre · <task ID>" (Resultado · Decisión · Sub-decisiones · Memoria · Procedimiento · Gates after the last edit · Aprendido = your rewritten Work in progress line · engram; L2+: Tests · Navegador = browser-verify tried · Review = code-review on the task\'s files or why not). Independent tool calls in one response. User\'s language. Only L0 skips.';
 const short = 'Waymark Rule 0 as in your last reply: routing line + owner dept-* skill first; opener before the first edit; the user decides every real decision (options first); "## Cierre · <task ID>" after changes. Independent tool calls in one response.';
 export function taskLine(cwd, now = new Date()) {
   const ids = taskIds(cwd, now);
@@ -129,6 +129,7 @@ async function main(input) {
   try { notice = sizeNotice(hook, st); } catch {}
   let ids = '';
   try { if (!silent) ids = taskLine(hook.cwd || process.cwd()); } catch {}
+  try { if (!silent) saveSnapshot(hook.session_id, hook.cwd || process.cwd()); } catch {} // the end-of-turn hook diffs against it
   const reminder = silent ? '' : (st.openedWithWaymark ? short : full) + ids + (mode === 'waymark-leads' ? coexist : '');
   const extra = await updateLine();
   const out = {};

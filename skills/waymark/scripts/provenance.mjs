@@ -116,6 +116,70 @@ export function commitsFor(cwd, id) {
   return r.stdout.split('\n').map((l) => l.split('\x1f')).filter(([h, t]) => h && String(t || '').split('\x1e').some((v) => v.trim() === id)).map(([h]) => h);
 }
 
+// Working-tree snapshot of the repo at cwd: { root, head, files: { <absolute path>: <content hash | "deleted"> } } for every
+// path git reports as changed or untracked; null without git or a repo. Two snapshots (prompt → end of turn) give the
+// files the turn really changed, whatever tool changed them (test 2.0-2: the modal files changed via `git checkout`,
+// the record listed only the spec written with Write).
+export function gitSnapshot(cwd) {
+  const git = (...a) => spawnSync('git', a, { cwd, encoding: 'utf8', timeout: 1500, maxBuffer: 8 * 1024 * 1024 });
+  const top = git('rev-parse', '--show-toplevel');
+  if (top.status !== 0) return null;
+  const root = top.stdout.trim(), head = git('rev-parse', 'HEAD').stdout.trim() || null;
+  const st = git('status', '--porcelain=v1', '-z', '--untracked-files=all');
+  if (st.status !== 0) return null;
+  const files = {};
+  const parts = st.stdout.split('\0');
+  for (let i = 0; i < parts.length; i++) {
+    const e = parts[i];
+    if (e.length < 4) continue;
+    if (/^[RC]/.test(e)) i++; // rename/copy: the next entry is the source path
+    const abs = path.join(root, e.slice(3));
+    files[abs] = fs.existsSync(abs) && fs.statSync(abs).isFile() ? fileSha(abs) : 'deleted';
+  }
+  return { root, head, files };
+}
+
+// Paths whose state differs between two snapshots: newly changed, changed again, or back to clean (e.g. `git checkout --`).
+export function snapshotDiff(before, after) {
+  if (!before || !after || before.root !== after.root) return [];
+  const out = new Set();
+  for (const [p, h] of Object.entries(after.files)) if (before.files[p] !== h) out.add(p);
+  for (const p of Object.keys(before.files)) if (!(p in after.files)) out.add(p);
+  return [...out];
+}
+
+// Snapshot taken by the per-prompt hook, per session (~/.waymark/.turn-snapshot.json), read by the end-of-turn hook.
+const snapFile = () => path.join(HOME(), '.turn-snapshot.json');
+export function saveSnapshot(session, cwd) {
+  const snap = gitSnapshot(cwd);
+  let all = {};
+  try { all = JSON.parse(fs.readFileSync(snapFile(), 'utf8')); } catch {}
+  for (const [k, v] of Object.entries(all)) if (Date.now() - (v.at || 0) > 7 * 86400000) delete all[k];
+  all[session || 'unknown'] = { at: Date.now(), cwd, snap };
+  fs.mkdirSync(HOME(), { recursive: true });
+  fs.writeFileSync(snapFile(), JSON.stringify(all));
+  return snap;
+}
+export function loadSnapshot(session) {
+  try { return JSON.parse(fs.readFileSync(snapFile(), 'utf8'))[session || 'unknown']?.snap || null; } catch { return null; }
+}
+
+// Shell commands that change files in place (the decision gate treats them like edits). Redirects count unless they go
+// to /dev/null, $null, NUL or a temp/scratch folder.
+// Temp/scratch locations: a whole path segment, so project paths such as src/templates/ are not mistaken for temp.
+const TEMP = /(^|[\s"'=\\/])(tmp|temp|scratchpad)[\\/]|AppData[\\/]Local[\\/]Temp|\$\{?TMP|\$\{?TEMP|%TEMP%|\$T\b|mktemp/i;
+const MUTATING = /(?:^|[;&|(]\s*)(?:git\s+(?:checkout\s+(?:\S+\s+)*--(?:\s|$)|(?:restore|reset\s+--hard|apply|rm|mv|clean)\b)|sed\s+(?:-\w+\s+)*-i|rm\s|mv\s|cp\s|tee\s|(?:Set|Add)-Content|Out-File|(?:Remove|Move|Copy|New)-Item)/i;
+export function mutatesFiles(command) {
+  const c = String(command || '');
+  if (MUTATING.test(c)) return true;
+  for (const m of c.matchAll(/(?<![0-9&>])>{1,2}\s*("?)([^\s"&|;]+)\1/g)) {
+    if (!/^(\/dev\/null|\$null|nul|&\d)$/i.test(m[2]) && !TEMP.test(m[2])) return true;
+  }
+  return false;
+}
+// A shell command that changes project files: mutating, and not only about temp/scratch or Waymark's own memory.
+export const changesProject = (command) => mutatesFiles(command) && !TEMP.test(String(command || '')) && !/(\.waymark[\\/]|\.claude[\\/]projects)/i.test(String(command || ''));
+
 // Appends the record with `prev` (hash of the last line) and `hash` (of this record without it).
 export function appendRecord(cwd, record) {
   const file = logFile(cwd);

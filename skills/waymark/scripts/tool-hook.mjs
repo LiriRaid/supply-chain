@@ -10,16 +10,18 @@
 //   which the transcript keeps reliably. (1.8.0 also noted a missing opener; removed in 1.9.0: reply text written after
 //   a thinking block is not persisted, so it fired on openers that were there — three false notes in one real task.)
 //   Memory and scratch files are exempt; L0 and Q turns are skipped.
-// - Decision gate (2.0, docs/adr/0001, 0002): the first L1–L3 project edit of a prompt is denied once when
-//   the task has no choice-window question (AskUserQuestion) yet; the retry passes, for a single real option or a
-//   choice the user already wrote, which the Cierre then states (`Decisión: única (…)` / `del usuario ("…")`).
+// - Decision gate (2.0, docs/adr/0001, 0002): every L1–L3 change to project files (edits, and shell commands that change
+//   files: git checkout --, sed -i, rm, redirects) is denied until the task has a choice-window question
+//   (AskUserQuestion) — strict since test 2.0-2, where a retry let the agent apply two decisions before asking. A turn
+//   routed Q is told once to re-route (by tool call: the owner dept-* with args "L<n>"); the owner's procedures.md must
+//   have been read before the first change (once per prompt).
 // Remove the hook from the agent's settings to disable it.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { readTail, currentTurn, routedLevel } from './transcript.mjs';
-import { taskLines, askedChoice } from './provenance.mjs';
+import { readTail, currentTurn, routedLevel, routedDept, sessionTools } from './transcript.mjs';
+import { taskLines, askedChoice, changesProject } from './provenance.mjs';
 
 const INLINE = /\bnode(?:\.exe)?["']?\s+(?:--[\w-]+(?:=\S+)?\s+)*(?:-e|--eval|-p|--print)\b/;
 const FRAGILE = /`|\$\{|\\[dDsSwWbB.\/()[\]{}|+*?^$nrt]/;
@@ -71,28 +73,45 @@ export function checkEdit(file, lines) {
 // Decision gate: deny once per prompt (state keyed by session + prompt uuid), never for L0 or exempt files. A turn routed
 // Q that edits a project file is denied once too: a question that became a change must re-route (test 2.0-1: routed Q,
 // 8 edits, so every check and the record were skipped).
-export function checkDecision(file, lines, session = 'unknown', stateFile = path.join(process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark'), '.decision-gate.json')) {
-  if (!file || exempt(file)) return null;
+export function checkDecision(target, lines, session = 'unknown', stateFile = path.join(process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark'), '.decision-gate.json')) {
+  // target: a file path (Edit/Write) or { command } (a shell command that changes files: git checkout --, sed -i, rm, >).
+  if (target && typeof target === 'object') { if (!changesProject(target.command)) return null; }
+  else if (!target || exempt(target)) return null;
   const turn = currentTurn(lines);
-  const level = routedLevel(turn.texts), q = level === 'Q';
-  if (!turn.found || !level || (!q && askedChoice(taskLines(lines)))) return null;
+  const level = routedLevel(turn.texts, turn.tools), q = level === 'Q';
+  if (!turn.found || !level) return null;
   let seen = {};
   try { seen = JSON.parse(fs.readFileSync(stateFile, 'utf8')); } catch {}
-  const key = `${session}:${turn.uuid || turn.prompt.slice(0, 80)}${q ? ':q' : ''}`;
-  if (seen[key]) return null;
-  for (const [k, at] of Object.entries(seen)) if (Date.now() - at > 7 * 86400000) delete seen[k];
-  seen[key] = Date.now();
-  try { fs.mkdirSync(path.dirname(stateFile), { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify(seen)); } catch { return null; } // no state → never deny (it could repeat)
-  if (q) return 'Waymark: this turn was routed as a question (Q) but is about to change a project file. A question that becomes a change is a task: write a new routing line `Waymark → L<n> · <owner dept-*> · skills: …` (invoke that department if it is not loaded), then the opener, and put the decision to the user with the optimal options before editing. The end-of-turn hook will check this task as L2 at least and record it.';
-  return `Waymark: L${level} decision gate — the user decides every real decision, you never decide alone. Before the first edit, list the optimal options in your choice window (AskUserQuestion): for each one the files it touches, the risk and the cost; mark the recommended one (it may not be what the user needs). Then do what the user picks. ` +
-    'If the user already chose in their message, or there is only one real option, retry this edit (this gate fires once per prompt) and write in the Cierre `Decisión: del usuario ("<their words>")` or `Decisión: única (<why>)`.';
+  const once = (suffix) => { // true the first time per prompt; false after, or when the state cannot be kept
+    const key = `${session}:${turn.uuid || turn.prompt.slice(0, 80)}:${suffix}`;
+    if (seen[key]) return false;
+    for (const [k, at] of Object.entries(seen)) if (Date.now() - at > 7 * 86400000) delete seen[k];
+    seen[key] = Date.now();
+    try { fs.mkdirSync(path.dirname(stateFile), { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify(seen)); return true; } catch { return false; }
+  };
+  if (q && once('q')) return 'Waymark: this turn was routed as a question (Q) but is about to change project files. A question that becomes a change is a task: re-route with a tool call — invoke the owner dept-* skill with args "L<n>" (e.g. Skill dept-frontend, args "L2"); a routing line written mid-turn is not persisted — then the opener, and put the decision to the user with the optimal options before changing anything.';
+  // Strict gate (user's decision 2026-10-02): no change until the user was asked in the choice window in this task.
+  if (!askedChoice(taskLines(lines))) {
+    return `Waymark: L${level} decision gate — the user decides every real decision, you never decide alone. Before changing files, list the optimal options in your choice window (AskUserQuestion): for each one the files it touches, the risk and the cost; mark the recommended one (it may not be what the user needs). Then do what the user picks. ` +
+      'If there is only one real way, or the user already chose in their message, confirm it in the choice window (that option + "otra cosa"). This gate stays until the user has been asked in this task.';
+  }
+  // The owner department's procedure is read before the first change (test 2.0-2: declared, never read).
+  const dept = routedDept(turn.texts, turn.tools);
+  if (dept && !sessionTools(lines).some((t) => new RegExp(`${dept}[\\\\/]procedures\\.md`).test(`${t.input.file_path || ''} ${t.input.path || ''} ${t.input.pattern || ''} ${t.input.command || ''}`))) {
+    return once('proc') ? `Waymark: ${dept} is the owner of this task but its procedures.md was not read in this session. Read the section you will follow (search its heading in <skills-dir>/${dept}/procedures.md) before changing files, and name it in the Cierre as Procedimiento: <section> (procedures.md:<line>).` : null;
+  }
+  return null;
 }
 
 // → { deny: reason } for commands and the decision gate, { note: text } for edits, or null.
 async function main(input) {
   const h = JSON.parse(input);
   const tool = h.tool_name || '';
-  if (/^(Bash|PowerShell)$/.test(tool)) { const deny = checkCommand(h.tool_input?.command, h.cwd || process.cwd()); return deny ? { deny } : null; }
+  if (/^(Bash|PowerShell)$/.test(tool)) {
+    const deny = checkCommand(h.tool_input?.command, h.cwd || process.cwd())
+      || (changesProject(h.tool_input?.command) ? checkDecision({ command: h.tool_input?.command }, readTail(h.transcript_path, 2 * 1024 * 1024), h.session_id) : null);
+    return deny ? { deny } : null;
+  }
   if (/^(Edit|Write|MultiEdit|NotebookEdit)$/.test(tool)) {
     const file = h.tool_input?.file_path || h.tool_input?.notebook_path, lines = readTail(h.transcript_path, 2 * 1024 * 1024);
     const deny = checkDecision(file, lines, h.session_id);

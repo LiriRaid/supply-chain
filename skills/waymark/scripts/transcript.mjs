@@ -48,6 +48,13 @@ export function currentTurn(lines) {
   return { found: i >= 0, prompt: i >= 0 ? promptText(lines[i]) : '', uuid: i >= 0 ? lines[i].uuid || '' : '', texts, tools };
 }
 
+// Every tool call of the main agent in the readable part of the session (for reads done in an earlier turn).
+export function sessionTools(lines) {
+  const out = [];
+  for (const d of lines) if (d.type === 'assistant' && !d.isSidechain) for (const c of d.message?.content || []) if (c.type === 'tool_use') out.push({ name: c.name, input: c.input || {} });
+  return out;
+}
+
 // Context size and time of the last main-agent response, and whether the last answered turn opened with "Waymark →".
 export function sessionState(lines) {
   let context = 0, lastAt = 0, opener = null, turn = null;
@@ -68,15 +75,26 @@ export function sessionState(lines) {
 // Level declared in the turn's routing line ("Waymark → L2 · …"): 0 when there is none, 'Q' for questions. The LAST
 // routing line wins: a question that turns into a change re-routes mid-turn (test 2.0-1: a turn routed Q edited 8 files).
 // Only a line that starts with "Waymark →" routes; one quoted mid-sentence (evidence, an example) does not.
+// Text written after a thinking block is not persisted (checked again 2026-10-02: a mid-turn re-route line was lost), so
+// a re-route is also a tool call: the owner dept-* skill invoked with args "L<n>", which always comes after the
+// turn's first text and therefore wins.
 const ROUTE = /^[ \t]*Waymark →\s*(L([0-3])|Q)\b(?:\s*·\s*(dept-[a-z-]+))?/gm;
 const routes = (texts) => [...texts.join('\n').matchAll(ROUTE)];
-export function routedLevel(texts) {
+const reroute = (tools = []) => {
+  const r = tools.filter((t) => t.name === 'Skill' && /^dept-/.test(String(t.input.skill || '')) && /^\s*(L[0-3])\b/i.test(String(t.input.args || '')));
+  return r.length ? { level: Number(String(r[r.length - 1].input.args).trim()[1]), dept: String(r[r.length - 1].input.skill) } : null;
+};
+export function routedLevel(texts, tools) {
+  const t = reroute(tools);
+  if (t) return t.level;
   const all = routes(texts), m = all[all.length - 1];
   return !m ? 0 : m[1] === 'Q' ? 'Q' : Number(m[2]);
 }
 
-// Department named in the last routing line ("Waymark → L2 · dept-frontend (+dept-ux-ui) · …"), or null.
-export function routedDept(texts) {
+// Department named in the last routing line ("Waymark → L2 · dept-frontend (+dept-ux-ui) · …") or re-route call, or null.
+export function routedDept(texts, tools) {
+  const t = reroute(tools);
+  if (t) return t.dept;
   const all = routes(texts);
   return all.length ? all[all.length - 1][3] || null : null;
 }

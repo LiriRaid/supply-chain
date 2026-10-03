@@ -26,8 +26,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readTail, currentTurn, routedLevel, routedDept, isPrompt, promptText } from './transcript.mjs';
-import { ID, taskIds, validId, taskLines, decisionsIn, appendRecord, turnInputs, commitsFor } from './provenance.mjs';
+import { readTail, currentTurn, routedLevel, routedDept, isPrompt, promptText, sessionTools } from './transcript.mjs';
+import { ID, taskIds, validId, taskLines, decisionsIn, appendRecord, turnInputs, commitsFor, changesProject, gitSnapshot, snapshotDiff, loadSnapshot } from './provenance.mjs';
 
 const norm = (p) => String(p || '').replace(/\\/g, '/').toLowerCase();
 const exempt = (file) => {
@@ -38,15 +38,12 @@ const EDITS = /^(Edit|Write|MultiEdit|NotebookEdit)$/;
 const UI = /\.(html|css|scss|sass|less|tsx|jsx|vue|svelte|astro)$|\.component\.ts$/i;
 const NOT_CODE = /\.(md|mdx|txt|json|ya?ml|toml|ini|env|lock|csv|svg|png|jpe?g|gif)$/i;
 const SPEC = /\.(spec|test)\.[cm]?[jt]sx?$|_spec\.rb$|_test\.(go|py)$|^test_.*\.py$/i;
+const TEST = /\b(test|tests|vitest|jest|karma|mocha|pytest|rspec|go test|dotnet test|mvn test|gradle test)\b/i;
+const GATE = /\b(tsc|typecheck|type-check|lint|eslint|ng build|build|go vet|mypy|ruff|rubocop|cargo (check|clippy)|node --check)\b/i;
 const fileOf = (t) => t.input.file_path || t.input.notebook_path || '';
 const skillCalled = (tools, re) => tools.some((t) => t.name === 'Skill' && re.test(String(t.input.skill || '')));
 
-// Every tool call of the main agent in the readable part of the session (for reads done in an earlier turn).
-export function sessionTools(lines) {
-  const out = [];
-  for (const d of lines) if (d.type === 'assistant' && !d.isSidechain) for (const c of d.message?.content || []) if (c.type === 'tool_use') out.push({ name: c.name, input: c.input || {} });
-  return out;
-}
+export { sessionTools }; // moved to transcript.mjs (shared with tool-hook.mjs); kept here for existing importers
 
 function specsNear(files) {
   for (const f of files) {
@@ -78,18 +75,22 @@ export function checkCierre(turn, last, allTools = turn.tools, prompts = [turn.p
 
 // → null (nothing to check: no project files changed, L0 or Q) or { level, changed, reply, missing[] }.
 export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.prompt], ctx = {}) {
-  const changed = turn.tools.filter((t) => EDITS.test(t.name) && !exempt(fileOf(t))).map(fileOf);
+  // Files changed: by the edit tools, plus what git saw change between the prompt and now (ctx.gitChanged), so a change
+  // made through the shell (git checkout --, sed -i, rm) is checked and recorded too.
+  const byKey = new Map();
+  for (const f of [...turn.tools.filter((t) => EDITS.test(t.name)).map(fileOf), ...(ctx.gitChanged || [])]) if (f && !exempt(f) && !byKey.has(norm(f))) byKey.set(norm(f), f);
+  const changed = [...byKey.values()];
   if (!changed.length) return null;
   const reply = String(last || turn.texts[turn.texts.length - 1] || '');
-  // The transcript can miss reply texts (not every text block is persisted): the closing reply itself counts too.
-  const routed = routedLevel([...turn.texts, reply]);
+  // The transcript can miss reply texts (not every text block is persisted): the closing reply and re-route calls count too.
+  const routed = routedLevel([...turn.texts, reply], turn.tools);
   const missing = [];
   // A turn routed Q that changed project files is a task that skipped routing: checked as L2 at least, never skipped.
-  if (routed === 'Q') missing.push('this turn was routed as a question (Q) but changed project files: it is a task. Write the routing line again with its level and owner department (`Waymark → L<n> · dept-… · skills: …`) and close it as that level');
+  if (routed === 'Q') missing.push('this turn was routed as a question (Q) but changed project files: it is a task. Re-route with a tool call (the owner dept-* skill with args "L<n>") and close it as that level');
   const level = routed === 'Q' ? 2 : routed || (/^L2\+:/m.test(reply) ? 2 : /##\s*Cierre/.test(reply) ? 1 : 0);
   if (!level) return null;
   // The owner department named in the routing line must have been invoked in this session (test 7: declared, never loaded).
-  const dept = { declared: routedDept([...turn.texts, reply]), invoked: [...new Set(allTools.filter((t) => t.name === 'Skill' && /^dept-/.test(String(t.input.skill || ''))).map((t) => String(t.input.skill)))] };
+  const dept = { declared: routedDept([...turn.texts, reply], turn.tools), invoked: [...new Set(allTools.filter((t) => t.name === 'Skill' && /^dept-/.test(String(t.input.skill || ''))).map((t) => String(t.input.skill)))] };
   if (!dept.declared) missing.push('the routing line names no owner department: `Waymark → L<n> · dept-<owner> · skills: …`');
   else if (!dept.invoked.includes(dept.declared)) missing.push(`the routing line names ${dept.declared} but it was never invoked in this session: invoke it and follow its Quick ref, or name the department you did follow`);
   // User decisions for this task: a quoted skip is accepted only when the user wrote those words.
@@ -139,11 +140,35 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
       if (!/Review:\s*(code-review|omitido \()/.test(reply)) missing.push('Review: code-review <task\'s files> <findings> | omitido (<why>)');
     }
   }
-  // Claims checked against tool calls.
-  const declared = [...turn.texts, reply].join('\n');
-  if (/Procedimiento:[^\n]*procedures\.md/.test(declared)) {
-    const read = allTools.some((t) => /procedures\.md/.test(`${t.input.file_path || ''} ${t.input.path || ''} ${t.input.pattern || ''} ${t.input.command || ''}`));
-    if (!read) missing.push('Procedimiento names a procedures.md section that was never read in this session: read that section (search its heading) and follow it, or name the one you did follow');
+  // Claims checked against tool calls. Memoria and Procedimiento live in the Cierre: the opener is written after a thinking
+  // block and is not persisted, so the hooks cannot read it (test 2.0-2: "leída" and an unread procedure passed).
+  const where = (t) => `${t.input.file_path || ''} ${t.input.path || ''} ${t.input.pattern || ''} ${t.input.command || ''}`;
+  const base = allTools.length - turn.tools.filter((t) => !t.input.slash).length;
+  const isChange = (t) => (EDITS.test(t.name) && !exempt(fileOf(t))) || (/^(Bash|PowerShell)$/.test(t.name) && changesProject(t.input.command));
+  const firstChange = allTools.findIndex((t, i) => i >= base && isChange(t));
+  if (/##\s*Cierre/.test(reply)) {
+    if (!/Procedimiento:/.test(reply)) missing.push('Procedimiento: <section> (procedures.md:<line>) — the section of the owner department\'s procedures.md you read and followed');
+    else if (!/Procedimiento:[^\n]*\.md:\d+/.test(reply)) missing.push('Procedimiento needs the file and line of the section: <section> (procedures.md:<line>)');
+    if (!/Memoria:\s*(digest|le[ií]da|creada)/i.test(reply)) missing.push('Memoria: digest (only the injected summary) | leída (you opened ~/.waymark/projects/<slug>.md) | creada');
+    else if (/Memoria:\s*le[ií]da/i.test(reply)) {
+      const opened = allTools.findIndex((t) => t.name === 'Read' && /[\\/]\.waymark[\\/]projects[\\/]/.test(String(t.input.file_path || '')));
+      if (opened < 0 || (firstChange >= 0 && opened > firstChange)) missing.push('Memoria says "leída" but the project memory file was not opened before the first change: write Memoria: digest, or say when you opened it');
+    }
+  }
+  if (/Procedimiento:[^\n]*procedures\.md/.test(reply)) {
+    const target = dept.declared ? new RegExp(`${dept.declared}[\\\\/]procedures\\.md`) : /procedures\.md/;
+    if (!allTools.some((t) => target.test(where(t)))) missing.push(`Procedimiento names a procedures.md section that was never read in this session${dept.declared ? ` (${dept.declared}/procedures.md)` : ''}: read that section (search its heading) and follow it, or name the one you did follow`);
+  }
+  // Gates in order: a typecheck/lint/build after the last code change, tests after the last spec change.
+  const shell = (t) => /^(Bash|PowerShell)$/.test(t.name);
+  const lastIdx = (pred) => { for (let i = turn.tools.length - 1; i >= 0; i--) if (pred(turn.tools[i])) return i; return -1; };
+  const lastCode = lastIdx((t) => (EDITS.test(t.name) && !exempt(fileOf(t)) && !NOT_CODE.test(fileOf(t))) || (shell(t) && changesProject(t.input.command)));
+  if (lastCode >= 0 && !turn.tools.slice(lastCode + 1).some((t) => shell(t) && GATE.test(String(t.input.command || '')))) {
+    missing.push('no typecheck, lint or build ran after the last code change: run the project\'s gate now and quote its result in Gates');
+  }
+  const lastSpec = lastIdx((t) => EDITS.test(t.name) && SPEC.test(path.basename(fileOf(t))));
+  if (lastSpec >= 0 && !turn.tools.slice(lastSpec + 1).some((t) => shell(t) && TEST.test(String(t.input.command || '')))) {
+    missing.push('a spec changed after the last test run: run the tests again and quote the result');
   }
   if (!skip.Tests && /Tests:\s*sin infra/i.test(reply)) {
     const spec = specsNear(changed.filter((f) => !NOT_CODE.test(f)));
@@ -155,7 +180,7 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
   if (near && !skip.Tests && !/Tests:/.test(reply)) missing.push(`${near} sits next to the changed code: add a regression spec (red → green) and a Tests: field, or Tests: no (<why it cannot cover this>)`);
   if (/Tests:\s*rojo→verde/i.test(reply)) {
     const specEdited = turn.tools.some((t) => EDITS.test(t.name) && SPEC.test(path.basename(fileOf(t))));
-    const testRun = turn.tools.some((t) => /^(Bash|PowerShell)$/.test(t.name) && /\b(test|tests|vitest|jest|karma|mocha|pytest|rspec|go test|dotnet test|mvn test|gradle test)\b/i.test(String(t.input.command || '')));
+    const testRun = turn.tools.some((t) => /^(Bash|PowerShell)$/.test(t.name) && TEST.test(String(t.input.command || '')));
     if (!specEdited || !testRun) missing.push(`Tests says rojo→verde but this turn ${!specEdited ? 'edited no spec/test file' : ''}${!specEdited && !testRun ? ' and ' : ''}${!testRun ? 'ran no test command' : ''}: write the spec, run it red then green, and quote the result`);
   }
   // "Pre-existing" failures need the clean-copy proof or an explicit "no comprobado".
@@ -205,6 +230,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       const claimed = String(h.last_assistant_message || '').match(/##\s*Cierre\s*·\s*(.+)/)?.[1]?.match(ID)?.[0];
       ctx.commits = commitsFor(cwd, claimed);
       ctx.inputs = turnInputs(taskLines(lines, 1), cwd);
+      ctx.gitChanged = snapshotDiff(loadSnapshot(h.session_id), gitSnapshot(cwd)); // taken by the per-prompt hook
       const gaps = cierreGaps(turn, h.last_assistant_message, sessionTools(lines), prompts, ctx);
       if (!gaps) return;
       if (gaps.missing.length && !h.stop_hook_active) {
