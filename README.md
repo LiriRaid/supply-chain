@@ -52,7 +52,7 @@ There is no installer script. [`INSTALL.md`](INSTALL.md) is written **for the ag
 
 It can configure every agent on the machine in one run (Claude Code, Codex, Cursor…); all of them share the same memory, so you can **start a task in one agent and continue it in another**: project memory keeps a *Work in progress* section (task, done, next, open) rewritten after every task.
 
-When a new version is published, the agent tells you (once a day at most) and asks whether to update. **Update** without reinstalling: *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"*. The agent compares `VERSION`, shows the [CHANGELOG](CHANGELOG.md), keeps what your skills learned and replaces the rest. The same sentence with "uninstall" removes it. Node.js 18+ is needed only for `sync.mjs`.
+When a new version is published, `waymark.mjs check` reports it (the session hook asks the agent to run it once a week) and the agent asks whether to update. **Update** without reinstalling: *"actualiza Waymark desde https://github.com/LiriRaid/waymark siguiendo su INSTALL.md"*. The agent compares `VERSION`, shows the [CHANGELOG](CHANGELOG.md), keeps what your skills learned and replaces the rest. The same sentence with "uninstall" removes it. Node.js 18+ is needed only for `sync.mjs`.
 
 ## Built to save tokens
 
@@ -73,11 +73,11 @@ The bigger saving is not the size of each attempt but the **number of attempts**
 
 ### MCP servers only where their framework is used
 
-Your MCP servers stay registered where you put them. In each project, `scripts/mcp-fit.mjs` reads its manifests and blocks (a deny rule in that project's private `.claude/settings.local.json`, after your yes) the framework servers it does not use: no Angular CLI or PrimeNG in a React app or a docs repo, no React docs in an Angular app. When the project adopts the framework the rule is lifted. Docs and memory servers are never blocked. In a new project the session hook notices and offers it once.
+Your MCP servers stay registered where you put them. In each project, `scripts/mcp-fit.mjs` reads its manifests and blocks (a deny rule in that project's private `.claude/settings.local.json`, after your yes) the framework servers it does not use: no Angular CLI or PrimeNG in a React app or a docs repo, no React docs in an Angular app. When the project adopts the framework the rule is lifted. Docs and memory servers are never blocked. `waymark.mjs check` reports it for the project it runs in.
 
 ### Skills you never use, and costly resumes
 
-Each listed skill costs its description in every session. `scripts/skill-fit.mjs` finds the skills you added but have not invoked in 30 days and, after your yes, lists only their names (still invocable); unused plugins are disabled. Waymark's 17 descriptions were also cut from 8,558 to 4,407 characters (~1,000 tokens per session). Resuming a large session after an hour idle re-writes its whole context (the cache expired): the Rule 0 hook stops that first message once and hands it to a new session in the same folder. Past 300k tokens of context an active session only shows a notice. Before commands, a hook stops fragile inline scripts and recursive searches through `node_modules`; at the end of a turn another checks the Cierre.
+Each listed skill costs its description in every session. `scripts/skill-fit.mjs` finds the skills you added but have not invoked in 30 days and, after your yes, lists only their names (still invocable); unused plugins are disabled. Waymark's 17 descriptions were also cut from 8,558 to 4,407 characters (~1,000 tokens per session). Resuming a large session after an hour idle re-writes its whole context (the cache expired), so a new task is cheaper in a new session. These are reported, not enforced: `node <skills-dir>/waymark/scripts/waymark.mjs check` lists what is pending (a newer version, skills changed, MCP fit, skill fit, the migration, unconnected agents, a large idle session), and the session hook reminds the agent to run it once a week. The hooks themselves hold only the chain (`docs/adr/0008`).
 
 ### Evaluate a task
 
@@ -93,7 +93,7 @@ It reads the agent's own session transcript (offline, no model call) and shows, 
 
 ## How it triggers
 
-Three layers keep the agent on track, without an orchestrator: each skill's `description` (the trigger, with the phrases people actually type), the instructions block (Rule 0: every request runs recall → department → skills → verify → learn; questions run in read-only consult mode), and a tiny per-prompt **Rule 0 reminder hook** (`scripts/rule0-hook.mjs`, installed by default where the agent supports hooks). The hook runs locally, adds ~120 tokens per prompt (~35 once the previous reply followed the routine) and blocks nothing except, once, a costly resume of a large idle session. Every reply starts with `Waymark → L<n> · <dept>`, so you can see at a glance that the routine ran.
+Three layers keep the agent on track, without an orchestrator: each skill's `description` (the trigger, with the phrases people actually type), the instructions block (Rule 0: every request runs recall → department → skills → verify → learn; questions run in read-only consult mode), and a tiny per-prompt **Rule 0 reminder hook** (`scripts/rule0-hook.mjs`, installed by default where the agent supports hooks). The hook runs locally, adds ~120 tokens per prompt (~35 once the previous reply followed the routine) and blocks nothing. Every reply starts with `Waymark → L<n> · <dept>`, so you can see at a glance that the routine ran.
 
 ```
 "quiero crear un modal"      → dept-frontend → brief → ui-build → browser-verify → gates → learn
@@ -151,7 +151,7 @@ When a department needs a capability no installed skill provides, the agent inst
 
 ### Third-party skills are used too
 
-`sync.mjs` indexes every skill it can find, not only Waymark's: the agent's own folder, other agents' folders (`~/.cursor/skills`, `~/.codex/skills`, `~/.agents/skills`, Gemini, OpenCode), plugins and each project's `.claude/`, `.cursor/`, `.agents/`… `skills/`. Each one gets a department and a capability from its description and its path in `skill-registry.md`, so a department can read and follow it even when the agent did not load it. The session hook notices new or removed skills and refreshes the registry in the background. The six community skills Waymark replaces are listed as *Replaced* and never used.
+`sync.mjs` indexes every skill it can find, not only Waymark's: the agent's own folder, other agents' folders (`~/.cursor/skills`, `~/.codex/skills`, `~/.agents/skills`, Gemini, OpenCode), plugins and each project's `.claude/`, `.cursor/`, `.agents/`… `skills/`. Each one gets a department and a capability from its description and its path in `skill-registry.md`, so a department can read and follow it even when the agent did not load it. `waymark.mjs check` reports new or removed skills, and `waymark.mjs sync` refreshes the registry. The six community skills Waymark replaces are listed as *Replaced* and never used.
 
 ### Tool skills that grow
 

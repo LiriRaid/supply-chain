@@ -5,7 +5,7 @@
 // Per agent folder that exists (Codex, Gemini CLI, OpenCode): one marked block in its global instructions file with the
 // pointer line below, and a row in ~/.waymark/agent.md (*Connected agents*). Only the marked block is ever written; the
 // rest of the file is never touched. Hooks and skills in those agents are a full install (INSTALL.md §1), not this.
-// The session hook offers it once per agent found and not connected (user's choice, 2026-10-03 · T2c). Offline.
+// `waymark.mjs check` reports each agent found and not connected (docs/adr/0008). Offline.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';

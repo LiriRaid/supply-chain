@@ -7,7 +7,8 @@
 | `<instructions-file>` | `~/.claude/CLAUDE.md` |
 | `<project-instructions-file>` | `CLAUDE.md` at the project root |
 | Skill loading | native (`Skill` tool, triggered by each skill's `description`) |
-| Hooks | `~/.claude/settings.json`: `UserPromptSubmit` → `rule0-hook.mjs`, `SessionStart` → `session-hook.mjs`, `PreToolUse` (matcher `Bash|PowerShell|Edit|Write|NotebookEdit`) → `tool-hook.mjs`, `Stop` → `stop-hook.mjs` (INSTALL §7.2) |
+| Hooks | `~/.claude/settings.json`: `UserPromptSubmit` → `rule0-hook.mjs`, `SessionStart` → `session-hook.mjs`, `PreToolUse` (matcher `Bash|PowerShell|Edit|Write|NotebookEdit`) → `tool-hook.mjs`, `Stop` → `stop-hook.mjs`, written by `install-hooks.mjs` (INSTALL §7.2) |
+| Hook adapter | `skills/waymark/scripts/agents/claude.mjs` (the default; `docs/adr/0008`): transcript reader, pre-tool input, output shapes, `~/.claude/CLAUDE.md`, `~/.claude/projects/<cwd>` |
 | Restart needed | yes, start a new session after installing |
 
 ## MCP registration (user scope)

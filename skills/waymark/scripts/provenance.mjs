@@ -4,7 +4,8 @@
 //   the transcript proves (prompt, options asked and the user's pick, files, commands, skills), the inputs it was
 //   built with (Waymark and agent version, model, MCP servers, instruction file hashes), its commits (trailer
 //   `Waymark-Task: <id>`) and the Cierre text. Each line holds the hash of the previous one: an edited or deleted
-//   record breaks the chain (verifyChain).
+//   record breaks the chain (verifyChain). Each record names its agent; a question (kind "Q") is a short record with no
+//   task ID (docs/adr/0008).
 // Where: <project>/.waymark/ (docs/adr/0007), resolved once by projectHome() for every hook.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -148,20 +149,23 @@ export function tasksMarkdown(home, now = new Date()) {
   const result = (r) => cell((r.cierre || '').match(/Resultado:[ \t]*([^·\n]*)/i)?.[1] || '?') + (r.unresolved?.length ? ` · ${r.unresolved.length} sin resolver` : '');
   const started = Object.values(readOpen(home)).sort((a, b) => String(a.at).localeCompare(String(b.at)))
     .map((o) => clip(`- ${o.next}${o.followUp ? ` (or follow-up ${o.followUp})` : ''} · started ${new Date(o.at).toLocaleString('sv').slice(0, 16)} · "${o.prompt}"`, TASK_CHARS));
-  const records = readRecords(home.log), lastRec = records[records.length - 1];
+  const all = readRecords(home.log), records = all.filter((r) => r.id), lastRec = records[records.length - 1];
+  const questions = all.slice(all.lastIndexOf(lastRec) + 1).filter((r) => r.kind === 'Q').length; // since the last close
+  const who = (r) => (r.agent ? ` · ${cell(r.agent)}` : ''); // the agent that closed it (docs/adr/0008)
   // The last closed task with what another agent needs to continue (user's choice, 2026-10-03 · T2d): ~220 ch per field.
-  const lastClosed = lastRec ? [`## Last closed: ${cell(lastRec.id)} (${new Date(lastRec.at).toLocaleString('sv').slice(0, 16)}; full record: last line of provenance.jsonl)`,
+  const lastClosed = lastRec ? [`## Last closed: ${cell(lastRec.id)}${who(lastRec)} (${new Date(lastRec.at).toLocaleString('sv').slice(0, 16)}; full record: last line of provenance.jsonl)`,
     // a field runs to the end of its line, or to the next field on the same line ("Resultado: hecho · Decisión: …")
     ...[['Resultado', 'Resultado'], ['Decisión', 'Decisi[oó]n'], ['Sub-decisiones', 'Sub-?decisiones'], ['Evidencia', 'Evidencia'], ['Aprendido', 'Aprendido']]
       .map(([name, re]) => [name, (lastRec.cierre || '').replace(/\*\*|__/g, '').match(new RegExp(`${re}:[ \\t]*(.*?)(?=\\s*·\\s*(?:Resultado|Decisi[oó]n|Sub-?decisiones|Evidencia|Aprendido):|\\n|$)`, 'i'))?.[1]])
       .filter(([, v]) => v).map(([name, v]) => `- ${name}: ${clip(cell(v), 220)}`),
     ...(lastRec.evaluation ? [(() => { const failed = Object.entries(lastRec.evaluation.steps || {}).filter(([, v]) => !v).map(([k]) => k); return `- Evaluación: ${lastRec.evaluation.score}${failed.length ? ` (✘ ${failed.join(', ')})` : ''}`; })()] : []), ''] : [];
   const rows = records.slice(-8).reverse()
-    .map((r) => `| ${cell(r.id)} | ${clip(result(r), 60)} | ${cell(r.evaluation?.score || '—')} | ${clip(cell(r.prompt), 60)} |`);
+    .map((r) => `| ${cell(r.id)}${who(r)} | ${clip(result(r), 60)} | ${cell(r.evaluation?.score || '—')} | ${clip(cell(r.prompt), 60)} |`);
   const render = () => [`# Tasks · ${home.slug}`, '',
     `Generated at each task close (${now.toISOString()}); do not edit. Detail: \`memory.md\` (*Work in progress*) and \`provenance.jsonl\`.`, '',
     '## In progress / pending', ...(tasks.length ? tasks : ['- none']), ...(notes > 0 ? [`- (${notes} more notes in memory.md, not tasks)`] : []), '',
     ...(started.length ? ['## Started, not closed (the turn never ended: quota, crash, or still running)', ...started, ''] : []),
+    ...(questions ? [`Preguntas (Q) desde el último cierre: ${questions} (provenance.jsonl, kind "Q")`, ''] : []),
     ...lastClosed,
     `## Done (last ${rows.length}, newest first)`,
     '| Task | Result | Routine | Request |', '|---|---|---|---|', ...rows, ''].join('\n');
@@ -198,7 +202,8 @@ export function taskIds(cwd, now = new Date(), records = readLog(cwd)) {
     for (let c = 98; c <= 122; c++) if (!known.has(`${b}${String.fromCharCode(c)}`)) return `${b}${String.fromCharCode(c)}`; // b … z
     return null;
   };
-  const last = records.length ? base(records[records.length - 1].id) : null;
+  const tasks = records.filter((r) => ID.test(String(r.id || ''))); // question records (kind "Q") carry no ID
+  const last = tasks.length ? base(tasks[tasks.length - 1].id) : null;
   return { next: `${day} · T${n + 1}`, last, followUp: last ? follow(last) : null, known, follow };
 }
 
@@ -242,7 +247,7 @@ const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const fileSha = (p) => { try { return sha(fs.readFileSync(p)).slice(0, 16); } catch { return null; } };
 
 // What the task was built with, from the turn's transcript lines (from its prompt on) and the instruction files.
-export function turnInputs(lines, cwd) {
+export function turnInputs(lines, cwd, userInstructions = path.join(os.homedir(), '.claude', 'CLAUDE.md')) { // the agent adapter names its file
   let model = null, agent = null;
   const mcp = new Set();
   for (const d of lines) {
@@ -254,7 +259,7 @@ export function turnInputs(lines, cwd) {
   let waymark = null;
   try { waymark = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'VERSION'), 'utf8').trim(); } catch {}
   const project = ['CLAUDE.md', 'AGENTS.md'].map((f) => path.join(cwd, f)).find((p) => fs.existsSync(p));
-  return { waymark, agent, model, mcp: [...mcp], instructions: { user: fileSha(path.join(os.homedir(), '.claude', 'CLAUDE.md')), project: project ? fileSha(project) : null } };
+  return { waymark, agent, model, mcp: [...mcp], instructions: { user: fileSha(userInstructions), project: project ? fileSha(project) : null } };
 }
 
 // Commits that carry `Waymark-Task: <id>` among the last 30 of the repo at cwd (git missing or no repo → []).

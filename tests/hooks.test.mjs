@@ -561,7 +561,7 @@ test('stop hook: the block reason fed back as a user line does not split the tur
   assert.deepEqual(second.records[0].files, [FILE]);
 });
 
-test('stop hook: Q turns and turns without project edits leave no record', () => {
+test('stop hook: without project memory, a Q turn leaves no record (with memory: the short Q record, step 3 below)', () => {
   assert.equal(runStop([prompt('¿qué hace esto?'), say('Waymark → Q · dept-qa'), call('Read', { file_path: FILE })], 'Respuesta').records.length, 0);
 });
 
@@ -709,7 +709,8 @@ test('stop hook: with memory in the project, the record and tasks.md go to <proj
   const recs = readRecords(path.join(repo, '.waymark', 'provenance.jsonl'));
   assert.equal(recs.length, 1);
   assert.deepEqual(recs[0].files, [FILE], 'the memory edit is not a project change');
-  assert.match(fs.readFileSync(path.join(repo, '.waymark', 'tasks.md'), 'utf8'), new RegExp(`- 2026-10-01 · T5 · en curso · próximo: deploy[\\s\\S]*\\| ${id} \\| hecho`));
+  assert.match(fs.readFileSync(path.join(repo, '.waymark', 'tasks.md'), 'utf8'), new RegExp(`- 2026-10-01 · T5 · en curso · próximo: deploy[\\s\\S]*## Last closed: ${id} · claude [\\s\\S]*\\| ${id} · claude \\| hecho`), 'the agent that closed it is shown');
+  assert.equal(recs[0].agent, 'claude');
   assert.match(excludeOf(repo), /^\.waymark\/$/m);
   const bare = tmpRepo('stop-bare'); // no memory at all: the record still lands excluded from git
   const r2 = spawnSync(process.execPath, [path.join(SCRIPTS, 'stop-hook.mjs')], { input: JSON.stringify({ transcript_path: transcript, cwd: bare, session_id: 's-step2b', last_assistant_message: cierre(id) }), env: { ...process.env, WAYMARK_HOME: home }, encoding: 'utf8' });
@@ -746,17 +747,19 @@ test('open.json: the per-prompt hook marks the turn started; the end of the turn
   assert.ok(!fs.existsSync(path.join(bare, '.waymark')));
 });
 
-test('connect-agents: one marked pointer block per agent found, backup first, registry row; the session hook offers it once', async () => {
+// `waymark.mjs check` with no network call that can succeed and no real ~/.claude.json or transcripts.
+const offline = () => Object.assign(process.env, { WAYMARK_REPO: 'invalid/none', WAYMARK_CLAUDE_JSON: path.join(home, 'none.json'), WAYMARK_CLAUDE_PROJECTS: path.join(home, 'none') });
+
+test('connect-agents: one marked pointer block per agent found, backup first, registry row; waymark check reports it until connected', async () => {
   const { found, planFor, apply: connect, POINTER } = await import(`file://${SCRIPTS}/connect-agents.mjs`);
+  const { check } = await import(`file://${SCRIPTS}/waymark.mjs`);
+  offline();
   delete process.env.CODEX_HOME;
   process.env.WAYMARK_BACKUPS = path.join(home, 'backups');
   fs.mkdirSync(path.join(agentsHome, '.codex'), { recursive: true });
   fs.writeFileSync(path.join(agentsHome, '.codex', 'AGENTS.md'), '# Mine\nkeep this');
   fs.mkdirSync(path.join(agentsHome, '.config', 'opencode'), { recursive: true });
-  const env = { ...process.env, WAYMARK_NO_SYNC: '1', WAYMARK_CLAUDE_JSON: path.join(home, 'none.json'), WAYMARK_CLAUDE_PROJECTS: path.join(home, 'none') };
-  const session = () => spawnSync(process.execPath, [path.join(SCRIPTS, 'session-hook.mjs')], { input: JSON.stringify({ cwd: agentsHome }), env, encoding: 'utf8' }).stdout;
-  assert.match(session(), /not connected to the project memory: Codex \([^)]*\.codex\/AGENTS\.md\), OpenCode/);
-  assert.doesNotMatch(session(), /not connected/, 'offered once');
+  assert.ok((await check(agentsHome)).some((t) => /^connect: other agents not connected to the project memory: Codex \([^)]*\.codex\/AGENTS\.md\), OpenCode/.test(t)));
   const agents = found();
   assert.deepEqual(agents.map((a) => a.name), ['Codex', 'OpenCode'], 'only folders that exist (no .gemini here)');
   for (const a of agents) connect(planFor(a));
@@ -768,6 +771,7 @@ test('connect-agents: one marked pointer block per agent found, backup first, re
   const reg = fs.readFileSync(path.join(home, 'agent.md'), 'utf8');
   assert.match(reg, /## Connected agents[\s\S]*\| OpenCode \|[\s\S]*\| Codex \|/);
   assert.ok(found().every((a) => a.connected) && planFor(found()[0]).skip, 'idempotent: already connected');
+  assert.ok(!(await check(agentsHome)).some((t) => t.startsWith('connect:')), 'connected: nothing to report');
   connect({ ...found()[0], connected: false, exists: true }); // a forced rerun replaces the registry row, never duplicates it
   assert.equal(fs.readFileSync(path.join(home, 'agent.md'), 'utf8').match(/\| Codex \|/g).length, 1);
 });
@@ -785,18 +789,124 @@ test('connect-agents: with an orchestrator in the file, Waymark joins as its gue
   assert.match(fs.readFileSync(path.join(home, 'agent.md'), 'utf8'), /\| Gemini CLI \| [^|]+ \| \d{4}-\d\d-\d\d · invitado de gentle-ai \|/);
 });
 
-test('session hook: new location points to tasks.md; the bridge offers the migration once', () => {
-  const env = { ...process.env, WAYMARK_HOME: home, WAYMARK_NO_SYNC: '1', WAYMARK_CLAUDE_JSON: path.join(home, 'none.json'), WAYMARK_CLAUDE_PROJECTS: path.join(home, 'none') };
+test('session hook: new location points to tasks.md; the bridge says old location and waymark check offers the migration', async () => {
+  const { check } = await import(`file://${SCRIPTS}/waymark.mjs`);
+  offline();
+  const env = { ...process.env, WAYMARK_HOME: home };
   const run = (cwd) => JSON.parse(spawnSync(process.execPath, [path.join(SCRIPTS, 'session-hook.mjs')], { input: JSON.stringify({ cwd }), env, encoding: 'utf8' }).stdout).hookSpecificOutput.additionalContext;
   const repo = tmpRepo('session');
   const old = oldMemory('sess', repo);
-  const first = run(repo);
-  assert.match(first, /old location/);
-  assert.match(first, /Memory migration .*migrate-memory\.mjs" --project /);
-  assert.doesNotMatch(run(repo), /Memory migration/, 'offered once');
+  assert.match(run(repo), /old location; read; full file there; `waymark\.mjs check` offers the move/);
+  assert.ok((await check(repo)).some((t) => /^migrate: .*migrate-memory\.mjs" --project /.test(t)));
   fs.rmSync(old);
+  assert.ok(!(await check(repo)).some((t) => t.startsWith('migrate:')), 'nothing left in the old location');
   fs.mkdirSync(path.join(repo, '.waymark'));
   fs.writeFileSync(path.join(repo, '.waymark', 'memory.md'), '# P\n\n## Work in progress\n- ▶ C\n');
   assert.match(run(repo), /Project memory: .*\.waymark\/memory\.md \(read; full file there\)\. Where the work stands: .*\.waymark\/tasks\.md[\s\S]*- ▶ C/);
   assert.match(run(tmpRepo('fresh')), /Project memory: none .* Create .*\.waymark\/memory\.md/);
+});
+
+// ---- Step 3 (docs/adr/0008): the hooks are the chain; the rest is waymark.mjs; one adapter per agent ----
+
+test('stop hook: a turn routed Q leaves a short record with no task ID; IDs, follow-ups and tasks.md count it apart', () => {
+  const repo = tmpRepo('question');
+  fs.mkdirSync(path.join(repo, '.waymark'));
+  fs.writeFileSync(path.join(repo, '.waymark', 'memory.md'), '# P\n\n## Work in progress\n- ▶ A (2026-10-01 · T1): NEXT b\n');
+  const day = new Date().toLocaleDateString('sv');
+  appendRecord(repo, { id: `${day} · T1`, agent: 'codex', at: new Date().toISOString(), cierre: 'Resultado: hecho', prompt: 'first' });
+  const transcript = path.join(home, 't-question.jsonl');
+  fs.writeFileSync(transcript, [prompt('¿qué hace el guard?'), say('Waymark → Q · dept-security · skills: ninguna'), call('Read', { file_path: FILE })].map((l) => JSON.stringify(l)).join('\n') + '\n');
+  const r = spawnSync(process.execPath, [path.join(SCRIPTS, 'stop-hook.mjs')], { input: JSON.stringify({ transcript_path: transcript, cwd: repo, session_id: 's-q', last_assistant_message: 'Respuesta' }), env: { ...process.env, WAYMARK_HOME: home }, encoding: 'utf8' });
+  assert.equal(r.stdout, '', 'a question is never blocked and shows no summary line');
+  const recs = readRecords(path.join(repo, '.waymark', 'provenance.jsonl'));
+  assert.equal(recs.length, 2);
+  assert.deepEqual([recs[1].kind, recs[1].id, recs[1].agent, recs[1].department, recs[1].prompt], ['Q', undefined, 'claude', 'dept-security', '¿qué hace el guard?']);
+  assert.ok(verifyChain(recs).ok, 'chained like any record');
+  const ids = taskIds(repo);
+  assert.deepEqual([ids.next, ids.last, ids.followUp], [`${day} · T2`, `${day} · T1`, `${day} · T1b`], 'the question takes no T<n> and keeps the follow-up');
+  const tasks = fs.readFileSync(path.join(repo, '.waymark', 'tasks.md'), 'utf8');
+  assert.match(tasks, /Preguntas \(Q\) desde el último cierre: 1 /);
+  assert.match(tasks, new RegExp(`## Last closed: ${day} · T1 · codex `), 'Claude sees the task closed in Codex');
+  assert.match(tasks, new RegExp(`\\| ${day} · T1 · codex \\| hecho`));
+  const bare = tmpRepo('question-bare'); // no project memory: a question writes nothing
+  spawnSync(process.execPath, [path.join(SCRIPTS, 'stop-hook.mjs')], { input: JSON.stringify({ transcript_path: transcript, cwd: bare, session_id: 's-q2', last_assistant_message: 'Respuesta' }), env: { ...process.env, WAYMARK_HOME: home }, encoding: 'utf8' });
+  assert.ok(!fs.existsSync(path.join(bare, '.waymark')));
+});
+
+test('session hook: one pointer to waymark check when the last check is older than a week, at most once a week', async () => {
+  const own = fs.mkdtempSync(path.join(os.tmpdir(), 'waymark-check-'));
+  temps.push(own);
+  const env = { ...process.env, WAYMARK_HOME: own };
+  const run = () => JSON.parse(spawnSync(process.execPath, [path.join(SCRIPTS, 'session-hook.mjs')], { input: JSON.stringify({ cwd: tmpRepo('pointer') }), env, encoding: 'utf8' }).stdout).hookSpecificOutput.additionalContext;
+  assert.match(run(), /Waymark check \(last run: never\): before the task, run node ".*waymark\.mjs" check/);
+  assert.doesNotMatch(run(), /Waymark check/, 'once a week');
+  fs.writeFileSync(path.join(own, '.check.json'), JSON.stringify({ checkedAt: Date.now() - 9 * 86400000, pointedAt: Date.now() - 8 * 86400000 }));
+  assert.match(run(), /Waymark check \(last run: 9 days ago\)/);
+  const { check } = await import(`file://${SCRIPTS}/waymark.mjs`);
+  offline();
+  const before = process.env.WAYMARK_HOME;
+  process.env.WAYMARK_HOME = own;
+  try { await check(tmpRepo('pointer-check')); } finally { process.env.WAYMARK_HOME = before; }
+  assert.ok(Date.now() - JSON.parse(fs.readFileSync(path.join(own, '.check.json'), 'utf8')).checkedAt < 60000, 'check records its time');
+});
+
+test('waymark check: skills never indexed or changed since the last sync, frameworks without coexistence, version compare', async () => {
+  const { check, newer, skillNames } = await import(`file://${SCRIPTS}/waymark.mjs`);
+  offline();
+  const repo = tmpRepo('check-skills');
+  assert.ok((await check(repo)).some((t) => /^skills: never indexed from this folder/.test(t)));
+  const sig = path.join(home, '.skills-signature.json');
+  fs.writeFileSync(sig, JSON.stringify({ [repo.replace(/\\/g, '/').toLowerCase()]: skillNames(repo) }));
+  assert.ok(!(await check(repo)).some((t) => t.startsWith('skills:')), 'unchanged since the last sync');
+  fs.mkdirSync(path.join(repo, '.claude', 'skills', 'mine'), { recursive: true });
+  fs.writeFileSync(path.join(repo, '.claude', 'skills', 'mine', 'SKILL.md'), '---\nname: mine\n---\n');
+  assert.ok((await check(repo)).some((t) => /^skills: changed since the last sync \(\+mine\)/.test(t)));
+  const instr = path.join(home, 'instr-check.md');
+  fs.writeFileSync(instr, '<!-- gentle-ai:persona -->\nx\n');
+  const agentMd = path.join(home, 'agent.md'), keep = fs.existsSync(agentMd) ? fs.readFileSync(agentMd, 'utf8') : null;
+  fs.writeFileSync(agentMd, `| Agent | Skills | Project skills | Instructions |\n|---|---|---|---|\n| Test | x | y | ${instr} |\n`);
+  try { assert.ok((await check(repo)).some((t) => /^coexistence: another agent framework appeared .*gentle-ai in /.test(t))); }
+  finally { if (keep === null) fs.rmSync(agentMd); else fs.writeFileSync(agentMd, keep); }
+  assert.equal(newer('2.1.0', '2.0.0-dev'), true);
+  assert.equal(newer('2.0.0', '2.0.0-dev'), false);
+  assert.equal(newer('1.9.9', '2.0.0'), false);
+});
+
+test('install-hooks: four entries added after the others, idempotent, old path/matcher updated, duplicates dropped', async () => {
+  const { planHooks } = await import(`file://${SCRIPTS}/install-hooks.mjs`);
+  const theirs = { type: 'command', command: 'node other-framework.js' };
+  const first = planHooks({ model: 'x', hooks: { Stop: [{ hooks: [theirs] }] } }, { scripts: '/s/waymark/scripts' });
+  assert.equal(first.steps.length, 4);
+  assert.equal(first.settings.model, 'x', 'other keys kept');
+  assert.deepEqual(first.settings.hooks.Stop.map((e) => e.hooks[0].command), ['node other-framework.js', 'node "/s/waymark/scripts/stop-hook.mjs"'], 'after the existing hooks');
+  assert.equal(first.settings.hooks.PreToolUse[0].matcher, 'Bash|PowerShell|Edit|Write|NotebookEdit');
+  assert.deepEqual(planHooks(first.settings, { scripts: '/s/waymark/scripts' }).steps, [], 'idempotent');
+  const old = { hooks: {
+    PreToolUse: [{ matcher: 'Bash|PowerShell', hooks: [{ type: 'command', command: 'node "C:\\old\\waymark\\scripts\\tool-hook.mjs"' }] }],
+    UserPromptSubmit: [{ hooks: [{ type: 'command', command: 'node "/s/waymark/scripts/rule0-hook.mjs"' }] }, { hooks: [{ type: 'command', command: 'node "/x/waymark/scripts/rule0-hook.mjs"' }, theirs] }],
+  } };
+  const second = planHooks(old, { scripts: '/s/waymark/scripts' });
+  assert.deepEqual(second.settings.hooks.PreToolUse, [{ matcher: 'Bash|PowerShell|Edit|Write|NotebookEdit', hooks: [{ type: 'command', command: 'node "/s/waymark/scripts/tool-hook.mjs"' }] }]);
+  assert.deepEqual(second.settings.hooks.UserPromptSubmit.map((e) => e.hooks.map((h) => h.command)), [['node "/s/waymark/scripts/rule0-hook.mjs"'], ['node other-framework.js']], 'the duplicate goes, the other hook stays');
+  assert.ok(second.steps.some((s) => /remove duplicate UserPromptSubmit/.test(s)));
+  assert.equal(old.hooks.PreToolUse[0].matcher, 'Bash|PowerShell', 'the input is not mutated');
+  assert.match(planHooks({}, { scripts: '/s/waymark/scripts', agent: 'codex' }).settings.hooks.Stop[0].hooks[0].command, /stop-hook\.mjs" --agent codex$/);
+});
+
+test('adapter: the hooks answer through the agent module; the gate no longer polices shell style', async () => {
+  const claude = await import(`file://${SCRIPTS}/agents/claude.mjs`);
+  const { agentFrom } = await import(`file://${SCRIPTS}/agents/index.mjs`);
+  const { gate } = await import(`file://${SCRIPTS}/tool-hook.mjs`);
+  assert.equal(agentFrom(['node', 'x']).name, 'claude', 'default');
+  assert.equal(agentFrom(['node', 'x', '--agent', 'unknown']).name, 'claude', 'unknown → default, never a crash');
+  assert.deepEqual(claude.call({ tool_name: 'Edit', tool_input: { file_path: '/a.ts' } }), { files: ['/a.ts'] });
+  assert.deepEqual(claude.call({ tool_name: 'PowerShell', tool_input: { command: 'ls' } }), { command: 'ls' });
+  assert.equal(claude.call({ tool_name: 'Read', tool_input: {} }), null);
+  assert.deepEqual(claude.out.deny('no'), { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: 'no' } });
+  assert.deepEqual(claude.out.block('r'), { decision: 'block', reason: 'r' });
+  const fake = { ...claude, read: () => [prompt('cambia el título'), say('Waymark → L1 · dept-frontend · skills: ninguna')] };
+  assert.equal(gate({ tool_name: 'Bash', tool_input: { command: 'node -e "console.log(`${1}`.match(/\\d/))"' } }, fake), null, 'no fragile-command check any more');
+  assert.equal(gate({ tool_name: 'Bash', tool_input: { command: 'git stash' } }, fake), null);
+  assert.match(gate({ tool_name: 'Edit', tool_input: { file_path: FILE }, session_id: `s-${Math.random()}` }, fake), /L1 decision gate/);
+  assert.equal(gate({ tool_name: 'Edit', tool_input: { file_path: path.join(os.homedir(), '.waymark', 'x.md') } }, fake), null, 'memory files exempt');
 });

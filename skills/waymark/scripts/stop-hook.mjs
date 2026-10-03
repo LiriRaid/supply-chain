@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Waymark · end-of-turn record and evaluation. Registered by INSTALL.md as an end-of-turn hook (Claude Code: Stop).
+// Waymark · end-of-turn record and evaluation, the last link of the chain. Registered by install-hooks.mjs as an
+// end-of-turn hook (Claude Code: Stop; another agent: same script with `--agent <name>`, docs/adr/0008).
 // Runs locally (0 model tokens unless it blocks). Supply chain of the agent's work (docs/adr/0001–0005):
 // - What can be observed is COMPUTED from the transcript and git, never declared by the agent (memory, procedure,
 //   gates after the last change with time and failure, tests, browser, code-review, docs, branches, time, tokens).
@@ -8,15 +9,19 @@
 //   contract waymark/routine.json (docs/adr/0006). Each step has the levels and the condition where it applies; this
 //   file only computes whether it passed and why not. The instructions block quotes each block step (tests check it).
 // - Then the record is appended to <project>/.waymark/provenance.jsonl (docs/adr/0007; tasks.md regenerated) with an automatic evaluation (routine ✔/✘, score,
-//   tokens, estimated quota) and the user sees a one-line summary (systemMessage, 0 model tokens).
+//   tokens, estimated quota) and the user sees a one-line summary (systemMessage, 0 model tokens). The record names
+//   the agent that did the work.
+// - A turn routed Q (analysis only, no change) in a project with memory gets a short record {kind: "Q"} with no task ID
+//   (user's choice, 2026-10-03 · T2g): it leaves a trace without taking a T<n>.
 // It never blocks twice in a row (stop_hook_active). Remove it from the agent's settings to disable it.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { readTail, currentTurn, routedLevel, routedDept, isPrompt, promptText, sessionTools, readSomething, turnUsage } from './transcript.mjs';
+import { currentTurn, routedLevel, routedDept, isPrompt, promptText, sessionTools, readSomething, turnUsage } from './transcript.mjs';
 import { estimate } from './calibrate.mjs';
+import { agentFrom } from './agents/index.mjs';
 import { ID, taskIds, validId, taskLines, decisionsIn, appendRecord, turnInputs, commitsFor, changesProject, gitSnapshot, snapshotDiff, loadSnapshot, projectHome, refreshTasks, ensureLocal, closeOpen } from './provenance.mjs';
 
 const norm = (p) => String(p || '').replace(/\\/g, '/').toLowerCase();
@@ -277,7 +282,7 @@ export function provenanceRecord(turn, gaps, ctx, meta = {}) {
   const claimed = gaps.reply.match(/##\s*Cierre\s*·\s*(.+)/)?.[1]?.match(ID)?.[0];
   const ok = claimed && validId(claimed, ctx.ids);
   return {
-    id: ok ? claimed : ctx.ids.next, ...(ok ? {} : { idBy: 'hook' }), at: new Date().toISOString(), session: meta.session, cwd: meta.cwd,
+    id: ok ? claimed : ctx.ids.next, ...(ok ? {} : { idBy: 'hook' }), agent: meta.agent || null, at: new Date().toISOString(), session: meta.session, cwd: meta.cwd,
     level: gaps.level, department: gaps.dept, prompt: String(turn.prompt || '').slice(0, 600), decisions: ctx.decisions,
     files: [...new Set(gaps.changed)],
     observed: gaps.observed,
@@ -291,6 +296,12 @@ export function provenanceRecord(turn, gaps, ctx, meta = {}) {
   };
 }
 
+// The record of a turn routed Q that changed nothing, or null: no task ID, so it never shifts T<n> or the follow-up offered.
+export function questionRecord(turn, meta = {}) {
+  if (!turn.found || routedLevel(turn.texts, turn.tools) !== 'Q') return null;
+  return { kind: 'Q', agent: meta.agent || null, at: new Date().toISOString(), session: meta.session, cwd: meta.cwd, department: routedDept(turn.texts, turn.tools), prompt: String(turn.prompt || '').slice(0, 600) };
+}
+
 // One line for the user (systemMessage: shown in the UI, not added to the model's context).
 export function summaryLine(id, ev) {
   const s = Object.entries(ev.steps).map(([k, v]) => `${k} ${v ? '✔' : '✘'}`).join(' · ');
@@ -298,36 +309,43 @@ export function summaryLine(id, ev) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const agent = agentFrom();
   let input = '', done = false;
   const run = () => {
     if (done) return;
     done = true;
     try {
       const h = JSON.parse(input);
-      const lines = readTail(h.transcript_path, 4 * 1024 * 1024), cwd = h.cwd || process.cwd();
+      const lines = agent.read(h, 4 * 1024 * 1024), cwd = h.cwd || process.cwd();
       const prompts = lines.filter(isPrompt).map(promptText).slice(-3); // this task: the current prompt and the two before it
       const home = projectHome(cwd);
       const turn = currentTurn(lines), ctx = { ids: taskIds(cwd), decisions: decisionsIn(taskLines(lines)), memoryFile: home.memory.replace(/\\/g, '/'), slug: home.slug };
       const claimed = String(h.last_assistant_message || '').replace(/\*\*|__/g, '').match(/##\s*Cierre\s*·\s*(.+)/)?.[1]?.match(ID)?.[0];
       ctx.commits = commitsFor(cwd, claimed);
-      ctx.inputs = turnInputs(taskLines(lines, 1), cwd);
+      ctx.inputs = turnInputs(taskLines(lines, 1), cwd, agent.instructions);
       ctx.gitChanged = snapshotDiff(loadSnapshot(h.session_id), gitSnapshot(cwd)); // taken by the per-prompt hook
       ctx.engram = lines.some((d) => JSON.stringify(d.attachment || '').includes('mcp__engram__') || (d.message?.content || []).some?.((c) => c.type === 'tool_use' && String(c.name).startsWith('mcp__engram__')));
       const all = sessionTools(lines);
       const gaps = cierreGaps(turn, h.last_assistant_message, all, prompts, ctx);
-      if (!gaps) { try { refreshTasks(home, closeOpen(home, h.session_id)); } catch {} return; } // the turn ended: no longer open
+      const meta = { agent: agent.name, session: h.session_id, cwd };
+      if (!gaps) { // the turn ended: no longer open; a question leaves its short record where the project has memory
+        const q = fs.existsSync(home.memory) ? questionRecord(turn, meta) : null;
+        try { if (q) appendRecord(cwd, q); } catch {}
+        try { refreshTasks(home, closeOpen(home, h.session_id) || !!q); } catch {}
+        return;
+      }
       if (gaps.missing.length && !h.stop_hook_active) {
-        process.stdout.write(JSON.stringify({ decision: 'block', reason: checkCierre(turn, h.last_assistant_message, all, prompts, ctx) }));
+        process.stdout.write(JSON.stringify(agent.out.block(checkCierre(turn, h.last_assistant_message, all, prompts, ctx))));
         return;
       }
       gaps.observed.branches = branchesOf(gaps.changed);
       const evaluation = evaluate(gaps, turnUsage(lines), ctx.inputs?.model || null);
-      const rec = provenanceRecord(turn, gaps, ctx, { session: h.session_id, cwd, evaluation });
+      const rec = provenanceRecord(turn, gaps, ctx, { ...meta, evaluation });
       try { if (home.dir && !home.legacy) ensureLocal(home); } catch {} // excluded from git before anything is written there
       try { appendRecord(cwd, rec); } catch {}
       try { closeOpen(home, h.session_id, rec.id); } catch {}
       try { refreshTasks(home, true); } catch {} // tasks.md: where the work stands, for any agent (docs/adr/0007)
-      process.stdout.write(JSON.stringify({ systemMessage: summaryLine(rec.id, evaluation) }));
+      process.stdout.write(JSON.stringify(agent.out.notice(summaryLine(rec.id, evaluation))));
     } catch {}
   };
   process.stdin.on('data', (d) => { input += d; });

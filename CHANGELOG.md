@@ -53,6 +53,27 @@ Waymark is now a supply chain of the agent's work: every task goes through defin
   - **Asked late:** a sub-decision marked `→ preguntada tarde` (asked after the change it decides) passes the block, because it cannot be undone, but Decision is ✘ in the evaluation and the record. If a choice-window question came after the first change and no item says *tarde*, it is recorded as a finding.
   - **Red claims:** a claim of red (*rojo*, *habría fallado*) needs a test run before the first code change or in a clean `git worktree`, or it must be written as *inferida*. The new `red` step is recorded and shares the Tests label.
   - **Angular UI:** a `.ts` with a sibling `.html` counts as UI (Angular 20+ names drop `.component`), so the browser step applies.
+- **Step 3a: one agent-agnostic core, hooks only for the chain** (`docs/adr/0008`):
+  - **The four hooks hold only the four links:**
+    - session start: the memory digest and the pointer to `tasks.md`;
+    - each prompt: the task ID, `open.json` and the reminder;
+    - pre-tool: the decision gate;
+    - end of turn: the Cierre check, the record and `tasks.md`.
+  - **Everything else is one on-demand command:** `node <skills-dir>/waymark/scripts/waymark.mjs [check | sync | mcp-fit | skill-fit | migrate | connect | install-hooks]`. `check` only reports what is pending:
+    - a newer version;
+    - skills changed since the last sync;
+    - MCP fit and skill fit;
+    - memory still in the old location;
+    - unconnected agents;
+    - a framework that appeared or vanished;
+    - a large idle session in the folder.
+  - **A weekly pointer:** the session hook adds one line asking the agent to run `check` when the last check is older than a week, at most once a week.
+  - **Removed:** the resume guard, the pending-prompt hand-over and the fragile-command checks. Each only worked by intercepting a prompt or a tool call. Their rules stay as text in `protocol.md` and `dept-qa`.
+  - **Removed:** dead code (`checkEdit`) and the skill-fit plan cache.
+  - **One adapter per agent:** `scripts/agents/<name>.mjs` holds the transcript reader, the pre-tool input mapping, the output shapes, and the instructions file and session folder. The hooks take `--agent <name>`, `claude` by default, so existing registrations keep working. Codex is step 3b.
+  - **`install-hooks.mjs` replaces the manual merge:** it shows a dry-run plan, and `--apply` makes a backup first. It adds, updates or de-duplicates only Waymark's own entries and registers nothing in guest or skills-only mode.
+  - **The record says who did the work:** each record carries `agent`, and `tasks.md` shows it next to the ID (`T4 · codex`).
+  - **Questions leave a trace:** a turn routed Q in a project with memory gets a short chained record with no task ID (`kind: "Q"`), so it never takes a `T<n>`. `tasks.md` shows *Preguntas (Q) desde el último cierre: N*.
 - **Hook tests in the repo:** `node --test tests/*.test.mjs` (no dependencies, temporary `WAYMARK_HOME`).
 - **Fix:** `protocol.md` → *Closing report* was an empty, unclosed code block that turned *When stuck* into code; it now shows a full Cierre and the decision gate.
 - **Fix:** a multi-select answer in the choice window joins labels with "," (no space); the record no longer lists chosen options as discarded.

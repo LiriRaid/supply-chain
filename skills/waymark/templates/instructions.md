@@ -30,7 +30,7 @@ Write only that: the end-of-turn hook computes the rest from the tool calls (mem
 - **Aprendido** — write it: rewrite **your task's** entry in *Work in progress* of the project memory as `decision ← evidence` (the hook checks the file was edited; the next session or another agent resumes from it) and quote it (never "ninguno"; keep other tasks' items); L3: the plan's steps live there (`✔1 · ▶2 · 3`, next step + its gate), a step is ✔ only after its gate. New facts → `waymark/references/learning.md`; fixed bug → *Solved problems* (symptom, cause, fix, dead ends). Waymark is a supply chain of your work: each closed task is recorded, hash-chained, in `.waymark/provenance.jsonl`; with engram, also `mem_save` the task's line with `topic_key` `waymark/tasks/<slug>` (the task index other sessions search).
 - **Coexistence** — obey the injected `~/.waymark/coexistence.md` (*Resolved* wins over this block); never edit the other framework's files; not configured → offer it (`waymark/references/coexistence.md`).
 
-Questions (Q): same first line, read-only, grounded in `file:line` or official docs (`waymark/references/consult.md`), no Cierre. Confirmations (plans, updates, destructive steps, a hook's update notice): your choice window if you have one (Claude Code: `AskUserQuestion`), before the task.
+Questions (Q): same first line, read-only, grounded in `file:line` or official docs (`waymark/references/consult.md`), no Cierre. Confirmations (plans, updates, destructive steps, an update `waymark.mjs check` reports): your choice window if you have one (Claude Code: `AskUserQuestion`), before the task.
 
 ## Index
 
