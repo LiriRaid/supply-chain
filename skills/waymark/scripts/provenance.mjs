@@ -144,7 +144,8 @@ export function snapshotDiff(before, after) {
   if (!before || !after || before.root !== after.root) return [];
   const out = new Set();
   for (const [p, h] of Object.entries(after.files)) if (before.files[p] !== h) out.add(p);
-  for (const p of Object.keys(before.files)) if (!(p in after.files)) out.add(p);
+  // Back to clean: a change only when the content differs from before (git checkout --); a commit keeps the content.
+  for (const [p, h] of Object.entries(before.files)) if (!(p in after.files) && (h === 'deleted' ? fs.existsSync(p) : fileSha(p) !== h)) out.add(p);
   return [...out];
 }
 

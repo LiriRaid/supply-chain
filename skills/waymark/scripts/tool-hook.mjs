@@ -6,24 +6,19 @@
 //   with a broken script (twice). `# waymark:allow` in the command skips it.
 // - Recursive search through dependencies: `grep -r` / `find` over a folder holding node_modules without excluding
 //   it hung 120 s (four times). The Grep/Glob tools skip ignored folders.
-// - First L2+ edit with no mem_search yet (engram available): a one-line note, never a denial. Based on tool calls,
-//   which the transcript keeps reliably. (1.8.0 also noted a missing opener; removed in 1.9.0: reply text written after
-//   a thinking block is not persisted, so it fired on openers that were there — three false notes in one real task.)
-//   Memory and scratch files are exempt; L0 and Q turns are skipped.
-// - Decision gate (2.0, docs/adr/0001, 0002): every L1–L3 change to project files (edits, and shell commands that change
+// - Decision gate (2.0, docs/adr/0001–0005): every L1–L3 change to project files (edits, and shell commands that change
 //   files: git checkout --, sed -i, rm, redirects) is denied until the task has a choice-window question
 //   (AskUserQuestion) — strict since test 2.0-2, where a retry let the agent apply two decisions before asking. A turn
-//   routed Q is told once to re-route (by tool call: the owner dept-* with args "L<n>"); the owner's procedures.md must
-//   have been read before the first change (once per prompt); L2+ with engram and no mem_search yet is denied once too
-//   (test 2.0-3: the old note was ignored for 3 edits). The gate's message names the repo's branch and asks for the
-//   foreseeable sub-decisions in the same choice-window call.
+//   routed Q is told once to re-route (by tool call: the owner dept-* with args "L<n>"). The message names the repo's
+//   branch and asks for the foreseeable sub-decisions in the same call. Memory and scratch files are exempt; L0 skipped.
+//   Procedure and mem_search are recorded and scored by the end-of-turn hook, not denied here (user, 2026-10-03).
 // Remove the hook from the agent's settings to disable it.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { readTail, currentTurn, routedLevel, routedDept, sessionTools } from './transcript.mjs';
+import { readTail, currentTurn, routedLevel } from './transcript.mjs';
 import { taskLines, askedChoice, changesProject } from './provenance.mjs';
 
 const INLINE = /\bnode(?:\.exe)?["']?\s+(?:--[\w-]+(?:=\S+)?\s+)*(?:-e|--eval|-p|--print)\b/;
@@ -101,17 +96,8 @@ export function checkDecision(target, lines, session = 'unknown', stateFile = pa
       `${branch ? `This repo is on branch "${branch}": if that branch is not for this task, include where the work goes as an option. ` : ''}` +
       'If there is only one real way, or the user already chose in their message, confirm it there (that option + "otra cosa"). This gate stays until the user has been asked in this task.';
   }
-  const all = sessionTools(lines);
-  // The owner department's procedure is read before the first change (test 2.0-2: declared, never read).
-  const dept = routedDept(turn.texts, turn.tools);
-  if (dept && !all.some((t) => new RegExp(`${dept}[\\\\/]procedures\\.md`).test(`${t.input.file_path || ''} ${t.input.path || ''} ${t.input.pattern || ''} ${t.input.command || ''}`))) {
-    if (once('proc')) return `Waymark: ${dept} is the owner of this task but its procedures.md was not read in this session. Read the section you will follow (search its heading in <skills-dir>/${dept}/procedures.md) before changing files.`;
-  }
-  // L2+: recall past decisions before the first change (test 2.0-3: a note was ignored for 3 edits).
-  const engram = lines.some((d) => JSON.stringify(d.attachment || '').includes('mcp__engram__')) || all.some((t) => t.name.startsWith('mcp__engram__'));
-  if (level >= 2 && engram && !all.some((t) => /mcp__engram__mem_(search|context)/.test(t.name)) && once('mem')) {
-    return 'Waymark: L2+ and no mem_search yet in this session: run mem_search with the task\'s key terms (past decisions, rejected paths) before changing files.';
-  }
+  // The owner's procedure and mem_search are no longer denied here (2026-10-03, docs/adr/0005): the end-of-turn hook
+  // records them and scores them in the task's evaluation.
   return null;
 }
 

@@ -52,11 +52,35 @@ export function currentTurn(lines) {
   return { found: i >= 0, prompt: i >= 0 ? promptText(lines[i]) : '', uuid: i >= 0 ? lines[i].uuid || '' : '', startedAt: i >= 0 ? Date.parse(lines[i].timestamp || '') || 0 : 0, texts, tools, results };
 }
 
-// Every tool call of the main agent in the readable part of the session (for reads done in an earlier turn).
+// Every tool call of the main agent in the readable part of the session (for reads done in an earlier turn), with the
+// start of its result (`out`) so a search that found nothing is not taken for a read.
 export function sessionTools(lines) {
-  const out = [];
-  for (const d of lines) if (d.type === 'assistant' && !d.isSidechain) for (const c of d.message?.content || []) if (c.type === 'tool_use') out.push({ name: c.name, input: c.input || {} });
+  const out = [], byId = {};
+  for (const d of lines) {
+    if (d.type === 'assistant' && !d.isSidechain) for (const c of d.message?.content || []) if (c.type === 'tool_use') { const t = { name: c.name, input: c.input || {}, out: '' }; out.push(t); byId[c.id] = t; }
+    if (d.type === 'user' && !d.isSidechain && Array.isArray(d.message?.content)) for (const c of d.message.content) if (c.type === 'tool_result' && byId[c.tool_use_id]) byId[c.tool_use_id].out = (typeof c.content === 'string' ? c.content : JSON.stringify(c.content || '')).slice(0, 200);
+  }
   return out;
+}
+
+// A read that returned something: a Read, or a search/command whose result is not empty or "no matches".
+export const readSomething = (t) => t.name === 'Read' || !/^\s*(\[\])?\s*$|^No (matches|files) found|^Found 0 /i.test(String(t.out || ''));
+
+// Tokens of the turn's main-agent responses, each message counted once (a streamed response is written as several
+// lines that share message.id and usage; measure.mjs counts the same way).
+export function turnUsage(lines) {
+  let i = lines.length - 1;
+  while (i >= 0 && !isPrompt(lines[i])) i--;
+  const seen = new Set();
+  let total = 0, fresh = 0;
+  for (const d of lines.slice(i + 1)) {
+    const u = d.type === 'assistant' && !d.isSidechain ? d.message?.usage : null;
+    if (!u || seen.has(d.message.id)) continue;
+    seen.add(d.message.id);
+    fresh += (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.output_tokens || 0);
+    total += (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.output_tokens || 0);
+  }
+  return { total, fresh, responses: seen.size };
 }
 
 // Context size and time of the last main-agent response, and whether the last answered turn opened with "Waymark →".
