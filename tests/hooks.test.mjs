@@ -1,6 +1,6 @@
 // Waymark hooks · scenario tests with synthetic transcripts. Run: node --test tests/*.test.mjs
 // Every test uses a temporary WAYMARK_HOME; nothing reads or writes the real ~/.waymark or ~/.claude.
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -11,11 +11,13 @@ import { fileURLToPath } from 'node:url';
 const SCRIPTS = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'waymark', 'scripts');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'waymark-test-'));
 process.env.WAYMARK_HOME = home;
+const temps = [home];
+after(() => { for (const d of temps) fs.rmSync(d, { recursive: true, force: true }); });
 const { taskIds, validId, decisionsIn, projectSlug, readLog, appendRecord, taskLines, verifyChain, turnInputs, commitsFor } = await import(`file://${SCRIPTS}/provenance.mjs`);
 const { checkDecision } = await import(`file://${SCRIPTS}/tool-hook.mjs`);
 const { checkCierre, cierreGaps, provenanceRecord } = await import(`file://${SCRIPTS}/stop-hook.mjs`);
 const { taskLine } = await import(`file://${SCRIPTS}/rule0-hook.mjs`);
-const { currentTurn } = await import(`file://${SCRIPTS}/transcript.mjs`);
+const { currentTurn, routedLevel, routedDept } = await import(`file://${SCRIPTS}/transcript.mjs`);
 
 const NOW = new Date(2026, 9, 2, 12, 0); // 2026-10-02 local
 const DAY = '2026-10-02';
@@ -88,6 +90,7 @@ test('inputs manifest: Waymark and agent version, model, MCP servers used', () =
 
 test('commits: found by their Waymark-Task trailer', () => {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'waymark-git-'));
+  temps.push(repo);
   const git = (...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: repo, encoding: 'utf8' });
   git('init', '-q');
   git('commit', '-q', '--allow-empty', '-m', `feat: x\n\nWaymark-Task: ${DAY} · T4`);
@@ -119,18 +122,26 @@ test('decision gate: L1 too (the user decides every real decision); silent after
   const asked = [prompt('agrega reintentos'), say('Waymark → L2 · dept-backend'), call('AskUserQuestion', { questions: [] }), answered('Q', ['A', 'B'], 'A')];
   assert.equal(checkDecision(FILE, asked, 's2', state), null);
   assert.match(checkDecision(FILE, [prompt('typo'), say('Waymark → L1 · dept-frontend')], 's2', state) || '', /L1 decision gate/);
-  assert.equal(checkDecision(FILE, [prompt('¿cómo?'), say('Waymark → Q · dept-qa')], 's2', state), null);
+  assert.equal(checkDecision(FILE, [prompt('¿cómo?'), say('Waymark → Q · dept-qa')], 's2', path.join(home, `gate-${n++}.json`)) === null, false, 'a Q turn that edits is stopped');
   assert.equal(checkDecision(path.join(os.homedir(), '.waymark', 'projects', 'x.md'), [prompt('x'), say('Waymark → L3 · dept-architecture')], 's2', state), null);
 });
 
-// A complete L2 turn: routed, choice asked and answered, file edited, code-review run.
+test('decision gate: a turn routed Q that edits must re-route (once), then the normal gate applies', () => {
+  const state = path.join(home, `gate-${n++}.json`);
+  const q = [prompt('¿se puede mover el modal?', 'uq'), say('Waymark → Q · dept-frontend · skills: dept-frontend')];
+  assert.match(checkDecision(FILE, q, 's3', state), /routed as a question/);
+  assert.equal(checkDecision(FILE, q, 's3', state), null, 'once per prompt');
+  assert.match(checkDecision(FILE, [...q, say('Waymark → L2 · dept-frontend · skills: ui-build')], 's3', state) || '', /L2 decision gate/, 'the last routing line wins');
+});
+
+// A complete L2 turn: routed, department invoked, choice asked and answered, file edited, code-review run.
 const l2 = (extra = []) => currentTurn([
-  prompt('agrega reintentos al servicio de pedidos'), say('Waymark → L2 · dept-backend · skills: code-review'),
+  prompt('agrega reintentos al servicio de pedidos'), say('Waymark → L2 · dept-backend · skills: code-review'), call('Skill', { skill: 'dept-backend' }),
   call('AskUserQuestion', { questions: [] }), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'),
   call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs' }), call('Skill', { skill: 'code-review' }), ...extra,
 ]);
-const cierre = (id, decision = 'elegida Backoff · descartadas Cola', resultado = 'Resultado: hecho · ') =>
-  `## Cierre · ${id}\n${resultado}Gates: node --check ✔ · Aprendido: "backoff ← timeouts" · engram: no disponible\nL2+: Decisión: ${decision} · Tests: sin infra (no hay specs en src) · Navegador: no (sin UI; check: ninguno) · Review: code-review orders.service.mjs sin hallazgos`;
+const cierre = (id, decision = 'elegida Backoff · descartadas Cola', resultado = 'Resultado: hecho · ', sub = 'ninguna') =>
+  `## Cierre · ${id}\n${resultado}Decisión: ${decision}\nSub-decisiones: ${sub}\nGates: node --check ✔ · Aprendido: "backoff ← timeouts" · engram: no disponible\nL2+: Tests: sin infra (no hay specs en src) · Navegador: no (sin UI; check: ninguno) · Review: code-review orders.service.mjs sin hallazgos`;
 const ctxFor = (cwd, decisions = [{ question: '¿Cómo?', chosen: 'Backoff', discarded: ['Cola'] }]) => ({ ids: taskIds(cwd), decisions });
 
 test('Cierre: a complete L2 record passes', () => {
@@ -154,7 +165,7 @@ test('Cierre: Decisión must be backed', () => {
   const { cwd } = fresh();
   const id = taskIds(cwd).next;
   assert.match(checkCierre(l2(), cierre(id), undefined, undefined, ctxFor(cwd, [])), /no choice-window answer/);
-  assert.match(checkCierre(l2(), cierre(id).replace(/Decisión: [^·]*· descartadas Cola · /, ''), undefined, undefined, ctxFor(cwd)), /Decisión: elegida/);
+  assert.match(checkCierre(l2(), cierre(id).replace(/Decisión: [^\n]*\n/, ''), undefined, undefined, ctxFor(cwd)), /Decisión: elegida/);
   const prompts = ['hazlo con backoff exponencial, nada de colas'];
   assert.equal(checkCierre(l2(), cierre(id, 'del usuario ("hazlo con backoff exponencial")'), undefined, prompts, ctxFor(cwd, [])), null);
   assert.match(checkCierre(l2(), cierre(id, 'del usuario ("usa una cola")'), undefined, prompts, ctxFor(cwd, [])), /own words/);
@@ -163,10 +174,46 @@ test('Cierre: Decisión must be backed', () => {
 });
 
 test('Cierre: L1 needs Decisión too; older callers without ctx skip the ID check', () => {
-  const turn = currentTurn([prompt('typo en el título'), say('Waymark → L1 · dept-frontend'), call('Edit', { file_path: FILE })]);
-  const base = '## Cierre\nResultado: hecho · Gates: node --check ✔ · Aprendido: "x ← y" · engram: no disponible';
+  const turn = currentTurn([prompt('typo en el título'), say('Waymark → L1 · dept-frontend'), call('Skill', { skill: 'dept-frontend' }), call('Edit', { file_path: FILE })]);
+  const base = '## Cierre\nResultado: hecho · Gates: node --check ✔ · Aprendido: "x ← y" · engram: no disponible\nSub-decisiones: ninguna';
   assert.match(checkCierre(turn, base), /Decisión:/);
   assert.equal(checkCierre(turn, `${base}\nDecisión: única (un solo texto que corregir)`), null);
+});
+
+test('Cierre: a turn routed Q that changed files is checked as L2 and must re-route', () => {
+  const lines = [prompt('¿se puede mover el modal?'), say('Waymark → Q · dept-frontend · skills: dept-frontend'), call('Skill', { skill: 'dept-frontend' }), call('Edit', { file_path: FILE })];
+  const r = checkCierre(currentTurn(lines), '## Cierre\nResultado: hecho · Decisión: única (x y z) · Sub-decisiones: ninguna · Gates: ✔ · Aprendido: "a ← b" · engram: no disponible');
+  assert.match(r, /this L2 turn/);
+  assert.match(r, /routed as a question/);
+  assert.match(r, /Review:/, 'L2 fields are required');
+  const rerouted = checkCierre(currentTurn([...lines.slice(0, 3), say('Waymark → L1 · dept-frontend · skills: dept-frontend'), lines[3]]), '## Cierre\nResultado: hecho · Decisión: única (x y z) · Sub-decisiones: ninguna · Gates: ✔ · Aprendido: "a ← b" · engram: no disponible');
+  assert.equal(rerouted, null, 're-routed to L1 mid-turn');
+});
+
+test('routing: a routing line quoted mid-sentence does not override the real one', () => {
+  const texts = ['Waymark → L2 · dept-devex · skills: dept-devex', 'Evidencia: la única línea de ruta fue `Waymark → Q · dept-frontend`, ver transcript'];
+  assert.equal(routedLevel(texts), 2);
+  assert.equal(routedDept(texts), 'dept-devex');
+  assert.equal(routedLevel([...texts, 'Waymark → L1 · dept-qa · skills: …']), 1, 'a real re-route still wins');
+});
+
+test('Cierre: Sub-decisiones listed, none taken alone, as many asked as answered', () => {
+  const { cwd } = fresh();
+  const id = taskIds(cwd).next, ctx = ctxFor(cwd);
+  assert.match(checkCierre(l2(), cierre(id).replace(/Sub-decisiones: ninguna\n/, ''), undefined, undefined, ctx), /Sub-decisiones:/);
+  assert.match(checkCierre(l2(), cierre(id, undefined, undefined, 'íconos en modales angostos → no preguntada'), undefined, undefined, ctx), /taken without asking/);
+  assert.match(checkCierre(l2(), cierre(id, undefined, undefined, 'textos de botones → preguntada'), undefined, undefined, ctx), /claim 2 decisions asked but the choice window answered 1/);
+  assert.equal(checkCierre(l2(), cierre(id, undefined, undefined, 'textos de botones → del usuario ("que diga Izquierda, Centro, Derecha")'), undefined, ['ok'], ctx), null);
+  assert.match(checkCierre(l2(), cierre(id, undefined, undefined, 'íconos'), undefined, undefined, ctx), /each item needs/);
+});
+
+test('Cierre: the routing line\'s department must have been invoked; the record keeps it', () => {
+  const { cwd } = fresh();
+  const id = taskIds(cwd).next, ctx = ctxFor(cwd);
+  const noDept = currentTurn([prompt('x'), say('Waymark → L2 · dept-frontend · skills: ui-build'), call('AskUserQuestion'), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Skill', { skill: 'code-review' })]);
+  assert.match(checkCierre(noDept, cierre(id), undefined, undefined, ctx), /names dept-frontend but it was never invoked/);
+  const gaps = cierreGaps(l2(), cierre(id), undefined, undefined, ctx);
+  assert.deepEqual(provenanceRecord(l2(), gaps, ctx, {}).department, { declared: 'dept-backend', invoked: ['dept-backend'] });
 });
 
 test('Cierre: a commit made in the turn needs the Waymark-Task trailer', () => {
@@ -184,7 +231,7 @@ test('provenance record: what the transcript proves, the hook assigns an ID when
   assert.equal(rec.id, ctx.ids.next);
   assert.equal(rec.idBy, 'hook');
   assert.deepEqual(rec.files, [FILE]);
-  assert.deepEqual(rec.skills, ['code-review']);
+  assert.deepEqual(rec.skills, ['dept-backend', 'code-review']);
   assert.equal(rec.decisions[0].chosen, 'Backoff');
   assert.ok(rec.unresolved.length > 0);
 });
@@ -204,7 +251,7 @@ function runStop(lines, last, extra = {}) {
   const r = spawnSync(process.execPath, [path.join(SCRIPTS, 'stop-hook.mjs')], { input: JSON.stringify({ transcript_path: transcript, cwd, session_id: 's9', last_assistant_message: last, ...extra }), env: { ...process.env, WAYMARK_HOME: home }, encoding: 'utf8' });
   return { out: r.stdout, records: fs.existsSync(log) ? readLog(cwd) : [], ids: taskIds(cwd) };
 }
-const l2Lines = [prompt('agrega reintentos al servicio de pedidos'), say('Waymark → L2 · dept-backend · skills: code-review'), call('AskUserQuestion', { questions: [] }), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Skill', { skill: 'code-review' })];
+const l2Lines = [prompt('agrega reintentos al servicio de pedidos'), say('Waymark → L2 · dept-backend · skills: code-review'), call('Skill', { skill: 'dept-backend' }), call('AskUserQuestion', { questions: [] }), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Skill', { skill: 'code-review' })];
 
 test('stop hook: a backed Cierre is recorded and not blocked', () => {
   const id = `${new Date().toLocaleDateString('sv')} · T1`;

@@ -23,7 +23,8 @@ A software supply chain tracks how an artifact was built: its inputs, the steps 
 | Link | What Waymark records | How it is verified |
 |---|---|---|
 | **Inputs** | your request in your words; the project memory; a manifest per task: Waymark and agent version, model, MCP servers used, hashes of the instruction files | read from the transcript and the files at the end of the turn |
-| **Decision** | the options put to you, the one you picked and the ones you discarded, on a dated task ID (`2026-10-02 · T3`) | your answer in the choice window, or your quoted words; a single real way is recorded as `única (<why>)` |
+| **Department** | the department that owns the task (frontend, backend, data, security, QA, devops, architecture, UX/UI, product, devex): its procedure, rules, tools and Definition of Done | the owner named in the routing line must have been invoked; the record keeps declared vs invoked. A question that turns into a change is re-routed, or it is stopped |
+| **Decision** | the options put to you, the one you picked and the ones you discarded, on a dated task ID (`2026-10-02 · T3`); every decision taken during the task (`Sub-decisiones`) | your answer in the choice window, or your quoted words; a single real way is recorded as `única (<why>)`; a decision taken without asking is sent back to you |
 | **Evidence** | what was observed vs inferred, and the check you were given before the fix | the Cierre's fields, checked against the tool calls |
 | **Gates and review** | lint, typecheck, tests, build, browser check, code review | the commands and skills that actually ran; a claim with nothing behind it is blocked once, then recorded as unresolved |
 | **Output** | the files changed and the commits | each commit carries `Waymark-Task: <task ID>`; the record keeps its hash |

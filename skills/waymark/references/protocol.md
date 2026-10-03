@@ -59,6 +59,7 @@ The receiving department checks the evidence it relies on (memory and hand-offs 
 ```
 ## Cierre · 2026-10-02 · T3
 Resultado: hecho · Decisión: elegida modal compartido · descartadas confirm() nativo, deshacer con toast
+Sub-decisiones: texto del botón → del usuario ("que diga Eliminar"); foco inicial en Cancelar → preguntada
 Gates: npm run lint -- src/app/features/contacts ✔ · ng build ✔ · npm test -- delete-contact-dialog ✔ (4/4) · Aprendido: "confirmación con app-modal ← observado: borrado sin confirmar en /contacts" · engram: guardado
 L2+: Tests: rojo→verde delete-contact-dialog.spec.ts · Navegador: browser-verify smoke /contacts ✔ · Review: code-review delete-contact-dialog.* sin hallazgos
 ```

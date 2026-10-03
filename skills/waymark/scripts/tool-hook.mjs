@@ -68,19 +68,22 @@ export function checkEdit(file, lines) {
   return notes.length ? `Waymark: ${notes.join('; ')}.` : null;
 }
 
-// Decision gate: deny once per prompt (state keyed by session + prompt uuid), never for L0/Q or exempt files.
+// Decision gate: deny once per prompt (state keyed by session + prompt uuid), never for L0 or exempt files. A turn routed
+// Q that edits a project file is denied once too: a question that became a change must re-route (test 2.0-1: routed Q,
+// 8 edits, so every check and the record were skipped).
 export function checkDecision(file, lines, session = 'unknown', stateFile = path.join(process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark'), '.decision-gate.json')) {
   if (!file || exempt(file)) return null;
   const turn = currentTurn(lines);
-  const level = routedLevel(turn.texts);
-  if (!turn.found || !(level >= 1) || askedChoice(taskLines(lines))) return null;
+  const level = routedLevel(turn.texts), q = level === 'Q';
+  if (!turn.found || !level || (!q && askedChoice(taskLines(lines)))) return null;
   let seen = {};
   try { seen = JSON.parse(fs.readFileSync(stateFile, 'utf8')); } catch {}
-  const key = `${session}:${turn.uuid || turn.prompt.slice(0, 80)}`;
+  const key = `${session}:${turn.uuid || turn.prompt.slice(0, 80)}${q ? ':q' : ''}`;
   if (seen[key]) return null;
   for (const [k, at] of Object.entries(seen)) if (Date.now() - at > 7 * 86400000) delete seen[k];
   seen[key] = Date.now();
   try { fs.mkdirSync(path.dirname(stateFile), { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify(seen)); } catch { return null; } // no state → never deny (it could repeat)
+  if (q) return 'Waymark: this turn was routed as a question (Q) but is about to change a project file. A question that becomes a change is a task: write a new routing line `Waymark → L<n> · <owner dept-*> · skills: …` (invoke that department if it is not loaded), then the opener, and put the decision to the user with the optimal options before editing. The end-of-turn hook will check this task as L2 at least and record it.';
   return `Waymark: L${level} decision gate — the user decides every real decision, you never decide alone. Before the first edit, list the optimal options in your choice window (AskUserQuestion): for each one the files it touches, the risk and the cost; mark the recommended one (it may not be what the user needs). Then do what the user picks. ` +
     'If the user already chose in their message, or there is only one real option, retry this edit (this gate fires once per prompt) and write in the Cierre `Decisión: del usuario ("<their words>")` or `Decisión: única (<why>)`.';
 }

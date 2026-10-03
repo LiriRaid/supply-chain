@@ -10,11 +10,12 @@ Every request runs this, any size or session length. Only L0 skips it (a color, 
 Pedido: <the ask in one line> · Captura: <what each image shows + the element it points to | sin captura> [· Copia: <only what was named from X>] [· Capa: <layer the user set>] [· Cambia: <behavior not asked to change> → ask first]
 Memoria: digest | leída | creada <~/.waymark/projects/<slug>.md> [· mem_search "<query>" (L2+)] · Reutiliza: <piece + path | ninguno → patrón de <file>> · Evidencia: observada <what you saw> | inferida de <source> (check: <one line>) · Procedimiento: <section> (procedures.md:<line>)
 ```
-**The user decides, never you — every real decision, any level** (2+ valid ways: approach, placement, library, visible behavior): before acting, list the optimal options in your choice window, each with the files it touches, risk and cost; mark the recommended one, which may not be what the user needs; do what the user picks. One real way → act and record `única (<why>)`. Commits of the task carry the trailer `Waymark-Task: <task ID>`.
+**The user decides, never you — every real decision, any level** (2+ valid ways: approach, placement, library, visible behavior): before acting, list the optimal options in your choice window, each with the files it touches, risk and cost; mark the recommended one, which may not be what the user needs; do what the user picks. One real way → act and record `única (<why>)`. Decisions that appear mid-task (a default, a variant, something the user named) are asked too, before applying them. A question (Q) that turns into a change → new routing line with its level and department before the first edit. Commits of the task carry the trailer `Waymark-Task: <task ID>`.
 **Close every change with** (the task ID comes from the per-prompt hook: new task or follow-up):
 ```
 ## Cierre · <YYYY-MM-DD · T<n>[a-z]>
 Resultado: hecho | parcial (<what is missing>) | bloqueado (<why>) · Decisión: elegida <option> · descartadas <options> | del usuario ("<their words>") | única (<why>)
+Sub-decisiones: <each decision taken during the task> → preguntada | del usuario ("<their words>") | no preguntada; … | ninguna
 Gates: <commands run after the last edit + result> · Aprendido: <your Work in progress line, rewritten> · engram: <guardado | no disponible> [· Tests: … when a spec sits next to the changed code]
 L2+: Tests: rojo→verde <spec> | sin infra (<proof>) · Navegador: browser-verify <result> | no (<what failed when tried>; check: …) · Review: code-review <task's files> <findings>
 (Tests, Navegador, Review: omitido (usuario: "<their words>") — this task only)

@@ -65,8 +65,18 @@ export function sessionState(lines) {
   return { context, lastAt, openedWithWaymark: !!opener && opener.startsWith('Waymark →') };
 }
 
-// Level declared in the turn's routing line ("Waymark → L2 · …"): 0 when there is none, 'Q' for questions.
+// Level declared in the turn's routing line ("Waymark → L2 · …"): 0 when there is none, 'Q' for questions. The LAST
+// routing line wins: a question that turns into a change re-routes mid-turn (test 2.0-1: a turn routed Q edited 8 files).
+// Only a line that starts with "Waymark →" routes; one quoted mid-sentence (evidence, an example) does not.
+const ROUTE = /^[ \t]*Waymark →\s*(L([0-3])|Q)\b(?:\s*·\s*(dept-[a-z-]+))?/gm;
+const routes = (texts) => [...texts.join('\n').matchAll(ROUTE)];
 export function routedLevel(texts) {
-  const m = texts.join('\n').match(/Waymark →\s*(L([0-3])|Q)\b/);
+  const all = routes(texts), m = all[all.length - 1];
   return !m ? 0 : m[1] === 'Q' ? 'Q' : Number(m[2]);
+}
+
+// Department named in the last routing line ("Waymark → L2 · dept-frontend (+dept-ux-ui) · …"), or null.
+export function routedDept(texts) {
+  const all = routes(texts);
+  return all.length ? all[all.length - 1][3] || null : null;
 }

@@ -14,7 +14,9 @@
 //   only when those words are in the user's messages (prompts are persisted reliably).
 // - 2.0 supply chain (docs/adr/0001, 0002): the heading carries the task ID the per-prompt hook offered
 //   (`## Cierre · <id>`); at every level `Resultado:` and `Decisión:` backed by a choice-window answer (elegida), the
-//   user's quoted words (del usuario) or a reason (única); a commit made in the turn carries `Waymark-Task: <id>`.
+//   user's quoted words (del usuario) or a reason (única); a commit made in the turn carries `Waymark-Task: <id>`;
+//   `Sub-decisiones:` lists the decisions taken during the task (one taken alone is sent back to the user); the owner
+//   department of the routing line was invoked; a turn routed Q that changed project files is checked as L2.
 // Missing → the agent is asked once to do it or correct the field (decision "block": it continues with the reason).
 // Measured: tests 6–8 closed L2 tasks declaring steps that never ran (a skipped browser check caused a 2nd attempt).
 // It never fires twice in a row (stop_hook_active), for L0/Q turns, or for turns that only wrote memory/scratch files.
@@ -24,7 +26,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readTail, currentTurn, routedLevel, isPrompt, promptText } from './transcript.mjs';
+import { readTail, currentTurn, routedLevel, routedDept, isPrompt, promptText } from './transcript.mjs';
 import { ID, taskIds, validId, taskLines, decisionsIn, appendRecord, turnInputs, commitsFor } from './provenance.mjs';
 
 const norm = (p) => String(p || '').replace(/\\/g, '/').toLowerCase();
@@ -79,10 +81,17 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
   const changed = turn.tools.filter((t) => EDITS.test(t.name) && !exempt(fileOf(t))).map(fileOf);
   if (!changed.length) return null;
   const reply = String(last || turn.texts[turn.texts.length - 1] || '');
-  // The transcript can miss reply texts (not every text block is persisted): fall back to the closing reply itself.
-  const level = routedLevel(turn.texts) || (/^L2\+:/m.test(reply) ? 2 : /##\s*Cierre/.test(reply) ? 1 : 0);
-  if (!level || level === 'Q') return null;
+  // The transcript can miss reply texts (not every text block is persisted): the closing reply itself counts too.
+  const routed = routedLevel([...turn.texts, reply]);
   const missing = [];
+  // A turn routed Q that changed project files is a task that skipped routing: checked as L2 at least, never skipped.
+  if (routed === 'Q') missing.push('this turn was routed as a question (Q) but changed project files: it is a task. Write the routing line again with its level and owner department (`Waymark → L<n> · dept-… · skills: …`) and close it as that level');
+  const level = routed === 'Q' ? 2 : routed || (/^L2\+:/m.test(reply) ? 2 : /##\s*Cierre/.test(reply) ? 1 : 0);
+  if (!level) return null;
+  // The owner department named in the routing line must have been invoked in this session (test 7: declared, never loaded).
+  const dept = { declared: routedDept([...turn.texts, reply]), invoked: [...new Set(allTools.filter((t) => t.name === 'Skill' && /^dept-/.test(String(t.input.skill || ''))).map((t) => String(t.input.skill)))] };
+  if (!dept.declared) missing.push('the routing line names no owner department: `Waymark → L<n> · dept-<owner> · skills: …`');
+  else if (!dept.invoked.includes(dept.declared)) missing.push(`the routing line names ${dept.declared} but it was never invoked in this session: invoke it and follow its Quick ref, or name the department you did follow`);
   // User decisions for this task: a quoted skip is accepted only when the user wrote those words.
   const skip = {};
   for (const field of ['Tests', 'Navegador', 'Review']) {
@@ -109,6 +118,18 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
     else if (/^del usuario/i.test(d) && !(quoted && prompts.some((p) => plain(p).includes(plain(quoted))))) missing.push('Decisión: del usuario needs the user\'s own words in quotes, as they wrote them');
     else if (/^[uú]nica/i.test(d) && !/^[uú]nica \(.{3,}\)/i.test(d)) missing.push('Decisión: única (<why there is only one real option>)');
     else if (!/^(elegida|del usuario|[uú]nica)/i.test(d)) missing.push('Decisión: elegida … · descartadas … | del usuario ("<their words>") | única (<why>)');
+    // Decisions taken during the task (test 2.0-1: four taken alone, one against the user's words).
+    const sub = reply.match(/Sub-?decisiones:\s*([^\n]*)/i)?.[1]?.trim() || '';
+    if (!sub) missing.push('Sub-decisiones: <each decision taken during the task> → preguntada | del usuario ("<their words>") | no preguntada; … — or "ninguna"');
+    else if (!/^ninguna\b/i.test(sub)) {
+      const items = sub.split(';').map((s) => s.trim()).filter(Boolean);
+      const alone = items.filter((s) => /→\s*no preguntada/i.test(s));
+      const bad = items.filter((s) => !/→\s*(preguntada|del usuario \(|no preguntada)/i.test(s));
+      const asked = items.length - alone.length - bad.length - items.filter((s) => /→\s*del usuario \(/i.test(s)).length + (/^elegida/i.test(d) ? 1 : 0);
+      if (bad.length) missing.push(`Sub-decisiones: each item needs "→ preguntada | del usuario (\\"…\\") | no preguntada" (${bad.slice(0, 2).join('; ')})`);
+      if (alone.length) missing.push(`Sub-decisiones taken without asking (${alone.slice(0, 3).join('; ')}): the user decides every real decision. Put them to the user now with the options (AskUserQuestion), apply the pick, then mark them preguntada`);
+      if (ctx.decisions && asked > ctx.decisions.length) missing.push(`Sub-decisiones and Decisión claim ${asked} decisions asked but the choice window answered ${ctx.decisions.length} in this task: ask the missing ones or mark them honestly`);
+    }
     if (ctx.commits && !ctx.commits.length && turn.tools.some((t) => /^(Bash|PowerShell)$/.test(t.name) && /\bgit\b[^|;&\n]*\scommit\b/.test(String(t.input.command || '')))) {
       missing.push('a commit was made this turn but none of the last commits carries the trailer "Waymark-Task: <the heading\'s task ID>": put it in the next commit of this task; amend a commit only if it is not pushed and the user says yes');
     }
@@ -152,7 +173,7 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
   if (/engram:\s*guardado/i.test(reply) && !turn.tools.some((t) => /mem_(save|update|session_summary)/.test(t.name))) {
     missing.push('engram says "guardado" but no mem_save ran this turn: save this turn\'s decision, or write engram: no guardado (<why>)');
   }
-  return { level, changed, reply, missing };
+  return { level, changed, reply, missing, dept };
 }
 
 // The provenance record of a closed turn: what the transcript proves, plus the Cierre text and the unbacked claims.
@@ -161,7 +182,7 @@ export function provenanceRecord(turn, gaps, ctx, meta = {}) {
   const ok = claimed && validId(claimed, ctx.ids);
   return {
     id: ok ? claimed : ctx.ids.next, ...(ok ? {} : { idBy: 'hook' }), at: new Date().toISOString(), session: meta.session, cwd: meta.cwd,
-    level: gaps.level, prompt: String(turn.prompt || '').slice(0, 600), decisions: ctx.decisions,
+    level: gaps.level, department: gaps.dept, prompt: String(turn.prompt || '').slice(0, 600), decisions: ctx.decisions,
     files: [...new Set(gaps.changed)],
     commands: turn.tools.filter((t) => /^(Bash|PowerShell)$/.test(t.name)).map((t) => String(t.input.command || '').slice(0, 200)).slice(0, 30),
     skills: [...new Set(turn.tools.filter((t) => t.name === 'Skill').map((t) => String(t.input.skill || '')))],
