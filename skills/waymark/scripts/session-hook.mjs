@@ -17,6 +17,7 @@ import os from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { fitFor } from './mcp-fit.mjs';
+import { projectHome } from './provenance.mjs';
 
 const HOME = process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark');
 const SCRIPTS = path.dirname(fileURLToPath(import.meta.url));
@@ -35,18 +36,15 @@ function digest(cwd) {
   const env = section('\n' + read(path.join(HOME, 'profile.md')), 'Environment').filter((l) => l.startsWith('-'));
   if (env.length) out.push('Environment (this machine): ' + env.map((l) => l.replace(/^- \[[^\]]*\]\s*/, '')).join(' | '));
 
-  const dir = path.join(HOME, 'projects');
-  let best = null;
-  for (const f of fs.existsSync(dir) ? fs.readdirSync(dir).filter((n) => n.endsWith('.md')) : []) {
-    const text = read(path.join(dir, f));
-    const p = norm(text.match(/^Path:\s*([^·\n]+)/m)?.[1]?.trim());
-    if (p && (norm(cwd) === p || norm(cwd).startsWith(p + '/')) && (!best || p.length > best.p.length)) best = { f, p, text };
-  }
-  if (!best) {
-    out.push(`Project memory: none for ${cwd}. Create it now with the Minimal bootstrap (waymark/references/project-detection.md) before the first edit.`);
+  const home = projectHome(cwd); // one resolver for every hook (docs/adr/0007)
+  const where = home.memory.replace(/\\/g, '/');
+  const best = { text: read(home.memory) };
+  if (!best.text) {
+    out.push(`Project memory: none for ${cwd}. Create ${where} now with the Minimal bootstrap (waymark/references/project-detection.md) before the first edit${home.dir ? '; the end-of-turn hook keeps .waymark/ out of git' : ''}.`);
     return out.join('\n');
   }
-  out.push(`Project memory: ~/.waymark/projects/${best.f} (read; full file there).`);
+  out.push(home.legacy ? `Project memory: ${where} (old location; read; full file there).` : `Project memory: ${where} (read; full file there). Where the work stands: ${home.root.replace(/\\/g, '/')}/.waymark/tasks.md.`);
+  if (home.legacy) { const m = migrateOffer(home); if (m) out.push(m); }
   const solved = section('\n' + best.text, 'Solved problems').filter((l) => l.startsWith('-'))
     .map((l) => '- ' + (l.match(/Symptom:\s*([^·]+)/)?.[1] || l.slice(2, 120)).trim());
   if (solved.length) out.push('Solved problems (symptoms; details in the file):\n' + solved.slice(-10).join('\n'));
@@ -59,6 +57,17 @@ function digest(cwd) {
   });
   if (wip.length) out.push('Work in progress:\n' + wip.join('\n'));
   return out.join('\n');
+}
+
+// Bridge until 2.1.0 (docs/adr/0007): memory still in ~/.waymark/projects/ → offer the move into the project once per project.
+function migrateOffer(home) {
+  const stateFile = path.join(HOME, '.migrate-offer.json');
+  let st = {};
+  try { st = JSON.parse(fs.readFileSync(stateFile, 'utf8')); } catch {}
+  if (st[norm(home.root)]) return '';
+  try { fs.mkdirSync(HOME, { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify({ ...st, [norm(home.root)]: Date.now() })); } catch {}
+  const script = path.join(SCRIPTS, 'migrate-memory.mjs').replace(/\\/g, '/');
+  return `Memory migration (Waymark 2.0, docs/adr/0007): this project's memory and record are still in ~/.waymark. Offer once, with your choice window, before the task: move them into ${home.root}/.waymark/ (local, excluded from git, any agent resumes from it) — node "${script}" --project "${home.root}" shows the plan (dry run, nothing written), add --apply on yes (backup first). Declined → do not ask again; the old location keeps working until 2.1.0.`;
 }
 
 // Skill folders that sync.mjs indexes: this agent's, other agents', the current project's.

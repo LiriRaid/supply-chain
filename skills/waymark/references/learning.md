@@ -13,8 +13,8 @@ After each L1+ task, collect what was **non-obvious and new**: something you had
 | The lesson is about… | Write it to |
 |---|---|
 | this machine or environment (OS, shell, missing tools, how to edit files) | `~/.waymark/profile.md` → *Environment* |
-| a problem that took more than one attempt | `~/.waymark/projects/<slug>.md` → *Solved problems* (symptom, cause, fix, dead ends) + `mem_save` |
-| this project only (paths, conventions, gotchas, commands) | `~/.waymark/projects/<slug>.md` |
+| a problem that took more than one attempt | `<project>/.waymark/memory.md` → *Solved problems* (symptom, cause, fix, dead ends) + `mem_save` |
+| this project only (paths, conventions, gotchas, commands) | `<project>/.waymark/memory.md` |
 | a project rule that must apply to **every** task there and the team should share | `<project>/<project-instructions-file>` — ask first (see `project-detection.md`) |
 | a stack/framework, valid in any project of that stack | `stacks/<stack>.md` → matching *Conventions* section |
 | an architecture, valid in any project that uses it | `architectures/<arch>.md` → *Placement rules* or *Conformance checklist* |
@@ -39,7 +39,7 @@ Format: `- [YYYY-MM-DD] <lesson> — <why> (source: <project>)`.
 - Write only what was verified, with its evidence (`decision ← evidence`, `file:line`, the command that proved it) and the date; a hypothesis is written as one (`hipótesis: …`) or not at all.
 - When a memory entry and the code disagree, the code wins: fix or delete the entry in the same task and say so.
 - A *Solved problems* entry whose file, component or dependency no longer exists, or whose fix was reverted, is deleted. *Work in progress* entries the session hook flags as old are confirmed with the user or closed (`Status: idle`).
-- The project file `~/.waymark/projects/<slug>.md` is the source of truth; engram holds the history and search. If they disagree, update the project file and `mem_update` the observation.
+- The project file `<project>/.waymark/memory.md` is the source of truth; engram holds the history and search. If they disagree, update the project file and `mem_update` the observation.
 - Keep each list short: past ~10 *Solved problems*, merge entries with the same root cause and drop the ones that cannot recur.
 
 Mention in the closing report every file written by this loop.

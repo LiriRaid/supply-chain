@@ -50,7 +50,7 @@ export function checkCommand(command, cwd = process.cwd()) {
 // Files the routine itself writes (memory, learnings, scratch) never need the opener.
 const exempt = (file) => {
   const f = norm(file), home = norm(os.homedir());
-  return f.startsWith(`${home}/.waymark/`) || f.includes('/.claude/projects/') || f.includes('/appdata/local/temp/') || f.startsWith('/tmp/') || f.includes('/scratchpad/');
+  return f.startsWith(`${home}/.waymark/`) || f.includes('/.waymark/') || f.includes('/.claude/projects/') || f.includes('/appdata/local/temp/') || f.startsWith('/tmp/') || f.includes('/scratchpad/');
 };
 
 export function checkEdit(file, lines) {

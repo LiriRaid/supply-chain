@@ -14,6 +14,7 @@
     { "id": "browser", "label": "Navegador", "levels": [2, 3], "when": "ui", "enforce": "record", "doc": "L2+ with UI: browser-verify or run" },
     { "id": "spec", "label": "Tests", "levels": [1, 2, 3], "when": "specNear", "enforce": "record", "doc": "a spec next to the changed code added or changed (or Tests: no (<why>))" },
     { "id": "preexisting", "label": "Previos", "levels": [1, 2, 3], "when": "preClaim", "enforce": "record", "doc": "a pre-existing failure checked in a clean copy" },
-    { "id": "trailer", "label": "Commit", "levels": [1, 2, 3], "when": "commit", "enforce": "record", "doc": "commits with Waymark-Task: <task ID>" }
+    { "id": "trailer", "label": "Commit", "levels": [1, 2, 3], "when": "commit", "enforce": "record", "doc": "commits with Waymark-Task: <task ID>" },
+    { "id": "index", "label": "Índice", "levels": [1, 2, 3], "when": "engram", "enforce": "record", "doc": "with engram: the task index saved (mem_save, topic_key waymark/tasks/<slug>)" }
   ]
 }

@@ -39,10 +39,10 @@ In `guest` the lists are short: almost every turn-level rule resolves to the orc
 
 - **No Waymark hook, no Rule 0 block.** Nothing asks for the opener or the Cierre; the orchestrator's format, phases and delegation rule the turn.
 - **Departments are knowledge.** The orchestrator (or its sub-agents) loads a `dept-*` skill when the task matches its trigger, through its registry. Each department then runs its *Guest entry* (below) instead of the Rule 0 Entry.
-- **Memory travels through engram** when the orchestrator uses it: Waymark saves project decisions, solved problems and gates with `topic_key` `waymark/<project-slug>/<topic>`, so the orchestrator's `mem_search` finds them. `~/.waymark/projects/<slug>.md` stays the source and keeps filling itself.
+- **Memory travels through engram** when the orchestrator uses it: Waymark saves project decisions, solved problems and gates with `topic_key` `waymark/<project-slug>/<topic>`, so the orchestrator's `mem_search` finds them. `<project>/.waymark/memory.md` stays the source and keeps filling itself.
 
 **Guest entry** (what a department does when no Waymark block is in context):
-1. Recall: read `~/.waymark/projects/<slug>.md` if it exists (Work in progress, Solved problems, Quality gates) and `mem_search "waymark <slug>"` if engram is available. Missing memory → create it with the *Minimal bootstrap* (`project-detection.md`).
+1. Recall: read `<project>/.waymark/tasks.md` and `memory.md` if they exist (before migration: `~/.waymark/projects/<slug>.md`) (Work in progress, Solved problems, Quality gates) and `mem_search "waymark <slug>"` if engram is available. Missing memory → create it with the *Minimal bootstrap* (`project-detection.md`).
 2. Apply the department's rules and the one `procedures.md` section the task needs; verify APIs with `library-docs` as usual.
 3. Reply in the orchestrator's format; do not print the Waymark opener or Cierre.
 4. After a change: update *Work in progress* / *Solved problems* in the project memory and `mem_save` the decision (topic key above).

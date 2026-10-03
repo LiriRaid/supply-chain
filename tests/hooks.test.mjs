@@ -275,7 +275,7 @@ test('observed: memory, procedure and review are computed from the tool calls, n
   const opened = currentTurn([prompt('x'), say('Waymark → L2 · dept-backend'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'), call('mcp__engram__mem_search', { query: 'retries' }), call('Read', { file_path: path.join(os.homedir(), '.waymark', 'projects', 'shop.md') }), call('AskUserQuestion'), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs && npm run build' }), call('Skill', { skill: 'code-review' }), MEM()]);
   const g = cierreGaps(opened, cierre(id), undefined, undefined, { ...ctx, engram: true });
   assert.deepEqual(g.missing, []);
-  assert.deepEqual(g.observed.memory, { searched: true, opened: true, written: true, saved: false });
+  assert.deepEqual(g.observed.memory, { searched: true, opened: true, written: true, saved: false, indexed: false });
   assert.deepEqual(g.observed.procedure, { owner: 'dept-backend', read: ['dept-backend/procedures.md'], readBeforeChange: true });
   assert.equal(g.observed.review, true);
   assert.equal(g.observed.gates[0].cmd, 'node --check src/orders.service.mjs && npm run build');
@@ -417,10 +417,10 @@ test('evaluation: one ✔/✘ per routine step, a score, tokens and the estimate
   const { cwd } = fresh();
   const id = taskIds(cwd).next, ctx = ctxFor(cwd);
   const ev = evaluate(cierreGaps(l2(), cierre(id), undefined, undefined, { ...ctx, engram: true }), { total: 2700000 });
-  assert.deepEqual(ev.steps, { Decision: true, Verificar: true, Cierre: true, Aprender: true, Recordar: false, Review: true, Build: true, Enrutar: true });
-  assert.equal(ev.score, '7/8');
+  assert.deepEqual(ev.steps, { Decision: true, Verificar: true, Cierre: true, Aprender: true, Recordar: false, Review: true, Build: true, Enrutar: true, 'Índice': false });
+  assert.equal(ev.score, '7/9');
   assert.equal(ev.quotaPct, 2);
-  assert.match(summaryLine(id, ev), /Recordar ✘ .* 7\/8 · 2\.70M tokens ≈ 2% de la cuota/);
+  assert.match(summaryLine(id, ev), /Recordar ✘ .* 7\/9 · 2\.70M tokens ≈ 2% de la cuota/);
   assert.match(checkCierre(l2(), cierre(id), undefined, undefined, { ...ctx, engram: true }), /no mem_search before the first change/, 'mem_search blocks at L2+ when engram is there');
 });
 
@@ -499,4 +499,144 @@ test('stop hook: the block reason fed back as a user line does not split the tur
 
 test('stop hook: Q turns and turns without project edits leave no record', () => {
   assert.equal(runStop([prompt('¿qué hace esto?'), say('Waymark → Q · dept-qa'), call('Read', { file_path: FILE })], 'Respuesta').records.length, 0);
+});
+
+// ---- Step 2: project memory in <project>/.waymark/ (docs/adr/0007) ----
+const { projectHome, ensureLocal, tasksMarkdown, refreshTasks, readRecords } = await import(`file://${SCRIPTS}/provenance.mjs`);
+const { planFor, apply } = await import(`file://${SCRIPTS}/migrate-memory.mjs`);
+const tmpRepo = (name) => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), `waymark-${name}-`));
+  temps.push(repo);
+  spawnSync('git', ['init', '-q'], { cwd: repo });
+  return repo;
+};
+const oldMemory = (slug, root, wip = '- ▶ task A: step 2 next') => {
+  fs.mkdirSync(path.join(home, 'projects'), { recursive: true });
+  const file = path.join(home, 'projects', `${slug}.md`);
+  fs.writeFileSync(file, `# Project: ${slug}\n\nPath: ${root}\n\n## Work in progress\n${wip}\n\n## Identity\n- Stack: test\n`);
+  return file;
+};
+const excludeOf = (repo) => fs.readFileSync(path.join(repo, '.git', 'info', 'exclude'), 'utf8');
+const same = (a, b) => assert.equal(path.resolve(a).toLowerCase(), path.resolve(b).toLowerCase());
+
+test('project home: nearest .waymark/memory.md walking up, else the old memory (bridge), else the git root, else the home layout', () => {
+  const repo = tmpRepo('home');
+  const sub = path.join(repo, 'src', 'app');
+  fs.mkdirSync(sub, { recursive: true });
+  const none = projectHome(sub);
+  same(none.dir, path.join(repo, '.waymark'));
+  assert.equal(none.legacy, false, 'git repo without memory → <git root>/.waymark/');
+  const old = oldMemory('legacy-proj', repo);
+  const bridge = projectHome(sub);
+  assert.equal(bridge.legacy, true);
+  assert.equal(bridge.memory, old);
+  assert.equal(bridge.log, path.join(home, 'provenance', 'legacy-proj.jsonl'));
+  fs.mkdirSync(path.join(repo, '.waymark'), { recursive: true });
+  fs.writeFileSync(path.join(repo, '.waymark', 'memory.md'), '# Project: legacy-proj\n');
+  const now = projectHome(sub);
+  assert.equal(now.legacy, false, 'the project folder wins over the old file');
+  same(now.log, path.join(repo, '.waymark', 'provenance.jsonl'));
+  assert.equal(projectHome('/work/nowhere-1').dir, null, 'outside git and without memory → the home layout');
+  fs.rmSync(old);
+});
+
+test('ensureLocal: .waymark/ excluded through .git/info/exclude once, README written', () => {
+  const repo = tmpRepo('exclude');
+  const h = projectHome(repo);
+  ensureLocal(h); ensureLocal(h);
+  assert.equal(excludeOf(repo).match(/^\.waymark\/$/gm).length, 1);
+  assert.match(fs.readFileSync(path.join(repo, '.waymark', 'README.md'), 'utf8'), /tasks\.md/);
+  fs.writeFileSync(path.join(repo, '.waymark', 'memory.md'), 'x');
+  assert.equal(spawnSync('git', ['status', '--porcelain'], { cwd: repo, encoding: 'utf8' }).stdout, '', 'git does not see .waymark/');
+});
+
+test('migration: dry run writes nothing; apply moves memory and log byte for byte, chain intact, stub, exclude, backup', () => {
+  const repo = tmpRepo('migrate');
+  const backups = fs.mkdtempSync(path.join(os.tmpdir(), 'waymark-bk-'));
+  temps.push(backups);
+  process.env.WAYMARK_BACKUPS = backups;
+  const oldFile = oldMemory('mig', repo);
+  fs.writeFileSync(path.join(home, 'projects.md'), '| Project | Path | Memory |\n| mig | x | projects/mig.md |\n');
+  const oldLog = path.join(home, 'provenance', 'mig.jsonl');
+  appendRecord(repo, { id: '2026-10-01 · T1', prompt: 'first', cierre: '## Cierre\nResultado: hecho', evaluation: { score: '5/5' } });
+  appendRecord(repo, { id: '2026-10-01 · T2', prompt: 'second', cierre: '## Cierre\nResultado: parcial (x)', evaluation: { score: '4/5' } });
+  const bytes = fs.readFileSync(oldLog, 'utf8');
+  const plan = planFor({ slug: 'mig', file: oldFile, root: repo });
+  assert.equal(plan.skip, undefined);
+  assert.equal(plan.records, 2);
+  assert.ok(plan.chain.ok);
+  assert.ok(!fs.existsSync(path.join(repo, '.waymark')), 'the plan writes nothing');
+  const bk = apply(plan);
+  assert.equal(fs.readFileSync(path.join(repo, '.waymark', 'provenance.jsonl'), 'utf8'), bytes, 'log copied byte for byte');
+  assert.ok(verifyChain(readRecords(path.join(repo, '.waymark', 'provenance.jsonl'))).ok);
+  assert.match(fs.readFileSync(path.join(repo, '.waymark', 'memory.md'), 'utf8'), /task A: step 2 next/);
+  assert.match(fs.readFileSync(oldFile, 'utf8'), /^Moved: .*\.waymark\/memory\.md/m);
+  assert.ok(!fs.existsSync(oldLog), 'old log removed');
+  assert.ok(fs.existsSync(path.join(bk, 'mig.md')) && fs.existsSync(path.join(bk, 'mig.jsonl')), 'backup first');
+  assert.match(fs.readFileSync(path.join(home, 'projects.md'), 'utf8'), /\| mig \| x \| .*\.waymark\/memory\.md \|/);
+  assert.match(excludeOf(repo), /^\.waymark\/$/m);
+  const tasks = fs.readFileSync(path.join(repo, '.waymark', 'tasks.md'), 'utf8');
+  assert.match(tasks, /## In progress \/ pending\n- ▶ task A: step 2 next/);
+  assert.match(tasks, /\| 2026-10-01 · T2 \| parcial \(x\) \| 4\/5 \| second \|\n\| 2026-10-01 · T1 \| hecho \| 5\/5 \| first \|/);
+  assert.equal(projectHome(repo).legacy, false);
+  assert.equal(taskIds(repo, new Date(2026, 9, 1)).next, '2026-10-01 · T3', 'IDs continue from the migrated record');
+  assert.match(planFor({ slug: 'mig', file: oldFile, root: repo }).skip || '', /already exists/, 'never overwritten');
+  delete process.env.WAYMARK_BACKUPS;
+});
+
+test('tasks.md: generated from memory and the log, never for the bridge', () => {
+  const repo = tmpRepo('tasks');
+  const old = oldMemory('bridge-only', repo);
+  assert.equal(refreshTasks(projectHome(repo)), false, 'bridge: nothing written into the project');
+  assert.ok(!fs.existsSync(path.join(repo, '.waymark')));
+  fs.rmSync(old);
+  fs.mkdirSync(path.join(repo, '.waymark'));
+  fs.writeFileSync(path.join(repo, '.waymark', 'memory.md'), '# P\n\n## Work in progress\n- ▶ B: next step 3\n');
+  const h = projectHome(repo);
+  assert.match(tasksMarkdown(h), /- ▶ B: next step 3[\s\S]*## Done \(last 0/);
+  assert.equal(refreshTasks(h), true);
+  assert.equal(refreshTasks(h), false, 'up to date: not rewritten');
+});
+
+test('stop hook: with memory in the project, the record and tasks.md go to <project>/.waymark/ and memory edits are not changes', () => {
+  const repo = tmpRepo('stop');
+  fs.mkdirSync(path.join(repo, '.waymark'));
+  const mem = path.join(repo, '.waymark', 'memory.md');
+  fs.writeFileSync(mem, '# P\n\n## Work in progress\n- ▶ retries: done\n');
+  const transcript = path.join(home, 't-step2.jsonl');
+  const lines = [...l2Lines.slice(0, -1), call('Edit', { file_path: mem })];
+  fs.writeFileSync(transcript, lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
+  const id = `${new Date().toLocaleDateString('sv')} · T1`;
+  const r = spawnSync(process.execPath, [path.join(SCRIPTS, 'stop-hook.mjs')], { input: JSON.stringify({ transcript_path: transcript, cwd: repo, session_id: 's-step2', last_assistant_message: cierre(id) }), env: { ...process.env, WAYMARK_HOME: home }, encoding: 'utf8' });
+  assert.match(JSON.parse(r.stdout).systemMessage, /· 7\/7 · /, 'Aprendido written to <project>/.waymark/memory.md counts');
+  const recs = readRecords(path.join(repo, '.waymark', 'provenance.jsonl'));
+  assert.equal(recs.length, 1);
+  assert.deepEqual(recs[0].files, [FILE], 'the memory edit is not a project change');
+  assert.match(fs.readFileSync(path.join(repo, '.waymark', 'tasks.md'), 'utf8'), new RegExp(`- ▶ retries: done[\\s\\S]*\\| ${id} \\| hecho`));
+  assert.match(excludeOf(repo), /^\.waymark\/$/m);
+  const bare = tmpRepo('stop-bare'); // no memory at all: the record still lands excluded from git
+  const r2 = spawnSync(process.execPath, [path.join(SCRIPTS, 'stop-hook.mjs')], { input: JSON.stringify({ transcript_path: transcript, cwd: bare, session_id: 's-step2b', last_assistant_message: cierre(id) }), env: { ...process.env, WAYMARK_HOME: home }, encoding: 'utf8' });
+  assert.ok(r2.stdout);
+  assert.equal(readRecords(path.join(bare, '.waymark', 'provenance.jsonl')).length, 1);
+  assert.equal(spawnSync('git', ['status', '--porcelain'], { cwd: bare, encoding: 'utf8' }).stdout, '', 'git does not see .waymark/');
+  const logOnly = tmpRepo('mig-log');
+  fs.mkdirSync(path.join(logOnly, '.waymark'));
+  fs.writeFileSync(path.join(logOnly, '.waymark', 'provenance.jsonl'), '{}\n');
+  assert.match(planFor({ slug: 'x', file: oldMemory('mig-log', logOnly), root: logOnly }).skip || '', /provenance\.jsonl already exists/, 'an existing log is never overwritten');
+});
+
+test('session hook: new location points to tasks.md; the bridge offers the migration once', () => {
+  const env = { ...process.env, WAYMARK_HOME: home, WAYMARK_NO_SYNC: '1', WAYMARK_CLAUDE_JSON: path.join(home, 'none.json'), WAYMARK_CLAUDE_PROJECTS: path.join(home, 'none') };
+  const run = (cwd) => JSON.parse(spawnSync(process.execPath, [path.join(SCRIPTS, 'session-hook.mjs')], { input: JSON.stringify({ cwd }), env, encoding: 'utf8' }).stdout).hookSpecificOutput.additionalContext;
+  const repo = tmpRepo('session');
+  const old = oldMemory('sess', repo);
+  const first = run(repo);
+  assert.match(first, /old location/);
+  assert.match(first, /Memory migration .*migrate-memory\.mjs" --project /);
+  assert.doesNotMatch(run(repo), /Memory migration/, 'offered once');
+  fs.rmSync(old);
+  fs.mkdirSync(path.join(repo, '.waymark'));
+  fs.writeFileSync(path.join(repo, '.waymark', 'memory.md'), '# P\n\n## Work in progress\n- ▶ C\n');
+  assert.match(run(repo), /Project memory: .*\.waymark\/memory\.md \(read; full file there\)\. Where the work stands: .*\.waymark\/tasks\.md[\s\S]*- ▶ C/);
+  assert.match(run(tmpRepo('fresh')), /Project memory: none .* Create .*\.waymark\/memory\.md/);
 });

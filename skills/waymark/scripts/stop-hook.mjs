@@ -7,7 +7,7 @@
 // - What blocks (once, decision "block") and what is only recorded and scored is defined in ONE place: the routine
 //   contract waymark/routine.json (docs/adr/0006). Each step has the levels and the condition where it applies; this
 //   file only computes whether it passed and why not. The instructions block quotes each block step (tests check it).
-// - Then the record is appended to ~/.waymark/provenance/<slug>.jsonl with an automatic evaluation (routine ✔/✘, score,
+// - Then the record is appended to <project>/.waymark/provenance.jsonl (docs/adr/0007; tasks.md regenerated) with an automatic evaluation (routine ✔/✘, score,
 //   tokens, estimated quota) and the user sees a one-line summary (systemMessage, 0 model tokens).
 // It never blocks twice in a row (stop_hook_active). Remove it from the agent's settings to disable it.
 import fs from 'node:fs';
@@ -16,12 +16,12 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { readTail, currentTurn, routedLevel, routedDept, isPrompt, promptText, sessionTools, readSomething, turnUsage } from './transcript.mjs';
-import { ID, taskIds, validId, taskLines, decisionsIn, appendRecord, turnInputs, commitsFor, changesProject, gitSnapshot, snapshotDiff, loadSnapshot } from './provenance.mjs';
+import { ID, taskIds, validId, taskLines, decisionsIn, appendRecord, turnInputs, commitsFor, changesProject, gitSnapshot, snapshotDiff, loadSnapshot, projectHome, refreshTasks, ensureLocal } from './provenance.mjs';
 
 const norm = (p) => String(p || '').replace(/\\/g, '/').toLowerCase();
 const exempt = (file) => {
   const f = norm(file), home = norm(os.homedir());
-  return f.startsWith(`${home}/.waymark/`) || f.includes('/.claude/projects/') || f.includes('/appdata/local/temp/') || f.startsWith('/tmp/') || f.includes('/scratchpad/');
+  return f.startsWith(`${home}/.waymark/`) || f.includes('/.waymark/') || f.includes('/.claude/projects/') || f.includes('/appdata/local/temp/') || f.startsWith('/tmp/') || f.includes('/scratchpad/');
 };
 const EDITS = /^(Edit|Write|MultiEdit|NotebookEdit)$/;
 const UI = /\.(html|css|scss|sass|less|tsx|jsx|vue|svelte|astro)$|\.component\.ts$/i;
@@ -30,7 +30,7 @@ const SPEC = /\.(spec|test)\.[cm]?[jt]sx?$|_spec\.rb$|_test\.(go|py)$|^test_.*\.
 const TEST = /\b(test|tests|vitest|jest|karma|mocha|pytest|rspec|go test|dotnet test|mvn test|gradle test)\b/i;
 const GATE = /\b(tsc|typecheck|type-check|lint|eslint|ng build|build|go vet|mypy|ruff|rubocop|cargo (check|clippy)|node --check)\b/i;
 const PRE = /(pre-?existente|preexist|pre-existing|ya (fallaba|exist[ií]a)|fallos? previos?|en c[oó]digo que no cambi)/i;
-const MEMORY_FILE = /[\\/]\.waymark[\\/](projects[\\/][^\\/]+\.md|memory\.md|tasks\.md)$/i; // ~/.waymark/projects/<slug>.md or <project>/.waymark/
+const MEMORY_FILE = /[\\/]\.waymark[\\/](projects[\\/][^\\/]+\.md|memory\.md)$/i; // <project>/.waymark/memory.md or the pre-0007 ~/.waymark/projects/<slug>.md (tasks.md is generated)
 const BUILD = /\b(ng build|vite build|next build|nuxt build|astro build|(npm|pnpm|yarn|bun)( run)? build|go build|cargo build|dotnet build|mvn (package|verify)|gradle build|tsc -b)\b/i;
 // The routine contract: what blocks and what is recorded and scored (waymark/routine.json, docs/adr/0006).
 // A missing or invalid contract never disables the hook: a minimal contract keeps the chain (decision, gate, Cierre) and
@@ -133,6 +133,7 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
       opened: before((t) => t.name === 'Read' && /[\\/]\.waymark[\\/]/.test(String(t.input.file_path || ''))),
       written: turn.tools.some((t) => EDITS.test(t.name) && MEMORY_FILE.test(fileOf(t))),
       saved: turn.tools.some((t) => /mem_(save|update|session_summary)/.test(t.name)),
+      indexed: turn.tools.some((t) => /mem_(save|update)$/.test(t.name) && /^waymark\/tasks\//.test(String(t.input.topic_key || ''))),
     },
     procedure: { owner: dept.declared, read: [...new Set(procReads.map((t) => (where(t).match(/[\w.-]+[\\/]procedures\.md/) || ['procedures.md'])[0].replace(/\\/g, '/')))], readBeforeChange: before((t) => procRe.test(where(t)) && readSomething(t)) },
     gates: gatesAfter.map((t) => ({ cmd: cmdOf(t).replace(/\s+/g, ' ').slice(0, 140), s: secs(t) === null ? null : Math.round(secs(t)), error: !!result(t)?.error })),
@@ -207,8 +208,9 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
   else if (!observed.procedure.read.some((p) => procRe.test(p))) procedure.push(`${dept.declared}/procedures.md never read (a search with no match does not count)`);
   const fails = {
     decision, gate, cierre,
-    learned: hasCierre && field(reply, 'Aprendido') && !observed.memory.written ? ['Aprendido is not in the project memory: write it as the task\'s Work in progress line (~/.waymark/projects/<slug>.md) — the next session, or another agent, resumes from there'] : [],
+    learned: hasCierre && field(reply, 'Aprendido') && !observed.memory.written ? [`Aprendido is not in the project memory: write it as the task's Work in progress line (${ctx.memoryFile || '<project>/.waymark/memory.md'}) — the next session, or another agent, resumes from there`] : [],
     memory: observed.memory.searched ? [] : ['L2+: no mem_search before the first change: search engram for past decisions and rejected paths of this area now'],
+    index: observed.memory.indexed ? [] : [`engram task index not saved: mem_save the task's line with topic_key waymark/tasks/${ctx.slug || '<slug>'}`],
     review: skip.Review || observed.review ? [] : [`code changed and code-review did not run: run it on the task's files (${code.slice(0, 4).map((f) => path.basename(f)).join(', ')}${code.length > 4 ? '…' : ''})`],
     build: buildAfter || /Build:\s*no \(.{3,}\)/i.test(reply) ? [] : ['L2+ with code: run the build once now, after the last change (or write Build: no (<why>) if the project has none)'],
     docs: observed.docs ? [] : ['Evidencia is inferred from docs but no docs were consulted: consult them (library-docs, or the installed package\'s types/source) and confirm or correct the change'],
@@ -286,7 +288,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       const h = JSON.parse(input);
       const lines = readTail(h.transcript_path, 4 * 1024 * 1024), cwd = h.cwd || process.cwd();
       const prompts = lines.filter(isPrompt).map(promptText).slice(-3); // this task: the current prompt and the two before it
-      const turn = currentTurn(lines), ctx = { ids: taskIds(cwd), decisions: decisionsIn(taskLines(lines)) };
+      const home = projectHome(cwd);
+      const turn = currentTurn(lines), ctx = { ids: taskIds(cwd), decisions: decisionsIn(taskLines(lines)), memoryFile: home.memory.replace(/\\/g, '/'), slug: home.slug };
       const claimed = String(h.last_assistant_message || '').replace(/\*\*|__/g, '').match(/##\s*Cierre\s*·\s*(.+)/)?.[1]?.match(ID)?.[0];
       ctx.commits = commitsFor(cwd, claimed);
       ctx.inputs = turnInputs(taskLines(lines, 1), cwd);
@@ -294,7 +297,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       ctx.engram = lines.some((d) => JSON.stringify(d.attachment || '').includes('mcp__engram__') || (d.message?.content || []).some?.((c) => c.type === 'tool_use' && String(c.name).startsWith('mcp__engram__')));
       const all = sessionTools(lines);
       const gaps = cierreGaps(turn, h.last_assistant_message, all, prompts, ctx);
-      if (!gaps) return;
+      if (!gaps) { try { refreshTasks(home); } catch {} return; }
       if (gaps.missing.length && !h.stop_hook_active) {
         process.stdout.write(JSON.stringify({ decision: 'block', reason: checkCierre(turn, h.last_assistant_message, all, prompts, ctx) }));
         return;
@@ -302,7 +305,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       gaps.observed.branches = branchesOf(gaps.changed);
       const evaluation = evaluate(gaps, turnUsage(lines));
       const rec = provenanceRecord(turn, gaps, ctx, { session: h.session_id, cwd, evaluation });
+      try { if (home.dir && !home.legacy) ensureLocal(home); } catch {} // excluded from git before anything is written there
       try { appendRecord(cwd, rec); } catch {}
+      try { refreshTasks(home, true); } catch {} // tasks.md: where the work stands, for any agent (docs/adr/0007)
       process.stdout.write(JSON.stringify({ systemMessage: summaryLine(rec.id, evaluation) }));
     } catch {}
   };

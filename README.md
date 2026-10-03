@@ -28,7 +28,7 @@ A software supply chain tracks how an artifact was built: its inputs, the steps 
 | **Evidence** | what was observed vs inferred, and the check you were given before the fix | written by the agent; an inference "from the docs" needs a docs call, a "pre-existing" failure a clean-copy check |
 | **Gates and review** | lint, typecheck, tests, build, browser check, code review, memory and procedure used, with the time each gate took and whether it failed | **computed by the hooks** from the tool calls, never declared by the agent (the platform generates the provenance, as in SLSA). What blocks and what is only scored is one contract, [`skills/waymark/routine.json`](skills/waymark/routine.json), that you can change: by default a gate after the last change and, at L2+ with code, `mem_search` before it, code-review and the build at the end. Everything is scored in an automatic evaluation of each task (✔/✘ per step, tokens, estimated quota), shown to you in one line |
 | **Output** | the files changed and the commits | the files git saw change between your message and the end of the turn, whatever tool changed them; each commit carries `Waymark-Task: <task ID>` and the record keeps its hash |
-| **Record** | one line per task in `~/.waymark/provenance/<project>.jsonl` | each line holds the hash of the previous one: editing or deleting a past task breaks the chain |
+| **Record** | one line per task in `<project>/.waymark/provenance.jsonl`, and `tasks.md` next to it: in progress, pending, next step, done | each line holds the hash of the previous one: editing or deleting a past task breaks the chain. The folder is local (excluded through `.git/info/exclude`) and plain Markdown/JSONL, so any agent (Codex, Cursor, a new session) resumes from it |
 
 What it is not: an SBOM or a dependency audit. Dependencies are `dept-security`'s job; this chain covers the work the agent does on your code. Decisions: [`docs/adr/`](docs/adr).
 
@@ -166,7 +166,7 @@ Nothing personal ships in this repository: no stack, no preferences, no projects
 | File | Fills itself when… |
 |---|---|
 | `profile.md` | a project of a new stack, package manager or architecture is detected |
-| `projects.md` + `projects/<slug>.md` | you work in a project for the first time; then gates, gotchas and decisions as they are learned |
+| `projects.md` (index) + `<project>/.waymark/memory.md` | you work in a project for the first time; then gates, gotchas and decisions as they are learned. The memory lives in the project, local and never committed |
 | `preferences.md` | you correct how the agent answers or delivers code |
 | `subagents.md` | a search or delegation rule proves wrong or missing |
 | `agent.md` | the installer records where your agent keeps skills and instructions |
@@ -192,7 +192,7 @@ After every L1+ task the agent keeps only what was **new and non-obvious** and w
 
 | The lesson is about… | It goes to |
 |---|---|
-| this project | `~/.waymark/projects/<slug>.md` |
+| this project | `<project>/.waymark/memory.md` |
 | a stack | `stacks/<stack>.md` |
 | a tool skill | its `## Learned notes` |
 | a department, in any stack | its `## Learned rules` |

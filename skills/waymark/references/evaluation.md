@@ -1,6 +1,6 @@
 # Self-evaluation (deep audit)
 
-Every closed task is already evaluated automatically: the end-of-turn hook scores it against the routine contract `waymark/routine.json` and writes the result into the task's record in `~/.waymark/provenance/<slug>.jsonl` (`evaluation`: ✔/✘ per step that applied, score, tokens, estimated quota). The user sees it as one line. **The contract is the only rubric:** this guide adds none. When the user asks for **"evalúa tu trabajo"**, do a deeper audit of that record against the transcript.
+Every closed task is already evaluated automatically: the end-of-turn hook scores it against the routine contract `waymark/routine.json` and writes the result into the task's record in `<project>/.waymark/provenance.jsonl` (`evaluation`: ✔/✘ per step that applied, score, tokens, estimated quota). The user sees it as one line. **The contract is the only rubric:** this guide adds none. When the user asks for **"evalúa tu trabajo"**, do a deeper audit of that record against the transcript.
 
 ## 1. Start from the record
 - `evaluation.steps`: the ✔/✘ per contract step that applied. Report them as they are; do not re-score with other criteria.
@@ -28,4 +28,4 @@ Decisión correcta: ✔/✘ — intentos: N — alucinaciones: ninguna | <lista>
 Consumo: <measure.mjs> · cuota estimada X% · real A% → B% (si la anotó)
 Qué mejorar en Waymark: <un cambio en routine.json, un hook o una plantilla — no reglas en prosa>
 ```
-If you maintain Waymark (its repository has a project memory file in `~/.waymark/projects/`), add the improvements to that file → *Work in progress → Open*; otherwise list them in the report only.
+If you maintain Waymark (its repository has a `.waymark/memory.md`), add the improvements to that file → *Work in progress → Open*; otherwise list them in the report only.

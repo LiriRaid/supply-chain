@@ -34,7 +34,7 @@ Loaded on demand from `SKILL.md` → *Procedures*. Read only the section the tas
 6. Structural cause → hand off to `dept-architecture` and note it in the report.
 
 ### Run the quality gates yourself
-Commands come from project memory → *Quality gates* (`~/.waymark/projects/<slug>.md`), else `../waymark/stacks/<stack>.md` → *Commands*. Never invent a command; if none is verified, discover it per the stack profile, run it once and record it in project memory.
+Commands come from project memory → *Quality gates* (`<project>/.waymark/memory.md`), else `../waymark/stacks/<stack>.md` → *Commands*. Never invent a command; if none is verified, discover it per the stack profile, run it once and record it in project memory.
 
 | Level | Gates |
 |---|---|

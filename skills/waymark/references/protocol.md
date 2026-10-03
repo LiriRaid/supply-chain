@@ -6,7 +6,7 @@ The compact version lives in the instructions file and is enough for L1. Read th
 
 ## Entry
 
-1. **Project memory.** Identify the project root (nearest folder with a manifest: `package.json`, `Gemfile`, `pyproject.toml`, `go.mod`, `pom.xml`, `*.csproj`, `Cargo.toml`, `composer.json`, `pubspec.yaml`). Read `~/.waymark/projects/<project-slug>.md`. If it does not exist, read `~/.waymark/profile.md` (the user's defaults), run `references/project-detection.md` and create the memory from `templates/project-memory.template.md`. If the memory exists but has no *Project map*, run the minimal project scan of `references/project-detection.md` once and add it. Any private-layer file missing (`profile.md`, `preferences.md`, `subagents.md`, `projects.md`, `agent.md`) → create it from `templates/private-layer/` without asking.
+1. **Project memory.** Identify the project root (nearest folder with a manifest: `package.json`, `Gemfile`, `pyproject.toml`, `go.mod`, `pom.xml`, `*.csproj`, `Cargo.toml`, `composer.json`, `pubspec.yaml`). Read `<project>/.waymark/memory.md` (the session hook names the file; before migration it is still `~/.waymark/projects/<project-slug>.md`) and `.waymark/tasks.md` (where the work stands). If it does not exist, read `~/.waymark/profile.md` (the user's defaults), run `references/project-detection.md` and create the memory from `templates/project-memory.template.md`. If the memory exists but has no *Project map*, run the minimal project scan of `references/project-detection.md` once and add it. Any private-layer file missing (`profile.md`, `preferences.md`, `subagents.md`, `projects.md`, `agent.md`) → create it from `templates/private-layer/` without asking.
 2. **Stack profile.** Read `stacks/<stack>.md` (L1: *Commands* + your department's section; L2+: full). Unknown stack → `stacks/generic.md`.
 3. **Architecture profile** (L2+). Read `architectures/<architecture>.md`. Unknown → derive it from the project and generate the profile (`references/project-detection.md`); ask only if the code is ambiguous. Record it in project memory.
 4. **Learnings.** Read `~/.waymark/learnings/<department>.md` if it exists.
@@ -16,7 +16,7 @@ The compact version lives in the instructions file and is enough for L1. Read th
 ```
 Waymark → L2 · dept-frontend (+dept-ux-ui) · skills: ui-build · browser-verify · library-docs
 Pedido: confirmar antes de borrar un contacto · Captura: /contacts, fila de la tabla, botón papelera rojo marcado con un círculo
-Memoria: leída ~/.waymark/projects/contacts-app.md · Reutiliza: shared/components/app-modal · Evidencia: observada (botón borrar sin confirmación en /contacts) · Procedimiento: New component / screen
+Memoria: leída .waymark/memory.md · Reutiliza: shared/components/app-modal · Evidencia: observada (botón borrar sin confirmación en /contacts) · Procedimiento: New component / screen
 Qué: modal de confirmación para eliminar contacto · Para qué: evitar borrados accidentales · Dónde: features/contacts/components/delete-contact-dialog/
 ```
 At L2+ add the *Qué · Para qué · Dónde* line; at L1 the opening lines are enough. *Captura* names what the image points at (screen, element, state, the mark the user drew), not a description of the whole picture; if the image and the text disagree, ask once.

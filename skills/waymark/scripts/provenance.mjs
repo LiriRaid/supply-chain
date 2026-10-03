@@ -1,11 +1,11 @@
 // Waymark · supply chain of the agent's work (docs/adr/0001, 0002), shared by the hooks. Offline, 0 model tokens.
 // - Task IDs `YYYY-MM-DD · T<n>[a-z]`: n per project and local day, a letter per follow-up prompt of the same task.
-// - The log: one JSON line per closed task in ~/.waymark/provenance/<slug>.jsonl, written by stop-hook.mjs from what
+// - The log: one JSON line per closed task in <project>/.waymark/provenance.jsonl, written by stop-hook.mjs from what
 //   the transcript proves (prompt, options asked and the user's pick, files, commands, skills), the inputs it was
 //   built with (Waymark and agent version, model, MCP servers, instruction file hashes), its commits (trailer
 //   `Waymark-Task: <id>`) and the Cierre text. Each line holds the hash of the previous one: an edited or deleted
 //   record breaks the chain (verifyChain).
-// <slug> is the project memory file whose `Path:` holds the folder (as session-hook.mjs resolves it), else the folder name.
+// Where: <project>/.waymark/ (docs/adr/0007), resolved once by projectHome() for every hook.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -18,22 +18,108 @@ const HOME = () => process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark
 const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
 export const ID = /\b(20\d\d-\d\d-\d\d) · T(\d+)([a-z]?)\b/;
 
-export function projectSlug(cwd) {
+const slugOf = (dir) => (path.basename(norm(dir)) || 'project').replace(/[^a-z0-9._-]+/g, '-');
+
+// The pre-0007 memory file whose `Path:` holds cwd (longest match), skipping files already migrated (`Moved:`).
+export function legacyMemory(cwd) {
   const dir = path.join(HOME(), 'projects');
   let best = null;
   try {
     for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.md'))) {
-      const p = norm(fs.readFileSync(path.join(dir, f), 'utf8').match(/^Path:\s*([^·\n]+)/m)?.[1]?.trim());
-      if (p && (norm(cwd) === p || norm(cwd).startsWith(p + '/')) && (!best || p.length > best.p.length)) best = { f, p };
+      const text = fs.readFileSync(path.join(dir, f), 'utf8');
+      if (/^Moved:/m.test(text)) continue;
+      const raw = text.match(/^Path:\s*([^·\n]+)/m)?.[1]?.trim(), p = norm(raw);
+      if (p && (norm(cwd) === p || norm(cwd).startsWith(p + '/')) && (!best || p.length > best.p.length)) best = { f, p, root: raw.replace(/\\/g, '/') };
     }
   } catch {}
-  return best ? best.f.slice(0, -3) : (path.basename(norm(cwd)) || 'project').replace(/[^a-z0-9._-]+/g, '-');
+  return best ? { slug: best.f.slice(0, -3), file: path.join(dir, best.f), root: best.root } : null;
 }
 
-export const logFile = (cwd) => path.join(HOME(), 'provenance', `${projectSlug(cwd)}.jsonl`);
+const gitTop = (cwd) => { try { const r = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd, encoding: 'utf8', timeout: 1500 }); return r.status === 0 ? r.stdout.trim() : null; } catch { return null; } };
 
-export function readLog(cwd) {
-  try { return fs.readFileSync(logFile(cwd), 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; }
+// The one resolver of a project's Waymark state (docs/adr/0007). → { root, slug, dir, memory, tasks, log, legacy, legacyFile? }
+// 1. The nearest <dir>/.waymark/memory.md walking up from cwd (the home folder itself is skipped: ~/.waymark is Waymark's).
+// 2. Bridge until 2.1.0: an old ~/.waymark/projects/<slug>.md whose Path holds cwd → the old files (legacy: true).
+// 3. No memory: a git repo → <git root>/.waymark/; outside git → the home layout.
+export function projectHome(cwd) {
+  const at = (root, slug = slugOf(root)) => {
+    const dir = path.join(root, '.waymark');
+    return { root, slug, dir, memory: path.join(dir, 'memory.md'), tasks: path.join(dir, 'tasks.md'), log: path.join(dir, 'provenance.jsonl'), legacy: false };
+  };
+  const home = norm(os.homedir());
+  for (let d = path.resolve(String(cwd || '.')); ; d = path.dirname(d)) {
+    if (norm(d) !== home && fs.existsSync(path.join(d, '.waymark', 'memory.md'))) return at(d);
+    if (path.dirname(d) === d) break;
+  }
+  const old = legacyMemory(cwd);
+  if (old) return { ...at(old.root, old.slug), memory: old.file, log: path.join(HOME(), 'provenance', `${old.slug}.jsonl`), legacy: true, legacyFile: old.file };
+  const top = gitTop(cwd);
+  if (top) return at(top);
+  const slug = slugOf(cwd);
+  return { root: String(cwd), slug, dir: null, memory: path.join(HOME(), 'projects', `${slug}.md`), tasks: null, log: path.join(HOME(), 'provenance', `${slug}.jsonl`), legacy: false };
+}
+
+export const projectSlug = (cwd) => projectHome(cwd).slug;
+export const logFile = (cwd) => projectHome(cwd).log;
+
+// Keeps <root>/.waymark/ out of git through .git/info/exclude (untracked; the user's decision, docs/adr/0007) and writes
+// its README once. → true when the exclude line is in place (or the root is not a repo).
+export function ensureLocal(home) {
+  if (!home?.dir) return false;
+  fs.mkdirSync(home.dir, { recursive: true });
+  const readme = path.join(home.dir, 'README.md');
+  if (!fs.existsSync(readme)) fs.writeFileSync(readme, README);
+  const r = spawnSync('git', ['rev-parse', '--git-path', 'info/exclude'], { cwd: home.root, encoding: 'utf8', timeout: 1500 });
+  if (r.status !== 0) return true;
+  const file = path.resolve(home.root, r.stdout.trim());
+  let text = '';
+  try { text = fs.readFileSync(file, 'utf8'); } catch {}
+  if (/^\/?\.waymark\/?\s*$/m.test(text)) return true;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.appendFileSync(file, `${text && !text.endsWith('\n') ? '\n' : ''}# Waymark: project memory, local only\n.waymark/\n`);
+  return true;
+}
+
+const README = `# .waymark: this project's Waymark memory (local, not committed)
+
+Any agent (Claude Code, Codex, Cursor, a new session) resumes the work from this folder:
+
+- \`tasks.md\`: where the work stands: in progress, pending, next step, and the tasks already done. Generated at each task close; do not edit it.
+- \`memory.md\`: the project memory. *Work in progress* has one line per task (edit your task's line), then identity, verified gate commands, conventions and solved problems.
+- \`provenance.jsonl\`: one record per closed task: the request, the user's decisions, files, gates, evidence and the automatic evaluation. Each line holds the hash of the previous one.
+
+Excluded from git through \`.git/info/exclude\`.
+`;
+
+// tasks.md from memory.md (Work in progress) and the log (done tasks). The agent never edits it (docs/adr/0007).
+export function tasksMarkdown(home, now = new Date()) {
+  let mem = '';
+  try { mem = fs.readFileSync(home.memory, 'utf8'); } catch {}
+  const wip = (('\n' + mem).match(/\n## Work in progress[^\n]*\n([\s\S]*?)(?=\n## |$)/)?.[1] || '').split('\n').filter((l) => /^\s*-/.test(l));
+  const records = readRecords(home.log).slice(-30).reverse();
+  const cell = (s) => String(s || '').replace(/\s+/g, ' ').replace(/\|/g, '/').trim();
+  const result = (r) => cell((r.cierre || '').match(/Resultado:[ \t]*([^·\n]*)/i)?.[1] || '?') + (r.unresolved?.length ? ` · ${r.unresolved.length} sin resolver` : '');
+  return [`# Tasks · ${home.slug}`, '',
+    `Generated by Waymark at each task close from \`memory.md\` (*Work in progress*) and \`provenance.jsonl\`. Do not edit: change your task's line in \`memory.md\`. Updated ${now.toISOString()}.`, '',
+    '## In progress / pending', ...(wip.length ? wip : ['- none']), '',
+    `## Done (last ${records.length}, newest first; full record in provenance.jsonl)`,
+    '| Task | Result | Routine | Request |', '|---|---|---|---|',
+    ...records.map((r) => `| ${cell(r.id)} | ${result(r)} | ${cell(r.evaluation?.score || '—')} | ${cell(r.prompt).slice(0, 120)} |`), ''].join('\n');
+}
+
+// Regenerates tasks.md when memory.md or the log is newer (cheap at every end of turn). Never for the bridge or outside git.
+export function refreshTasks(home, force = false) {
+  if (!home?.tasks || home.legacy || !fs.existsSync(home.memory)) return false;
+  const m = (p) => { try { return fs.statSync(p).mtimeMs; } catch { return 0; } };
+  if (!force && m(home.tasks) >= Math.max(m(home.memory), m(home.log))) return false;
+  ensureLocal(home);
+  fs.writeFileSync(home.tasks, tasksMarkdown(home));
+  return true;
+}
+
+export const readLog = (cwd) => readRecords(logFile(cwd));
+export function readRecords(file) {
+  try { return fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; }
 }
 
 const localDay = (now) => now.toLocaleDateString('sv'); // YYYY-MM-DD in local time
