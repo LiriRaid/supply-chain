@@ -4,16 +4,10 @@ Path: <absolute path to project root>
 Updated: <YYYY-MM-DD>
 
 ## Work in progress
-Read first at Recall; one entry per open task, each rewritten after its own milestones (never delete another task's pending items) (not at session end: sessions can stop without warning, e.g. out of tokens). Any agent can resume from here.
-- Updated: <YYYY-MM-DD HH:mm> · by: <agent>
-- Task: <what the user asked, in their words> · goal: <done looks like…>
-- Done: <steps finished, files touched>
-- Decision: <what was decided> ← <the evidence it rests on: file:line, output, observed value>
-- Plan (L3): ✔1 <step> · ▶2 <step> · 3 <step> — next gate: <command> · Descartado: <what was ruled out and why>
-- Next: <ordered remaining steps>
-- Open: <decisions or questions pending>
-- Last request: <the user's last message, short>
-<!-- When the task is finished and nothing is pending: "- Status: idle (last: <task>, <date>)" -->
+Read first at Recall. **One line per task, headed by its task ID** (tasks.md is generated from these lines; a line without an ID at its head counts as a note). Rewrite only your task's line, after its own milestones (not at session end: sessions can stop without warning, e.g. out of tokens). Any agent can resume from here.
+- [<task ID>] <title in the user's words> (L<n> <dept>): <what is done, files>. Decisión: <what was decided> ← <evidence: file:line, output, observed value>. Pendiente: <the next step>
+- ▶ [<task ID>] <title> (L3 <dept>): plan ✔1 <step> · ▶2 <step> · 3 <step>; next gate: <command>. Descartado: <what was ruled out and why>. NEXT <the next step>
+<!-- ▶ marks the task in progress. A finished task with nothing pending leaves this section (its record stays in provenance.jsonl); none open → "- (idle since <date>)". -->
 
 ## Identity
 - Stack: <slug from stacks/> (<framework + version>)

@@ -468,7 +468,30 @@ test('evaluation: one ✔/✘ per routine step, a score, tokens and the estimate
 test('turn usage: each streamed message counted once', () => {
   const u = (id, usage) => ({ type: 'assistant', message: { id, usage, content: [] } });
   const usage = { input_tokens: 10, cache_creation_input_tokens: 100, cache_read_input_tokens: 1000, output_tokens: 5 };
-  assert.deepEqual(turnUsage([prompt('x'), u('m1', usage), u('m1', usage), u('m2', usage)]), { total: 2230, fresh: 230, responses: 2 });
+  assert.deepEqual(turnUsage([prompt('x'), u('m1', usage), u('m1', usage), u('m2', usage)]), { total: 2230, fresh: 230, input: 20, cacheWrite: 200, cacheRead: 2000, output: 10, responses: 2 });
+});
+
+test('calibration: the user\'s pairs per model drive the quota estimate (mean, then a fit of new vs cached tokens)', async () => {
+  const { estimate, addPair, pairsFile } = await import(`file://${SCRIPTS}/calibrate.mjs`);
+  const M = 'claude-test-model';
+  assert.deepEqual(estimate({ total: 2700000 }, M, 1350000), { pct: 2, by: 'default' });
+  const repo = tmpRepo('calib');
+  fs.mkdirSync(path.join(repo, '.waymark'));
+  fs.writeFileSync(path.join(repo, '.waymark', 'memory.md'), '# P\n\n## Work in progress\n');
+  fs.writeFileSync(path.join(repo, '.waymark', 'provenance.jsonl'), [
+    { id: '2026-10-03 · T1', inputs: { model: M }, evaluation: { tokens: 7200000 } }, // an old record: total only
+    { id: '2026-10-03 · T2', inputs: { model: M }, evaluation: { tokens: 3000000, usage: { input: 0, cacheWrite: 0, cacheRead: 2000000, output: 1000000 } } },
+  ].map((r) => JSON.stringify(r)).join('\n') + '\n');
+  assert.equal(addPair('2026-10-03 · T1', 9, repo).total, 7200000);
+  assert.deepEqual(estimate({ total: 1600000 }, M), { pct: 2, by: 'pairs:1' }, '800k per 1% from the pair');
+  assert.deepEqual(estimate({ total: 1600000 }, 'other-model', 1350000).by, 'default', 'per model');
+  const p2 = addPair('2026-10-03 · T2', 3, repo);
+  assert.deepEqual([p2.fresh, p2.cacheRead], [1000000, 2000000]);
+  fs.appendFileSync(pairsFile(), [{ model: M, pct: 2, total: 3000000, fresh: 500000, cacheRead: 2500000 }, { model: M, pct: 4, total: 4000000, fresh: 1500000, cacheRead: 2500000 }].map((p) => JSON.stringify(p)).join('\n') + '\n');
+  const fit = estimate({ total: 3000000, fresh: 1000000, cacheRead: 2000000 }, M);
+  assert.equal(fit.by, 'fit:3', 'three pairs with a split: new and cached tokens weighed apart');
+  assert.ok(fit.pct > 2.5 && fit.pct < 3.5, String(fit.pct));
+  assert.throws(() => addPair('2026-10-03 · T9', 5, repo), /not in/);
 });
 
 test('provenance record: what the transcript proves, the hook assigns an ID when the reply has none', () => {

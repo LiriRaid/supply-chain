@@ -16,6 +16,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { readTail, currentTurn, routedLevel, routedDept, isPrompt, promptText, sessionTools, readSomething, turnUsage } from './transcript.mjs';
+import { estimate } from './calibrate.mjs';
 import { ID, taskIds, validId, taskLines, decisionsIn, appendRecord, turnInputs, commitsFor, changesProject, gitSnapshot, snapshotDiff, loadSnapshot, projectHome, refreshTasks, ensureLocal, closeOpen } from './provenance.mjs';
 
 const norm = (p) => String(p || '').replace(/\\/g, '/').toLowerCase();
@@ -250,12 +251,13 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
 
 // Automatic evaluation from the routine contract: ✔/✘ per step that applied (a label with several steps passes only if
 // all pass), the score over the applicable steps, tokens and the estimated quota.
-export function evaluate(gaps, usage) {
+export function evaluate(gaps, usage, model = null) {
   const steps = {};
   for (const s of gaps.steps.filter((x) => x.applies)) steps[s.label] = (steps[s.label] ?? true) && s.pass;
   const ok = Object.values(steps).filter(Boolean).length;
-  const perPct = Number(process.env.WAYMARK_TOKENS_PER_PCT) || ROUTINE.tokensPerQuotaPct || 1350000;
-  return { steps, score: `${ok}/${Object.keys(steps).length}`, tokens: usage?.total || 0, quotaPct: usage?.total ? Math.round((usage.total / perPct) * 10) / 10 : null };
+  const est = estimate(usage, model, ROUTINE.tokensPerQuotaPct || 1350000); // the user's own pairs per model (calibrate.mjs)
+  const split = usage?.cacheRead !== undefined ? { usage: { input: usage.input, cacheWrite: usage.cacheWrite, cacheRead: usage.cacheRead, output: usage.output } } : {};
+  return { steps, score: `${ok}/${Object.keys(steps).length}`, tokens: usage?.total || 0, ...split, model, quotaPct: est.pct, quotaBy: est.by };
 }
 
 // Branch of the repo that holds each changed file (null when not a repo), so the record shows where the work went.
@@ -319,7 +321,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
         return;
       }
       gaps.observed.branches = branchesOf(gaps.changed);
-      const evaluation = evaluate(gaps, turnUsage(lines));
+      const evaluation = evaluate(gaps, turnUsage(lines), ctx.inputs?.model || null);
       const rec = provenanceRecord(turn, gaps, ctx, { session: h.session_id, cwd, evaluation });
       try { if (home.dir && !home.legacy) ensureLocal(home); } catch {} // excluded from git before anything is written there
       try { appendRecord(cwd, rec); } catch {}

@@ -72,15 +72,15 @@ export function turnUsage(lines) {
   let i = lines.length - 1;
   while (i >= 0 && !isPrompt(lines[i])) i--;
   const seen = new Set();
-  let total = 0, fresh = 0;
+  const s = { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 }; // split: the quota does not weigh a cache read like a new token
   for (const d of lines.slice(i + 1)) {
     const u = d.type === 'assistant' && !d.isSidechain ? d.message?.usage : null;
     if (!u || seen.has(d.message.id)) continue;
     seen.add(d.message.id);
-    fresh += (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.output_tokens || 0);
-    total += (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.output_tokens || 0);
+    s.input += u.input_tokens || 0; s.cacheWrite += u.cache_creation_input_tokens || 0; s.cacheRead += u.cache_read_input_tokens || 0; s.output += u.output_tokens || 0;
   }
-  return { total, fresh, responses: seen.size };
+  const fresh = s.input + s.cacheWrite + s.output;
+  return { total: fresh + s.cacheRead, fresh, ...s, responses: seen.size };
 }
 
 // Context size and time of the last main-agent response, and whether the last answered turn opened with "Waymark →".
