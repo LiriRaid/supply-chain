@@ -16,7 +16,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { readTail, currentTurn, routedLevel, routedDept, isPrompt, promptText, sessionTools, readSomething, turnUsage } from './transcript.mjs';
-import { ID, taskIds, validId, taskLines, decisionsIn, appendRecord, turnInputs, commitsFor, changesProject, gitSnapshot, snapshotDiff, loadSnapshot, projectHome, refreshTasks, ensureLocal } from './provenance.mjs';
+import { ID, taskIds, validId, taskLines, decisionsIn, appendRecord, turnInputs, commitsFor, changesProject, gitSnapshot, snapshotDiff, loadSnapshot, projectHome, refreshTasks, ensureLocal, closeOpen } from './provenance.mjs';
 
 const norm = (p) => String(p || '').replace(/\\/g, '/').toLowerCase();
 const exempt = (file) => {
@@ -123,7 +123,8 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
   const result = (t) => turn.results?.[t.id];
   const secs = (t) => (result(t)?.at && t.at ? Math.max(0, (result(t).at - t.at) / 1000) : null);
   const gatesAfter = turn.tools.slice(Math.max(lastChange, lastCode) + 1).filter((t) => shell(t) && (GATE.test(cmdOf(t)) || TEST.test(cmdOf(t))));
-  const ui = changed.some((f) => UI.test(f));
+  // UI: templates and styles, `.component.ts`, and a `.ts` with a sibling `.html` (Angular 20+ names drop the suffix)
+  const ui = changed.some((f) => UI.test(f) || (/\.ts$/i.test(f) && !SPEC.test(path.basename(f)) && fs.existsSync(f.replace(/\.ts$/i, '.html'))));
   const code = changed.filter((f) => !NOT_CODE.test(f));
   const timed = turn.tools.filter((t) => secs(t) !== null);
   const slowest = [...timed].sort((a, b) => secs(b) - secs(a))[0];
@@ -137,7 +138,12 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
     },
     procedure: { owner: dept.declared, read: [...new Set(procReads.map((t) => (where(t).match(/[\w.-]+[\\/]procedures\.md/) || ['procedures.md'])[0].replace(/\\/g, '/')))], readBeforeChange: before((t) => procRe.test(where(t)) && readSomething(t)) },
     gates: gatesAfter.map((t) => ({ cmd: cmdOf(t).replace(/\s+/g, ' ').slice(0, 140), s: secs(t) === null ? null : Math.round(secs(t)), error: !!result(t)?.error })),
-    tests: { specsChanged: changed.filter((f) => SPEC.test(path.basename(f))).map((f) => path.basename(f)), ranAfterLastSpec: lastSpec < 0 ? null : turn.tools.slice(lastSpec + 1).some((t) => shell(t) && TEST.test(cmdOf(t))) },
+    tests: {
+      specsChanged: changed.filter((f) => SPEC.test(path.basename(f))).map((f) => path.basename(f)), ranAfterLastSpec: lastSpec < 0 ? null : turn.tools.slice(lastSpec + 1).some((t) => shell(t) && TEST.test(cmdOf(t))),
+      // red: a test run before the first code change, or in a clean copy (git worktree add … && … test)
+      red: allTools.some((t, i) => i >= base && shell(t) && TEST.test(cmdOf(t)) && ((firstChange >= 0 && i < firstChange) || /git\s+worktree\s+add/.test(cmdOf(t)))),
+    },
+    asked: { afterFirstChange: firstChange >= 0 && allTools.some((t, i) => i > firstChange && t.name === 'AskUserQuestion') },
     browser: { ui, tried: turn.tools.filter((t) => (t.name === 'Skill' && /^(browser-verify|run)$/.test(String(t.input.skill || ''))) || /browser|playwright|chrome/i.test(t.name)).map((t) => t.name === 'Skill' ? t.input.skill : t.name).slice(0, 5) },
     review: skillCalled(turn.tools, /(^|:)code-review$/),
     docs: turn.tools.filter(DOCS).length,
@@ -158,7 +164,7 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
   const chosenLabels = (ctx.decisions || []).flatMap((x) => String(x.chosen).split(',')).map(plain).filter(Boolean);
   const quoted = d.match(/^del usuario \(\s*[“"«]([^”"»]{3,200})[”"»]/i)?.[1];
   const usersWords = (q) => q && (prompts.some((p) => plain(p).includes(plain(q))) || chosenLabels.some((l) => l.includes(plain(q)))); // the quote is (part of) the picked label
-  const decision = [];
+  const decision = [], late = [];
   if (hasCierre) {
     if (!d) decision.push('Decisión: elegida <option> · descartadas <options> (the user\'s pick in the choice window) | del usuario ("<their words>") | única (<why>)');
     else if (/^elegida/i.test(d) && ctx.decisions && !ctx.decisions.length) decision.push('Decisión says "elegida" but no choice-window answer exists in this task: ask with the optimal options (AskUserQuestion), or write del usuario ("<their words>") / única (<why>)');
@@ -170,6 +176,7 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
     else if (!/^ninguna\b/i.test(sub)) {
       const items = splitTop(sub, ';');
       const alone = items.filter((s) => /→\s*no preguntada/i.test(s));
+      late.push(...items.filter((s) => /→\s*preguntada tarde/i.test(s))); // asked after the change it decides: passes, Decision ✘
       const bad = items.filter((s) => !/→\s*(preguntada|del usuario \(|no preguntada)/i.test(s));
       const asked = items.length - alone.length - bad.length - items.filter((s) => /→\s*del usuario \(/i.test(s)).length + (/^elegida/i.test(d) ? 1 : 0);
       if (bad.length) decision.push(`Sub-decisiones: each item needs "→ preguntada | del usuario (\\"…\\") | no preguntada" (${bad.slice(0, 2).join(' | ')})`);
@@ -194,12 +201,15 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
     }
   }
   const ev = field(reply, 'Evidencia');
+  const redText = `${ev} ${field(reply, 'Tests')}`;
+  // about a spec only ("spec en rojo", "rojo→verde", "el test habría fallado"), not a red button
+  const redClaim = /\b(specs?|tests?|prueba|suite)\b[^.;\n]{0,80}(\brojo\b|habr[ií]a fallado|\bfallaba\b)|\brojo\s*(→|->|a|y luego)\s*verde/i.test(redText) && !/inferid[ao]/i.test(redText);
   const near = code.length ? specsNear(code) : null;
   const committed = turn.tools.some((t) => shell(t) && /\bgit\b[^|;&\n]*\scommit\b/.test(cmdOf(t)));
   const buildAfter = lastCode >= 0 && turn.tools.slice(lastCode + 1).some((t) => shell(t) && BUILD.test(cmdOf(t)));
   const when = {
     engram: !!ctx.engram, code: code.length > 0, ui, specNear: !!near && !skip.Tests, commit: committed && !!ctx.commits,
-    inferredFromDocs: /inferida/i.test(ev) && /(doc|documentaci|documentation|oficial|official|specification|especificaci|spec de)/i.test(ev), preClaim: PRE.test(reply),
+    inferredFromDocs: /inferida/i.test(ev) && /(doc|documentaci|documentation|oficial|official|specification|especificaci|spec de)/i.test(ev), preClaim: PRE.test(reply), redClaim,
   };
   const procedure = [];
   if (routed === 'Q') procedure.push('routed as a question (Q) but changed project files');
@@ -217,6 +227,7 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
     procedure,
     browser: skip.Navegador || observed.browser.tried.length ? [] : ['UI changed with no browser attempt (browser-verify or run; curl does not count)'],
     spec: observed.tests.specsChanged.length || /Tests:\s*no \(/i.test(reply) ? [] : [`${near} sits next to the changed code and no spec was added or changed`],
+    red: observed.tests.red ? [] : ['a red claim (rojo / habría fallado) with no test run before the first code change or in a clean worktree: run it there, or write it as inferida'],
     preexisting: observed.worktree || /no comprobado/i.test(reply) ? [] : ['a failure called pre-existing without a clean-copy check'],
     trailer: ctx.commits?.length ? [] : ['a commit made this turn without the trailer "Waymark-Task: <task ID>"'],
   };
@@ -227,6 +238,11 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
   });
   const missing = steps.filter((s) => s.applies && s.enforce === 'block').flatMap((s) => s.why);
   const findings = [...steps.filter((s) => s.applies && s.enforce !== 'block').flatMap((s) => s.why), ...extras];
+  const dec = steps.find((s) => s.id === 'decision');
+  if (late.length && dec?.applies) { // cannot be undone, so it does not block; the evaluation keeps it
+    const why = `preguntada tarde (asked after the change it decides): ${late.slice(0, 3).join(' | ')}`;
+    dec.pass = false; dec.why = [...dec.why, why]; findings.push(why);
+  } else if (observed.asked.afterFirstChange && hasCierre) findings.push('a choice-window question came after the first change and no sub-decision says "preguntada tarde": check it was asked before applying what it decided');
   if (ROUTINE.fallback) findings.push('waymark/routine.json missing or invalid: checked with the minimal contract (decision, gate, Cierre)');
   if (observed.gates.some((g) => g.error)) findings.push(`a gate after the last change failed: ${observed.gates.filter((g) => g.error).map((g) => g.cmd.slice(0, 60)).join(' | ')}`);
   return { level, changed, reply, missing, findings, steps, dept, observed };
@@ -297,7 +313,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       ctx.engram = lines.some((d) => JSON.stringify(d.attachment || '').includes('mcp__engram__') || (d.message?.content || []).some?.((c) => c.type === 'tool_use' && String(c.name).startsWith('mcp__engram__')));
       const all = sessionTools(lines);
       const gaps = cierreGaps(turn, h.last_assistant_message, all, prompts, ctx);
-      if (!gaps) { try { refreshTasks(home); } catch {} return; }
+      if (!gaps) { try { refreshTasks(home, closeOpen(home, h.session_id)); } catch {} return; } // the turn ended: no longer open
       if (gaps.missing.length && !h.stop_hook_active) {
         process.stdout.write(JSON.stringify({ decision: 'block', reason: checkCierre(turn, h.last_assistant_message, all, prompts, ctx) }));
         return;
@@ -307,6 +323,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       const rec = provenanceRecord(turn, gaps, ctx, { session: h.session_id, cwd, evaluation });
       try { if (home.dir && !home.legacy) ensureLocal(home); } catch {} // excluded from git before anything is written there
       try { appendRecord(cwd, rec); } catch {}
+      try { closeOpen(home, h.session_id, rec.id); } catch {}
       try { refreshTasks(home, true); } catch {} // tasks.md: where the work stands, for any agent (docs/adr/0007)
       process.stdout.write(JSON.stringify({ systemMessage: summaryLine(rec.id, evaluation) }));
     } catch {}

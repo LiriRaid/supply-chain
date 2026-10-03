@@ -18,6 +18,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { fitFor } from './mcp-fit.mjs';
 import { projectHome } from './provenance.mjs';
+import { found } from './connect-agents.mjs';
 
 const HOME = process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark');
 const SCRIPTS = path.dirname(fileURLToPath(import.meta.url));
@@ -68,6 +69,18 @@ function migrateOffer(home) {
   try { fs.mkdirSync(HOME, { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify({ ...st, [norm(home.root)]: Date.now() })); } catch {}
   const script = path.join(SCRIPTS, 'migrate-memory.mjs').replace(/\\/g, '/');
   return `Memory migration (Waymark 2.0, docs/adr/0007): this project's memory and record are still in ~/.waymark. Offer once, with your choice window, before the task: move them into ${home.root}/.waymark/ (local, excluded from git, any agent resumes from it) — node "${script}" --project "${home.root}" shows the plan (dry run, nothing written), add --apply on yes (backup first). Declined → do not ask again; the old location keeps working until 2.1.0.`;
+}
+
+// Another agent on this machine (Codex, Gemini CLI, OpenCode) not connected to the project memory → offer once per agent.
+function agentsOffer() {
+  const stateFile = path.join(HOME, '.connect-offer.json');
+  let st = {};
+  try { st = JSON.parse(fs.readFileSync(stateFile, 'utf8')); } catch {}
+  const fresh = found().filter((a) => !a.connected && !st[norm(a.path)]);
+  if (!fresh.length) return '';
+  try { fs.mkdirSync(HOME, { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify({ ...st, ...Object.fromEntries(fresh.map((a) => [norm(a.path), Date.now()])) })); } catch {}
+  const script = path.join(SCRIPTS, 'connect-agents.mjs').replace(/\\/g, '/');
+  return `Other agents on this machine are not connected to the project memory: ${fresh.map((a) => `${a.name} (${a.path.replace(/\\/g, '/')}${a.guestOf.length ? `; ${a.guestOf.join(', ')} governs it: Waymark joins as its guest` : ''})`).join(', ')}. Offer once, with your choice window, before the task: one marked line in each one's instructions file so it reads .waymark/tasks.md first, nothing installed there — node "${script}" shows the plan (dry run), add --apply on yes (backup first). Declined → do not ask again.`;
 }
 
 // Skill folders that sync.mjs indexes: this agent's, other agents', the current project's.
@@ -207,6 +220,7 @@ const emit = () => {
   try { const s = skillsChanged(cwd); if (s) text += '\n' + s; } catch {}
   try { const m = mcpFit(cwd); if (m) text += '\n' + m; } catch {}
   try { const s = skillFit(); if (s) text += '\n' + s; } catch {}
+  try { const a = agentsOffer(); if (a) text += '\n' + a; } catch {}
   let coexist = '';
   try { coexist = coexistence(); } catch {}
   if (coexist) text = (text ? text + '\n' : '') + coexist;

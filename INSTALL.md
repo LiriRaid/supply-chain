@@ -55,6 +55,7 @@ Voy a instalar Waymark así:
 Ask it with your **choice window** if the agent has one (Claude Code: `AskUserQuestion`), the plan in the question, options as buttons:
 - **Instalar (Recomendado)** — this agent, as in the plan.
 - **Instalar en todos mis agentes** — only if §1 found others; lists them.
+- **Instalar aquí y conectar los demás** — only if §1 found Codex, Gemini CLI or OpenCode. This agent gets the full install; the others get only one marked line in their global instructions file ("if the project has `.waymark/`, read `.waymark/tasks.md` first"), with no hooks or skills in them: `node <skills-dir>/waymark/scripts/connect-agents.mjs` shows the plan, `--apply` writes it after a backup and registers them in `~/.waymark/agent.md`. After the install, the session hook offers it once for each agent that appears later.
 - **Cambiar algo** — the user says what (another folder, skip the hook, skip a step).
 - **Cancelar**.
 

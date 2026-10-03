@@ -11,7 +11,10 @@ import { fileURLToPath } from 'node:url';
 const SCRIPTS = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'waymark', 'scripts');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'waymark-test-'));
 process.env.WAYMARK_HOME = home;
-const temps = [home];
+const agentsHome = fs.mkdtempSync(path.join(os.tmpdir(), 'waymark-agents-')); // never the real ~/.codex, ~/.gemini…
+process.env.WAYMARK_AGENTS_HOME = agentsHome;
+process.env.WAYMARK_BACKUPS = path.join(home, 'backups');
+const temps = [home, agentsHome];
 after(() => { for (const d of temps) fs.rmSync(d, { recursive: true, force: true }); });
 const { taskIds, validId, decisionsIn, projectSlug, readLog, appendRecord, taskLines, verifyChain, turnInputs, commitsFor, gitSnapshot, snapshotDiff, mutatesFiles, changesProject } = await import(`file://${SCRIPTS}/provenance.mjs`);
 const { checkDecision } = await import(`file://${SCRIPTS}/tool-hook.mjs`);
@@ -200,6 +203,44 @@ test('Cierre: a complete L2 record passes', () => {
   const { cwd } = fresh();
   const ids = taskIds(cwd);
   assert.equal(checkCierre(l2(), cierre(ids.next), undefined, undefined, ctxFor(cwd)), null);
+});
+
+test('2b: a sub-decision asked late passes the block but fails Decision; a late question alone is a finding', () => {
+  const { cwd } = fresh();
+  const ids = taskIds(cwd);
+  const decisions = [{ question: '¿Cómo?', chosen: 'Backoff', discarded: ['Cola'] }, { question: '¿Límite?', chosen: '3', discarded: ['5'] }];
+  const turn = l2([call('AskUserQuestion', { questions: [] }), answered('¿Límite?', ['3', '5'], '3')]);
+  const g = cierreGaps(turn, cierre(ids.next, undefined, undefined, 'límite de reintentos → preguntada tarde'), undefined, undefined, { ids, decisions });
+  assert.deepEqual(g.missing, [], 'cannot be undone: not blocked');
+  assert.equal(g.steps.find((s) => s.id === 'decision').pass, false);
+  assert.ok(g.findings.some((f) => /preguntada tarde/.test(f)));
+  const g2 = cierreGaps(turn, cierre(ids.next, undefined, undefined, 'límite de reintentos → preguntada'), undefined, undefined, { ids, decisions });
+  assert.equal(g2.steps.find((s) => s.id === 'decision').pass, true);
+  assert.ok(g2.findings.some((f) => /came after the first change/.test(f)), 'a hint, recorded only');
+});
+
+test('2b: a red claim needs a test run before the code change or in a clean worktree, or "inferida"', () => {
+  const { cwd } = fresh();
+  const ids = taskIds(cwd);
+  const turn = (before = [], after = []) => currentTurn([prompt('agrega reintentos'), say('Waymark → L2 · dept-backend · skills: code-review'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'),
+    call('AskUserQuestion', { questions: [] }), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), ...before, call('Edit', { file_path: FILE }),
+    call('Bash', { command: 'node --check src/orders.service.mjs && npm run build' }), ...after, call('Skill', { skill: 'code-review' }), MEM()]);
+  const red = (ev) => cierre(ids.next).replace('Evidencia: observada timeouts en el log de pedidos', `Evidencia: ${ev}`);
+  const step = (g) => g.steps.find((s) => s.id === 'red');
+  assert.equal(step(cierreGaps(turn(), red('observada spec en rojo y luego verde'), undefined, undefined, ctxFor(cwd))).pass, false);
+  assert.equal(step(cierreGaps(turn([call('Bash', { command: 'npm test -- orders' })]), red('observada spec en rojo y luego verde'), undefined, undefined, ctxFor(cwd))).pass, true, 'run before the code change');
+  assert.equal(step(cierreGaps(turn([], [call('Bash', { command: 'git worktree add -q /tmp/w HEAD && (cd /tmp/w && npm test)' })]), red('observada el test habría fallado en HEAD'), undefined, undefined, ctxFor(cwd))).pass, true, 'clean worktree');
+  assert.equal(step(cierreGaps(turn(), red('inferida: el spec habría fallado (check: revertir y correr)'), undefined, undefined, ctxFor(cwd))).applies, false, 'inferida is honest');
+  assert.equal(step(cierreGaps(turn(), red('observada el botón rojo en el navegador'), undefined, undefined, ctxFor(cwd))).applies, false, 'a red button is not a red test');
+});
+
+test('2b: a .ts with a sibling template counts as UI; a service does not', () => {
+  const dir = fs.mkdtempSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '.tmp-ui-')); // the OS temp folder is exempt
+  temps.push(dir);
+  for (const f of ['article-form.ts', 'article-form.html', 'articles.service.ts']) fs.writeFileSync(path.join(dir, f), '');
+  const ui = (file) => cierreGaps(currentTurn([prompt('x'), say('Waymark → L2 · dept-frontend'), call('Edit', { file_path: path.join(dir, file) })]), '## Cierre · x').observed.browser.ui;
+  assert.equal(ui('article-form.ts'), true);
+  assert.equal(ui('articles.service.ts'), false);
 });
 
 test('Cierre: task ID missing or reused, Resultado missing', () => {
@@ -502,7 +543,7 @@ test('stop hook: Q turns and turns without project edits leave no record', () =>
 });
 
 // ---- Step 2: project memory in <project>/.waymark/ (docs/adr/0007) ----
-const { projectHome, ensureLocal, tasksMarkdown, refreshTasks, readRecords } = await import(`file://${SCRIPTS}/provenance.mjs`);
+const { projectHome, ensureLocal, tasksMarkdown, taskSummary, refreshTasks, readRecords, closeOpen } = await import(`file://${SCRIPTS}/provenance.mjs`);
 const { planFor, apply } = await import(`file://${SCRIPTS}/migrate-memory.mjs`);
 const tmpRepo = (name) => {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), `waymark-${name}-`));
@@ -510,7 +551,7 @@ const tmpRepo = (name) => {
   spawnSync('git', ['init', '-q'], { cwd: repo });
   return repo;
 };
-const oldMemory = (slug, root, wip = '- ▶ task A: step 2 next') => {
+const oldMemory = (slug, root, wip = '- ▶ task A (2026-10-01 · T2): NEXT step 2') => {
   fs.mkdirSync(path.join(home, 'projects'), { recursive: true });
   const file = path.join(home, 'projects', `${slug}.md`);
   fs.writeFileSync(file, `# Project: ${slug}\n\nPath: ${root}\n\n## Work in progress\n${wip}\n\n## Identity\n- Stack: test\n`);
@@ -569,14 +610,14 @@ test('migration: dry run writes nothing; apply moves memory and log byte for byt
   const bk = apply(plan);
   assert.equal(fs.readFileSync(path.join(repo, '.waymark', 'provenance.jsonl'), 'utf8'), bytes, 'log copied byte for byte');
   assert.ok(verifyChain(readRecords(path.join(repo, '.waymark', 'provenance.jsonl'))).ok);
-  assert.match(fs.readFileSync(path.join(repo, '.waymark', 'memory.md'), 'utf8'), /task A: step 2 next/);
+  assert.match(fs.readFileSync(path.join(repo, '.waymark', 'memory.md'), 'utf8'), /task A \(2026-10-01 · T2\): NEXT step 2/);
   assert.match(fs.readFileSync(oldFile, 'utf8'), /^Moved: .*\.waymark\/memory\.md/m);
   assert.ok(!fs.existsSync(oldLog), 'old log removed');
   assert.ok(fs.existsSync(path.join(bk, 'mig.md')) && fs.existsSync(path.join(bk, 'mig.jsonl')), 'backup first');
   assert.match(fs.readFileSync(path.join(home, 'projects.md'), 'utf8'), /\| mig \| x \| .*\.waymark\/memory\.md \|/);
   assert.match(excludeOf(repo), /^\.waymark\/$/m);
   const tasks = fs.readFileSync(path.join(repo, '.waymark', 'tasks.md'), 'utf8');
-  assert.match(tasks, /## In progress \/ pending\n- ▶ task A: step 2 next/);
+  assert.match(tasks, /## In progress \/ pending\n- 2026-10-01 · T2 · en curso · próximo: step 2/);
   assert.match(tasks, /\| 2026-10-01 · T2 \| parcial \(x\) \| 4\/5 \| second \|\n\| 2026-10-01 · T1 \| hecho \| 5\/5 \| first \|/);
   assert.equal(projectHome(repo).legacy, false);
   assert.equal(taskIds(repo, new Date(2026, 9, 1)).next, '2026-10-01 · T3', 'IDs continue from the migrated record');
@@ -591,18 +632,51 @@ test('tasks.md: generated from memory and the log, never for the bridge', () => 
   assert.ok(!fs.existsSync(path.join(repo, '.waymark')));
   fs.rmSync(old);
   fs.mkdirSync(path.join(repo, '.waymark'));
-  fs.writeFileSync(path.join(repo, '.waymark', 'memory.md'), '# P\n\n## Work in progress\n- ▶ B: next step 3\n');
+  const mem = path.join(repo, '.waymark', 'memory.md');
+  fs.writeFileSync(mem, '# P\n\n## Work in progress\n'
+    + `- ▶ Big step (2026-10-03 · T2, L3): plan ✔a · ▶b-gate · c. ${'detail '.repeat(300)}NEXT run the gate ${'x'.repeat(400)}\n`
+    + '- [2026-10-03 · T3] KB form: fixed. Pendiente: verificación visual del usuario\n'
+    + '- STEP SPEC (2026-10-03): long notes\n- PLAN: next session as 2026-10-02 · T2b\n- Last request: old\n');
   const h = projectHome(repo);
-  assert.match(tasksMarkdown(h), /- ▶ B: next step 3[\s\S]*## Done \(last 0/);
+  const md = tasksMarkdown(h);
+  const lines = md.split('\n');
+  assert.ok(lines.includes('- 2026-10-03 · T3 · pendiente · próximo: verificación visual del usuario'), md);
+  const t2 = lines.find((l) => l.startsWith('- 2026-10-03 · T2 · en curso · paso b-gate · próximo: run the gate'));
+  assert.ok(t2 && t2.length <= 300 && t2.endsWith('…'), 'one task line, compact');
+  assert.match(md, /- \(3 more notes in memory\.md, not tasks\)[\s\S]*## Done \(last 0/);
+  assert.ok(!/STEP SPEC|T2b|Last request/.test(md), 'notes stay in memory.md, also one that quotes a task ID');
+  assert.equal(taskSummary('- [2026-10-03 · T1] Next.js upgrade: router done. Pendiente: deploy'), '- 2026-10-03 · T1 · pendiente · próximo: deploy');
+  assert.equal(taskSummary('- ▶ X (2026-10-03 · T4): rendered as NEXT/Pendiente: fragment. NEXT ship it'), '- 2026-10-03 · T4 · en curso · próximo: ship it', 'the last marker wins');
   assert.equal(refreshTasks(h), true);
   assert.equal(refreshTasks(h), false, 'up to date: not rewritten');
+  fs.writeFileSync(h.log, JSON.stringify({ id: '2026-10-03 · T3', at: '2026-10-03T15:00:00Z', prompt: 'p',
+    cierre: `## Cierre · 2026-10-03 · T3\nResultado: hecho · **Decisión:** del usuario ("Backoff")\nSub-decisiones: límite → preguntada\nEvidencia: observada ${'e'.repeat(300)}\nAprendido: backoff ← timeouts`,
+    evaluation: { score: '6/7', steps: { Decision: true, Review: false } } }) + '\n');
+  const last = tasksMarkdown(h);
+  assert.match(last, /## Last closed: 2026-10-03 · T3 \([^)]*full record: last line of provenance\.jsonl\)\n- Resultado: hecho\n- Decisión: del usuario \("Backoff"\)\n- Sub-decisiones: límite → preguntada\n- Evidencia: observada e+…\n- Aprendido: backoff ← timeouts\n- Evaluación: 6\/7 \(✘ Review\)/);
+  assert.ok(last.split('\n').find((l) => l.startsWith('- Evidencia:')).length <= 234, '~220 per field');
+  fs.rmSync(h.log);
+  fs.writeFileSync(mem, '# P\n\n## Work in progress\n- Updated: 2026-10-02\n- Task 3: Clientes multiselect\n- Decision 3: x\n- Next: probar en navegador\n');
+  assert.match(tasksMarkdown(h), /- Task 3: Clientes multiselect\n- Next: probar en navegador\n- \(2 more notes/, 'no IDs (old format): its Task/Next lines');
+});
+
+test('tasks.md: stays within ~3,000 characters by dropping the oldest done rows', () => {
+  const repo = tmpRepo('tasks-budget');
+  fs.mkdirSync(path.join(repo, '.waymark'));
+  fs.writeFileSync(path.join(repo, '.waymark', 'memory.md'), '# P\n\n## Work in progress\n'
+    + [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `- ▶ T (2026-10-03 · T${n}): NEXT ${'y'.repeat(400)}`).join('\n') + '\n');
+  const h = projectHome(repo);
+  fs.writeFileSync(h.log, [1, 2, 3, 4, 5, 6, 7, 8].map((n) => JSON.stringify({ id: `2026-10-02 · T${n}`, cierre: `Resultado: hecho ${'z'.repeat(80)}`, prompt: 'p'.repeat(200) })).join('\n') + '\n');
+  const md = tasksMarkdown(h);
+  assert.equal(md.split('\n').filter((l) => l.startsWith('- 2026-10-03')).length, 9, 'every task is kept');
+  assert.match(md, /## Done \(last 1, newest first\)\n[^\n]*\n[^\n]*\n\| 2026-10-02 · T8 \|/, 'oldest rows dropped first, at least one kept');
 });
 
 test('stop hook: with memory in the project, the record and tasks.md go to <project>/.waymark/ and memory edits are not changes', () => {
   const repo = tmpRepo('stop');
   fs.mkdirSync(path.join(repo, '.waymark'));
   const mem = path.join(repo, '.waymark', 'memory.md');
-  fs.writeFileSync(mem, '# P\n\n## Work in progress\n- ▶ retries: done\n');
+  fs.writeFileSync(mem, '# P\n\n## Work in progress\n- ▶ retries (2026-10-01 · T5): NEXT deploy\n');
   const transcript = path.join(home, 't-step2.jsonl');
   const lines = [...l2Lines.slice(0, -1), call('Edit', { file_path: mem })];
   fs.writeFileSync(transcript, lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
@@ -612,7 +686,7 @@ test('stop hook: with memory in the project, the record and tasks.md go to <proj
   const recs = readRecords(path.join(repo, '.waymark', 'provenance.jsonl'));
   assert.equal(recs.length, 1);
   assert.deepEqual(recs[0].files, [FILE], 'the memory edit is not a project change');
-  assert.match(fs.readFileSync(path.join(repo, '.waymark', 'tasks.md'), 'utf8'), new RegExp(`- ▶ retries: done[\\s\\S]*\\| ${id} \\| hecho`));
+  assert.match(fs.readFileSync(path.join(repo, '.waymark', 'tasks.md'), 'utf8'), new RegExp(`- 2026-10-01 · T5 · en curso · próximo: deploy[\\s\\S]*\\| ${id} \\| hecho`));
   assert.match(excludeOf(repo), /^\.waymark\/$/m);
   const bare = tmpRepo('stop-bare'); // no memory at all: the record still lands excluded from git
   const r2 = spawnSync(process.execPath, [path.join(SCRIPTS, 'stop-hook.mjs')], { input: JSON.stringify({ transcript_path: transcript, cwd: bare, session_id: 's-step2b', last_assistant_message: cierre(id) }), env: { ...process.env, WAYMARK_HOME: home }, encoding: 'utf8' });
@@ -623,6 +697,69 @@ test('stop hook: with memory in the project, the record and tasks.md go to <proj
   fs.mkdirSync(path.join(logOnly, '.waymark'));
   fs.writeFileSync(path.join(logOnly, '.waymark', 'provenance.jsonl'), '{}\n');
   assert.match(planFor({ slug: 'x', file: oldMemory('mig-log', logOnly), root: logOnly }).skip || '', /provenance\.jsonl already exists/, 'an existing log is never overwritten');
+});
+
+test('open.json: the per-prompt hook marks the turn started; the end of the turn closes it', () => {
+  const repo = tmpRepo('open');
+  fs.mkdirSync(path.join(repo, '.waymark'));
+  fs.writeFileSync(path.join(repo, '.waymark', 'memory.md'), '# P\n\n## Work in progress\n- ▶ A (2026-10-01 · T1): NEXT b\n');
+  const env = { ...process.env, WAYMARK_HOME: home, WAYMARK_REPO: 'invalid/none' };
+  spawnSync(process.execPath, [path.join(SCRIPTS, 'rule0-hook.mjs')], { input: JSON.stringify({ cwd: repo, session_id: 's-open', prompt: 'arregla   el login\nya' }), env, encoding: 'utf8' });
+  const open = JSON.parse(fs.readFileSync(path.join(repo, '.waymark', 'open.json'), 'utf8'));
+  assert.equal(open['s-open'].prompt, 'arregla el login ya');
+  const tasks = () => fs.readFileSync(path.join(repo, '.waymark', 'tasks.md'), 'utf8');
+  assert.match(tasks(), /## Started, not closed[^\n]*\n- \d{4}-\d\d-\d\d · T1 · started [^\n]* · "arregla el login ya"/, 'a turn that never ends (quota) still shows');
+  const transcript = path.join(home, 't-open.jsonl');
+  fs.writeFileSync(transcript, [prompt('¿qué hace esto?'), say('Waymark → Q · dept-qa'), call('Read', { file_path: FILE })].map((l) => JSON.stringify(l)).join('\n') + '\n');
+  spawnSync(process.execPath, [path.join(SCRIPTS, 'stop-hook.mjs')], { input: JSON.stringify({ transcript_path: transcript, cwd: repo, session_id: 's-open', last_assistant_message: 'Respuesta' }), env, encoding: 'utf8' });
+  assert.ok(!fs.existsSync(path.join(repo, '.waymark', 'open.json')), 'the turn ended: closed');
+  assert.ok(!/Started, not closed/.test(tasks()));
+  const h = projectHome(repo);
+  fs.writeFileSync(path.join(repo, '.waymark', 'open.json'), JSON.stringify({ hung: { at: new Date().toISOString(), next: '2026-10-03 · T3', followUp: '2026-10-03 · T2c', prompt: 'a' }, other: { at: new Date().toISOString(), next: '2026-10-03 · T4', followUp: null, prompt: 'b' } }));
+  assert.equal(closeOpen(h, 's-new', '2026-10-03 · T3b'), true, 'a hung task closed in another session is removed by its ID');
+  assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(path.join(repo, '.waymark', 'open.json'), 'utf8'))), ['other']);
+  const bare = tmpRepo('open-bare'); // no memory in the project: nothing is written there
+  spawnSync(process.execPath, [path.join(SCRIPTS, 'rule0-hook.mjs')], { input: JSON.stringify({ cwd: bare, session_id: 's-open2', prompt: 'x' }), env, encoding: 'utf8' });
+  assert.ok(!fs.existsSync(path.join(bare, '.waymark')));
+});
+
+test('connect-agents: one marked pointer block per agent found, backup first, registry row; the session hook offers it once', async () => {
+  const { found, planFor, apply: connect, POINTER } = await import(`file://${SCRIPTS}/connect-agents.mjs`);
+  delete process.env.CODEX_HOME;
+  process.env.WAYMARK_BACKUPS = path.join(home, 'backups');
+  fs.mkdirSync(path.join(agentsHome, '.codex'), { recursive: true });
+  fs.writeFileSync(path.join(agentsHome, '.codex', 'AGENTS.md'), '# Mine\nkeep this');
+  fs.mkdirSync(path.join(agentsHome, '.config', 'opencode'), { recursive: true });
+  const env = { ...process.env, WAYMARK_NO_SYNC: '1', WAYMARK_CLAUDE_JSON: path.join(home, 'none.json'), WAYMARK_CLAUDE_PROJECTS: path.join(home, 'none') };
+  const session = () => spawnSync(process.execPath, [path.join(SCRIPTS, 'session-hook.mjs')], { input: JSON.stringify({ cwd: agentsHome }), env, encoding: 'utf8' }).stdout;
+  assert.match(session(), /not connected to the project memory: Codex \([^)]*\.codex\/AGENTS\.md\), OpenCode/);
+  assert.doesNotMatch(session(), /not connected/, 'offered once');
+  const agents = found();
+  assert.deepEqual(agents.map((a) => a.name), ['Codex', 'OpenCode'], 'only folders that exist (no .gemini here)');
+  for (const a of agents) connect(planFor(a));
+  const codex = fs.readFileSync(path.join(agentsHome, '.codex', 'AGENTS.md'), 'utf8');
+  assert.equal(codex, `# Mine\nkeep this\n\n${POINTER}\n`, 'the rest of the file is untouched');
+  assert.equal(fs.readFileSync(path.join(agentsHome, '.config', 'opencode', 'AGENTS.md'), 'utf8'), `${POINTER}\n`, 'created when missing');
+  const bk = fs.readdirSync(path.join(home, 'backups')).find((d) => d.endsWith('-connect-agents'));
+  assert.equal(fs.readFileSync(path.join(home, 'backups', bk, 'codex', 'AGENTS.md'), 'utf8'), '# Mine\nkeep this');
+  const reg = fs.readFileSync(path.join(home, 'agent.md'), 'utf8');
+  assert.match(reg, /## Connected agents[\s\S]*\| OpenCode \|[\s\S]*\| Codex \|/);
+  assert.ok(found().every((a) => a.connected) && planFor(found()[0]).skip, 'idempotent: already connected');
+  connect({ ...found()[0], connected: false, exists: true }); // a forced rerun replaces the registry row, never duplicates it
+  assert.equal(fs.readFileSync(path.join(home, 'agent.md'), 'utf8').match(/\| Codex \|/g).length, 1);
+});
+
+test('connect-agents: with an orchestrator in the file, Waymark joins as its guest and never touches its blocks', async () => {
+  const { found, planFor, apply: connect } = await import(`file://${SCRIPTS}/connect-agents.mjs`);
+  fs.mkdirSync(path.join(agentsHome, '.gemini'), { recursive: true });
+  const theirs = '<!-- gentle-ai:persona -->\nYou are the orchestrator.\n<!-- /gentle-ai:persona -->\n';
+  fs.writeFileSync(path.join(agentsHome, '.gemini', 'GEMINI.md'), theirs);
+  const g = found().find((a) => a.name === 'Gemini CLI');
+  assert.deepEqual(g.guestOf, ['gentle-ai']);
+  assert.match(planFor(g).steps[0], /as a guest of gentle-ai/);
+  connect(planFor(g));
+  assert.ok(fs.readFileSync(path.join(agentsHome, '.gemini', 'GEMINI.md'), 'utf8').startsWith(theirs), 'its block intact');
+  assert.match(fs.readFileSync(path.join(home, 'agent.md'), 'utf8'), /\| Gemini CLI \| [^|]+ \| \d{4}-\d\d-\d\d · invitado de gentle-ai \|/);
 });
 
 test('session hook: new location points to tasks.md; the bridge offers the migration once', () => {

@@ -20,7 +20,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { readTail, sessionState } from './transcript.mjs';
-import { taskIds, saveSnapshot } from './provenance.mjs';
+import { taskIds, saveSnapshot, markOpen } from './provenance.mjs';
 
 const REPO = process.env.WAYMARK_REPO || 'LiriRaid/waymark';
 const DAY = 24 * 60 * 60 * 1000;
@@ -131,6 +131,7 @@ async function main(input) {
   let ids = '';
   try { if (!silent) ids = taskLine(hook.cwd || process.cwd()); } catch {}
   try { if (!silent) saveSnapshot(hook.session_id, hook.cwd || process.cwd()); } catch {} // the end-of-turn hook diffs against it
+  try { if (!silent) markOpen(hook.cwd || process.cwd(), hook.session_id, hook.prompt); } catch {} // a turn that never ends still shows in tasks.md
   const reminder = silent ? '' : (st.openedWithWaymark ? short : full) + ids + (mode === 'waymark-leads' ? coexist : '');
   const extra = await updateLine();
   const out = {};
