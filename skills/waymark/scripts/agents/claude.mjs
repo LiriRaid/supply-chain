@@ -5,6 +5,7 @@
 // - call(): the pre-tool input as { files } (an edit) or { command } (a shell command), or null for other tools.
 // - out: how each hook answers (context for the model, deny a tool call, block the end of a turn, a notice for the user).
 // - instructions / sessions(): the user's instructions file (hashed into the record) and the transcripts of a folder.
+// - lacks / note(skillsDir): routine steps the agent has no capability for, and one line on how it does the rest.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -29,6 +30,8 @@ export const out = {
 };
 
 export const instructions = path.join(os.homedir(), '.claude', 'CLAUDE.md');
+export const lacks = []; // routine steps this agent cannot do (recorded as not applicable); Claude Code has them all
+export const note = () => ''; // how this agent does what the routine names in Claude terms (added to the reminder and the gate)
 
 // Transcripts of the sessions opened in cwd, newest first (Claude Code names the folder after cwd, every
 // non-alphanumeric character as "-").

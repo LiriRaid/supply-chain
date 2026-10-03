@@ -67,13 +67,15 @@ function branchAt(dir) {
 export function gate(hook, agent) {
   const c = agent.call(hook), cwd = hook.cwd || process.cwd();
   if (!c) return null;
-  if (c.command !== undefined) return changesProject(c.command) ? checkDecision({ command: c.command }, agent.read(hook), hook.session_id, undefined, cwd) : null;
+  const withNote = (deny) => (deny ? deny + agent.note(SKILLS_DIR) : null);
+  if (c.command !== undefined) return changesProject(c.command) ? withNote(checkDecision({ command: c.command }, agent.read(hook), hook.session_id, undefined, cwd)) : null;
   const files = c.files.filter((f) => !exempt(f));
   if (!files.length) return null;
   const lines = agent.read(hook);
-  for (const f of files) { const deny = checkDecision(f, lines, hook.session_id, undefined, cwd); if (deny) return deny; }
+  for (const f of files) { const deny = checkDecision(f, lines, hook.session_id, undefined, cwd); if (deny) return withNote(deny); }
   return null;
 }
+const SKILLS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const agent = agentFrom();

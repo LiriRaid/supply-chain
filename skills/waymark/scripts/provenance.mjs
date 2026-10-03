@@ -235,7 +235,7 @@ export function decisionsIn(lines) {
       // itself holds a comma falls back to a substring match.
       const parts = String(chosen).split(',').map((s) => s.trim());
       const picked = (l) => parts.includes(l) || (l.includes(',') && String(chosen).includes(l));
-      out.push({ question: q.question, chosen, discarded: (q.options || []).map((o) => o.label).filter((l) => !picked(l)) });
+      out.push({ question: q.question, chosen, discarded: (q.options || []).map((o) => o.label).filter((l) => !picked(l)), ...(r.source ? { source: r.source } : {}) }); // source "chat": asked in the chat (agents without a choice window, docs/adr/0009)
     }
   }
   return out;

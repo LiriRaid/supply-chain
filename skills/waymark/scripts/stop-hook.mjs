@@ -90,7 +90,7 @@ export function splitTop(s, sep = ';') {
 
 const field = (reply, name) => reply.match(new RegExp(`${name}:[ \\t]*([^\\n]*)`, 'i'))?.[1]?.trim() || ''; // same line only
 
-// The block reason, or null. ctx: { ids, decisions, gitChanged, commits, branches } (all optional).
+// The block reason, or null. ctx: { ids, decisions, gitChanged, commits, branches, lacks, agent } (all optional).
 export function checkCierre(turn, last, allTools = turn.tools, prompts = [turn.prompt], ctx = {}) {
   const gaps = cierreGaps(turn, last, allTools, prompts, ctx);
   if (!gaps?.missing.length) return null;
@@ -238,9 +238,10 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
     trailer: ctx.commits?.length ? [] : ['a commit made this turn without the trailer "Waymark-Task: <task ID>"'],
   };
   const steps = ROUTINE.steps.map((s) => {
-    const applies = s.levels.includes(level) && (!s.when || when[s.when]);
+    const lacked = (ctx.lacks || []).includes(s.id); // the agent has no capability for it (docs/adr/0009): not applicable
+    const applies = s.levels.includes(level) && (!s.when || when[s.when]) && !lacked;
     const why = applies ? fails[s.id] || [] : [];
-    return { id: s.id, label: s.label, enforce: s.enforce, applies, pass: applies ? !why.length : null, why };
+    return { id: s.id, label: s.label, enforce: s.enforce, applies, pass: applies ? !why.length : null, why, ...(lacked ? { na: ctx.agent || 'agent' } : {}) };
   });
   const missing = steps.filter((s) => s.applies && s.enforce === 'block').flatMap((s) => s.why);
   const findings = [...steps.filter((s) => s.applies && s.enforce !== 'block').flatMap((s) => s.why), ...extras];
@@ -319,7 +320,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       const lines = agent.read(h, 4 * 1024 * 1024), cwd = h.cwd || process.cwd();
       const prompts = lines.filter(isPrompt).map(promptText).slice(-3); // this task: the current prompt and the two before it
       const home = projectHome(cwd);
-      const turn = currentTurn(lines), ctx = { ids: taskIds(cwd), decisions: decisionsIn(taskLines(lines)), memoryFile: home.memory.replace(/\\/g, '/'), slug: home.slug };
+      const turn = currentTurn(lines), ctx = { ids: taskIds(cwd), decisions: decisionsIn(taskLines(lines)), memoryFile: home.memory.replace(/\\/g, '/'), slug: home.slug, lacks: agent.lacks, agent: agent.name };
       const claimed = String(h.last_assistant_message || '').replace(/\*\*|__/g, '').match(/##\s*Cierre\s*·\s*(.+)/)?.[1]?.match(ID)?.[0];
       ctx.commits = commitsFor(cwd, claimed);
       ctx.inputs = turnInputs(taskLines(lines, 1), cwd, agent.instructions);

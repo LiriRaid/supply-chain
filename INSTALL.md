@@ -195,7 +195,8 @@ The agent offers each item with the choice window. `waymark.mjs sync | mcp-fit |
 
   Verify: `echo {} | node "<skills-dir>/waymark/scripts/rule0-hook.mjs"` and `echo {} | node "<skills-dir>/waymark/scripts/session-hook.mjs"` each print JSON with `additionalContext`. `echo {} | node "<skills-dir>/waymark/scripts/tool-hook.mjs"` and `echo {} | node "<skills-dir>/waymark/scripts/stop-hook.mjs"` print nothing (they only answer when a check fires).
 - **Coexistence mode:** `guest` or `skills-only` → register **none** of the hooks (the orchestrator's hooks own the turn). `waymark-leads` → all four, added after the other framework's; never remove or reorder its hooks.
-- **Other agents:** the same four scripts with `--agent <name>`, once that agent has an adapter in `scripts/agents/` (Codex: Waymark 2.0 step 3b). Until then the instructions block and the pointer line (`connect-agents.mjs`) apply; say so in the report.
+- **Codex CLI:** `node "<skills-dir>/waymark/scripts/install-hooks.mjs" --agent codex` shows the plan for `~/.codex/hooks.json` **[ask]**; then re-run it with `--apply`. Tell the user to open `/hooks` in Codex and trust the four Waymark hooks, because Codex skips them until then (`adapters/codex.md`, `docs/adr/0009`).
+- **Other agents:** the same four scripts with `--agent <name>`, once that agent has an adapter in `scripts/agents/`. Until then the instructions block and the pointer line (`connect-agents.mjs`) apply; say so in the report.
 - Report it under *Archivos modificados* (`settings.json — hook Rule 0 agregado`).
 
 **7.3 Sync.** Run:

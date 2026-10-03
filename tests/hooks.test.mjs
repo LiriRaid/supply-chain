@@ -910,3 +910,100 @@ test('adapter: the hooks answer through the agent module; the gate no longer pol
   assert.match(gate({ tool_name: 'Edit', tool_input: { file_path: FILE }, session_id: `s-${Math.random()}` }, fake), /L1 decision gate/);
   assert.equal(gate({ tool_name: 'Edit', tool_input: { file_path: path.join(os.homedir(), '.waymark', 'x.md') } }, fake), null, 'memory files exempt');
 });
+
+// ---- Step 3b (docs/adr/0009): the Codex adapter ----
+const cx = await import(`file://${SCRIPTS}/agents/codex.mjs`);
+let ord = 0;
+const row = (type, payload, ts = new Date(Date.UTC(2026, 9, 3, 15, 0, ord)).toISOString()) => ({ timestamp: ts, ordinal: ord++, type, payload });
+const item = (turn, it) => row('event_msg', { type: 'item_completed', thread_id: 'th', turn_id: turn, item: it });
+const cxUser = (turn, id, text) => item(turn, { type: 'UserMessage', id, content: [{ type: 'text', text }] });
+const cxSay = (turn, text) => item(turn, { type: 'AgentMessage', id: `a${ord}`, content: [{ type: 'Text', text }] });
+const cxCmd = (turn, command, exit = 0, out = 'ok') => item(turn, { type: 'CommandExecution', id: `c${ord}`, command: ['C:\\pwsh.exe', '-Command', command], status: 'completed', exit_code: exit, aggregated_output: out, duration: { secs: 2, nanos: 0 } });
+const cxEdit = (turn, file) => item(turn, { type: 'FileChange', id: `f${ord}`, changes: { [file]: { type: 'update' } } });
+const cxAsk = (callId, q) => row('response_item', { type: 'function_call', name: 'request_user_input', call_id: callId, arguments: JSON.stringify({ questions: q }) });
+const cxAnswer = (callId, answers) => row('response_item', { type: 'function_call_output', call_id: callId, output: JSON.stringify({ answers }) });
+const cxTokens = (total, input, cached, output) => row('event_msg', { type: 'token_count', info: { total_token_usage: { total_tokens: total }, last_token_usage: { input_tokens: input, cached_input_tokens: cached, cache_write_input_tokens: 0, output_tokens: output } } });
+const RUI_Q = [{ header: 'Retry', id: 'retry', question: '¿Cómo reintento?', options: [{ label: 'Backoff', description: 'x' }, { label: 'Cola', description: 'y' }] }];
+
+test('codex adapter: the rollout becomes core lines (prompts, routing, skills read, edits, choice window, tokens, model)', () => {
+  const rows = [
+    row('session_meta', { cli_version: '0.160.0', cwd: 'C:\\work\\proj' }), row('turn_context', { turn_id: 't1', model: 'gpt-5.5' }),
+    cxUser('t1', 'item-1', 'agrega reintentos'), cxSay('t1', 'Waymark → L2 · dept-backend · skills: ninguna'),
+    cxCmd('t1', 'Get-Content C:/skills/dept-backend/SKILL.md'), cxAsk('call_1', RUI_Q), cxAnswer('call_1', { retry: { answers: ['Backoff'] } }),
+    cxEdit('t1', FILE), cxCmd('t1', 'npm run build', 1, 'error TS2322'), cxTokens(1000, 900, 600, 100), cxTokens(1000, 900, 600, 100), cxTokens(1500, 400, 300, 100),
+  ];
+  const lines = cx.toLines(rows), turn = currentTurn(lines);
+  assert.equal(turn.prompt, 'agrega reintentos');
+  assert.equal(routedLevel(turn.texts, turn.tools), 2);
+  assert.equal(routedDept(turn.texts, turn.tools), 'dept-backend');
+  assert.deepEqual(turn.tools.map((t) => t.name), ['Skill', 'Bash', 'AskUserQuestion', 'Edit', 'Bash'], 'reading SKILL.md is the skill call');
+  assert.equal(turn.tools[0].input.skill, 'dept-backend');
+  assert.equal(turn.tools[3].input.file_path, FILE);
+  assert.equal(turn.results[turn.tools[4].id].error, true, 'a non-zero exit code is a failed result');
+  assert.deepEqual(decisionsIn(taskLines(lines)), [{ question: '¿Cómo reintento?', chosen: 'Backoff', discarded: ['Cola'] }]);
+  assert.deepEqual([turnUsage(lines).responses, turnUsage(lines).cacheRead, turnUsage(lines).input], [2, 900, 400], 'a repeated count is not a new response; cached input apart');
+  const inputs = turnInputs(taskLines(lines, 1), '/work/none', cx.instructions);
+  assert.deepEqual([inputs.agent, inputs.model], ['0.160.0', 'gpt-5.5']);
+});
+
+test('codex adapter: without request_user_input, a question that ended the turn and the reply count as a decision asked in chat', async () => {
+  const { gate } = await import(`file://${SCRIPTS}/tool-hook.mjs`);
+  const rows = [cxUser('t1', 'i1', 'agrega reintentos'), cxSay('t1', 'Waymark → L2 · dept-backend · skills: ninguna'), cxSay('t1', 'Opciones: 1) Backoff (recomendado) 2) Cola.\n¿Cuál prefieres?'),
+    cxUser('t2', 'i2', 'backoff'), cxSay('t2', 'Waymark → L2 · dept-backend · skills: ninguna')];
+  const lines = cx.toLines(rows);
+  assert.deepEqual(decisionsIn(taskLines(lines)), [{ question: '¿Cuál prefieres?', chosen: 'backoff', discarded: [], source: 'chat' }]);
+  const fedBack = cx.toLines([...rows.slice(0, 3), cxUser('t1', 'i9', 'Waymark: this L2 turn changed files and is missing: 1) …')]);
+  assert.deepEqual(decisionsIn(fedBack), [], 'a block reason fed back is not the user answering');
+  const agent = { ...cx, read: () => lines };
+  assert.equal(gate({ tool_name: 'apply_patch', tool_input: { command: `*** Begin Patch\n*** Update File: ${FILE}\n@@\n-a\n+b\n*** End Patch` }, cwd: '/work/proj', session_id: `s-${Math.random()}` }, agent), null, 'asked in chat: the gate passes');
+  const fresh = { ...cx, read: () => cx.toLines(rows.slice(0, 2)) };
+  const deny = gate({ tool_name: 'apply_patch', tool_input: { command: `*** Begin Patch\n*** Add File: src/new.mjs\n+x\n*** End Patch` }, cwd: '/work/proj', session_id: `s-${Math.random()}` }, fresh);
+  assert.match(deny, /L2 decision gate[\s\S]*In Codex: "invoke the skill <name>" = read .*\/<name>\/SKILL\.md/, 'the gate tells Codex how');
+  assert.deepEqual(cx.patchFiles('*** Update File: a.ts\n*** Move to: b/c.ts\n*** Delete File: /abs/d.ts', '/w').map((f) => path.basename(f)), ['a.ts', 'c.ts', 'd.ts']);
+  assert.equal(cx.call({ tool_name: 'mcp__engram__mem_save', tool_input: {} }), null);
+});
+
+test('stop hook --agent codex: the task is recorded as codex and code-review does not apply', () => {
+  const { cwd, log } = fresh();
+  const memFile = path.join(os.homedir(), '.waymark', 'projects', 'proj.md');
+  const rows = [row('session_meta', { cli_version: '0.160.0' }), row('turn_context', { model: 'gpt-5.5' }),
+    cxUser('t1', 'i1', 'agrega reintentos al servicio de pedidos'), cxSay('t1', 'Waymark → L2 · dept-backend · skills: ninguna'),
+    cxCmd('t1', 'Get-Content C:/skills/dept-backend/SKILL.md'), cxCmd('t1', 'Get-Content C:/skills/dept-backend/procedures.md', 0, '### Endpoint'),
+    cxAsk('call_9', [{ id: 'q', question: '¿Cómo?', options: [{ label: 'Backoff' }, { label: 'Cola' }] }]), cxAnswer('call_9', { q: { answers: ['Backoff'] } }),
+    cxEdit('t1', FILE), cxCmd('t1', 'node --check src/orders.service.mjs && npm run build'), cxEdit('t1', memFile), cxTokens(2000, 1500, 1000, 500)];
+  const transcript = path.join(home, `t-codex-${n}.jsonl`);
+  fs.writeFileSync(transcript, rows.map((l) => JSON.stringify(l)).join('\n') + '\n');
+  const id = `${new Date().toLocaleDateString('sv')} · T1`;
+  const r = spawnSync(process.execPath, [path.join(SCRIPTS, 'stop-hook.mjs'), '--agent', 'codex'], { input: JSON.stringify({ transcript_path: transcript, cwd, session_id: 'cx1', last_assistant_message: cierre(id) }), env: { ...process.env, WAYMARK_HOME: home }, encoding: 'utf8' });
+  const out = JSON.parse(r.stdout);
+  assert.ok(out.systemMessage && !out.decision, `not blocked: ${r.stdout}`);
+  const rec = readLog(cwd).pop();
+  assert.equal(rec.agent, 'codex');
+  assert.equal(rec.evaluation.steps.Review, undefined, 'no code-review capability: not applicable, not ✘');
+  assert.equal(rec.evaluation.model, 'gpt-5.5');
+  assert.deepEqual(rec.department.invoked, ['dept-backend'], 'the SKILL.md read is the invocation');
+  assert.ok(fs.existsSync(log));
+});
+
+test('install-hooks --agent codex: hooks.json entries with --agent codex, apply_patch matcher and commandWindows', async () => {
+  const { planHooks } = await import(`file://${SCRIPTS}/install-hooks.mjs`);
+  const { settings, steps } = planHooks({}, { scripts: '/s/waymark/scripts', agent: 'codex' });
+  assert.equal(steps.length, 4);
+  assert.deepEqual(settings.hooks.PreToolUse, [{ matcher: 'Bash|apply_patch', hooks: [{ type: 'command', command: 'node "/s/waymark/scripts/tool-hook.mjs" --agent codex', commandWindows: 'node "/s/waymark/scripts/tool-hook.mjs" --agent codex' }] }]);
+  assert.deepEqual(planHooks(settings, { scripts: '/s/waymark/scripts', agent: 'codex' }).steps, [], 'idempotent');
+  assert.equal(planHooks({}, { scripts: '/s/waymark/scripts' }).settings.hooks.PreToolUse[0].hooks[0].commandWindows, undefined, 'Claude Code: no commandWindows');
+});
+
+test('codex adapter: sessions(cwd) finds the rollouts opened in that folder', () => {
+  const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'waymark-codex-'));
+  temps.push(codexHome);
+  const before = process.env.CODEX_HOME;
+  process.env.CODEX_HOME = codexHome;
+  try {
+    const dir = path.join(codexHome, 'sessions', '2026', '10', '03');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'rollout-a.jsonl'), JSON.stringify(row('session_meta', { cwd: 'C:\\work\\Proj' })) + '\n');
+    fs.writeFileSync(path.join(dir, 'rollout-b.jsonl'), JSON.stringify(row('session_meta', { cwd: 'C:\\work\\other' })) + '\n');
+    assert.deepEqual(cx.sessions('c:/work/proj').map((f) => path.basename(f)), ['rollout-a.jsonl']);
+  } finally { if (before === undefined) delete process.env.CODEX_HOME; else process.env.CODEX_HOME = before; }
+});

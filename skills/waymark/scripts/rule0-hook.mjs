@@ -17,6 +17,7 @@ import { taskIds, saveSnapshot, markOpen } from './provenance.mjs';
 import { agentFrom } from './agents/index.mjs';
 
 const HOME = process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark');
+const SKILLS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..'); // where this install's skills live
 
 // Coexistence mode (~/.waymark/coexistence.md, waymark/references/coexistence.md) decides the reminder.
 let mode = '';
@@ -46,7 +47,7 @@ export function reminder(hook, agent) {
   try { ids = taskLine(cwd); } catch {}
   try { saveSnapshot(hook.session_id, cwd); } catch {} // the end-of-turn hook diffs against it
   try { markOpen(cwd, hook.session_id, hook.prompt); } catch {} // a turn that never ends still shows in tasks.md
-  return agent.out.context('UserPromptSubmit', (st.openedWithWaymark ? short : full) + ids + (mode === 'waymark-leads' ? coexist : ''));
+  return agent.out.context('UserPromptSubmit', (st.openedWithWaymark ? short : full) + ids + (mode === 'waymark-leads' ? coexist : '') + agent.note(SKILLS_DIR));
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

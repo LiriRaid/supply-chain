@@ -74,6 +74,16 @@ Waymark is now a supply chain of the agent's work: every task goes through defin
   - **`install-hooks.mjs` replaces the manual merge:** it shows a dry-run plan, and `--apply` makes a backup first. It adds, updates or de-duplicates only Waymark's own entries and registers nothing in guest or skills-only mode.
   - **The record says who did the work:** each record carries `agent`, and `tasks.md` shows it next to the ID (`T4 · codex`).
   - **Questions leave a trace:** a turn routed Q in a project with memory gets a short chained record with no task ID (`kind: "Q"`), so it never takes a `T<n>`. `tasks.md` shows *Preguntas (Q) desde el último cierre: N*.
+- **Step 3b: the Codex adapter** (`docs/adr/0009`):
+  - **Codex CLI runs the same four hooks:** `install-hooks.mjs --agent codex` writes them to `~/.codex/hooks.json` (matcher `Bash|apply_patch`, `commandWindows`). You trust them once in Codex's `/hooks`.
+  - **Rollout reader** (`agents/codex.mjs`): it turns the rollout into the core's lines:
+    - prompts, assistant text and commands with their exit codes;
+    - file changes and MCP calls;
+    - tokens per response, model and version.
+  - Checked against the 37 local rollouts (codex 0.115–0.160): 499 prompts, 2,266 commands and 1,806 file edits, with no failure.
+  - **Skills in Codex:** reading a skill's `SKILL.md` counts as invoking it. The reminder and the gate tell Codex the absolute skills path.
+  - **Decisions without a choice window:** `request_user_input` counts when Codex has it (Plan mode). Otherwise, a turn that ended with a question in the chat plus the user's reply count as one decision (`source: "chat"`).
+  - **Steps an agent lacks do not apply:** each adapter lists them (`lacks`; Codex: code-review). They are recorded as `na`, never block and do not count in the score.
 - **Hook tests in the repo:** `node --test tests/*.test.mjs` (no dependencies, temporary `WAYMARK_HOME`).
 - **Fix:** `protocol.md` → *Closing report* was an empty, unclosed code block that turned *When stuck* into code; it now shows a full Cierre and the decision gate.
 - **Fix:** a multi-select answer in the choice window joins labels with "," (no space); the record no longer lists chosen options as discarded.
