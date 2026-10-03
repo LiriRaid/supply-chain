@@ -4,12 +4,9 @@
 // - What can be observed is COMPUTED from the transcript and git, never declared by the agent (memory, procedure,
 //   gates after the last change with time and failure, tests, browser, code-review, docs, branches, time, tokens).
 // - The agent writes only `## Cierre · <task ID>`: Resultado · Decisión · Sub-decisiones · Evidencia · Aprendido.
-// - Three things block, once (decision "block"), because without them the chain is broken:
-//   1. the decision: Decisión backed by the choice window or the user's words, no sub-decision taken alone;
-//   2. a gate after the last change: typecheck/lint/build after the last code change, tests after the last spec change;
-//   3. the Cierre complete, with its Aprendido written to the project memory.
-//   Everything else (browser, code-review, spec next to the code, docs, pre-existing failures, procedure, department,
-//   commit trailer) is a FINDING: recorded and scored, never blocked (user's decision 2026-10-03).
+// - What blocks (once, decision "block") and what is only recorded and scored is defined in ONE place: the routine
+//   contract waymark/routine.json (docs/adr/0006). Each step has the levels and the condition where it applies; this
+//   file only computes whether it passed and why not. The instructions block quotes each block step (tests check it).
 // - Then the record is appended to ~/.waymark/provenance/<slug>.jsonl with an automatic evaluation (routine ✔/✘, score,
 //   tokens, estimated quota) and the user sees a one-line summary (systemMessage, 0 model tokens).
 // It never blocks twice in a row (stop_hook_active). Remove it from the agent's settings to disable it.
@@ -34,7 +31,14 @@ const TEST = /\b(test|tests|vitest|jest|karma|mocha|pytest|rspec|go test|dotnet 
 const GATE = /\b(tsc|typecheck|type-check|lint|eslint|ng build|build|go vet|mypy|ruff|rubocop|cargo (check|clippy)|node --check)\b/i;
 const PRE = /(pre-?existente|preexist|pre-existing|ya (fallaba|exist[ií]a)|fallos? previos?|en c[oó]digo que no cambi)/i;
 const MEMORY_FILE = /[\\/]\.waymark[\\/](projects[\\/][^\\/]+\.md|memory\.md|tasks\.md)$/i; // ~/.waymark/projects/<slug>.md or <project>/.waymark/
-const TOKENS_PER_PCT = Number(process.env.WAYMARK_TOKENS_PER_PCT) || 1350000; // calibrated on real tasks: 2.19M→2%, 7.66M→5%, 1.8M→2%
+const BUILD = /\b(ng build|vite build|next build|nuxt build|astro build|(npm|pnpm|yarn|bun)( run)? build|go build|cargo build|dotnet build|mvn (package|verify)|gradle build|tsc -b)\b/i;
+// The routine contract: what blocks and what is recorded and scored (waymark/routine.json, docs/adr/0006).
+// A missing or invalid contract never disables the hook: a minimal contract keeps the chain (decision, gate, Cierre) and
+// the record says the contract could not be read.
+const FALLBACK = { tokensPerQuotaPct: 1350000, fallback: true, steps: [
+  { id: 'decision', label: 'Decision', levels: [1, 2, 3], enforce: 'block' }, { id: 'gate', label: 'Verificar', levels: [1, 2, 3], enforce: 'block' },
+  { id: 'cierre', label: 'Cierre', levels: [1, 2, 3], enforce: 'block' }, { id: 'learned', label: 'Aprender', levels: [1, 2, 3], enforce: 'block' }] };
+const ROUTINE = (() => { try { return JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'routine.json'), 'utf8')); } catch { return FALLBACK; } })();
 const DOCS = (t) => (t.name === 'Skill' && /library-docs/.test(String(t.input.skill || ''))) || /^(WebFetch|WebSearch)$/.test(t.name) || /context7|docs?/i.test(t.name) || (t.name === 'Read' && /node_modules|\.d\.ts$/.test(String(t.input.file_path || '')));
 const fileOf = (t) => t.input.file_path || t.input.notebook_path || '';
 const shell = (t) => /^(Bash|PowerShell)$/.test(t.name);
@@ -100,7 +104,6 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
   const routed = routedLevel([...turn.texts, full], turn.tools);
   const level = routed === 'Q' ? 2 : routed || (/##\s*Cierre/.test(reply) ? 1 : 0);
   if (!level) return null;
-  const missing = [], findings = [];
 
   // ---- Observed (computed, never declared) ----
   const where = (t) => `${t.input.file_path || ''} ${t.input.path || ''} ${t.input.pattern || ''} ${t.input.command || ''}`;
@@ -142,87 +145,99 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
     time: { minutes: turn.startedAt ? Math.round((Date.now() - turn.startedAt) / 6000) / 10 : null, toolMinutes: Math.round(timed.reduce((a, t) => a + secs(t), 0) / 6) / 10, slowest: slowest ? { tool: slowest.name, what: (cmdOf(slowest) || fileOf(slowest) || String(slowest.input.skill || '')).replace(/\s+/g, ' ').slice(0, 100), s: Math.round(secs(slowest)) } : null },
   };
 
-  // ---- Block 1: the decision (the user decides, never the agent) ----
+  // ---- Each step of the routine contract (waymark/routine.json): does it apply, did it pass, why not ----
+  const skip = {}, extras = [];
+  for (const f of ['Tests', 'Navegador', 'Review']) {
+    const s = userSkip(reply, f, prompts);
+    if (s === 'ok') skip[f] = true;
+    else if (s) extras.push(`${f}: skip quoted as the user's ("${s}") but those words are not in the user's messages`);
+  }
+  const hasCierre = /##\s*Cierre/.test(reply);
   const d = field(reply, 'Decisi[oó]n');
   const chosenLabels = (ctx.decisions || []).flatMap((x) => String(x.chosen).split(',')).map(plain).filter(Boolean);
   const quoted = d.match(/^del usuario \(\s*[“"«]([^”"»]{3,200})[”"»]/i)?.[1];
   const usersWords = (q) => q && (prompts.some((p) => plain(p).includes(plain(q))) || chosenLabels.some((l) => l.includes(plain(q)))); // the quote is (part of) the picked label
-  if (/##\s*Cierre/.test(reply)) {
-    if (!d) missing.push('Decisión: elegida <option> · descartadas <options> (the user\'s pick in the choice window) | del usuario ("<their words>") | única (<why>)');
-    else if (/^elegida/i.test(d) && ctx.decisions && !ctx.decisions.length) missing.push('Decisión says "elegida" but no choice-window answer exists in this task: ask with the optimal options (AskUserQuestion), or write del usuario ("<their words>") / única (<why>)');
-    else if (/^del usuario/i.test(d) && !usersWords(quoted)) missing.push('Decisión: del usuario needs the user\'s own words (or the option they picked) in quotes');
-    else if (/^[uú]nica/i.test(d) && !/^[uú]nica \(.{3,}\)/i.test(d)) missing.push('Decisión: única (<why there is only one real option>)');
-    else if (!/^(elegida|del usuario|[uú]nica)/i.test(d)) missing.push('Decisión: elegida … · descartadas … | del usuario ("<their words>") | única (<why>)');
+  const decision = [];
+  if (hasCierre) {
+    if (!d) decision.push('Decisión: elegida <option> · descartadas <options> (the user\'s pick in the choice window) | del usuario ("<their words>") | única (<why>)');
+    else if (/^elegida/i.test(d) && ctx.decisions && !ctx.decisions.length) decision.push('Decisión says "elegida" but no choice-window answer exists in this task: ask with the optimal options (AskUserQuestion), or write del usuario ("<their words>") / única (<why>)');
+    else if (/^del usuario/i.test(d) && !usersWords(quoted)) decision.push('Decisión: del usuario needs the user\'s own words (or the option they picked) in quotes');
+    else if (/^[uú]nica/i.test(d) && !/^[uú]nica \(.{3,}\)/i.test(d)) decision.push('Decisión: única (<why there is only one real option>)');
+    else if (!/^(elegida|del usuario|[uú]nica)/i.test(d)) decision.push('Decisión: elegida … · descartadas … | del usuario ("<their words>") | única (<why>)');
     const sub = field(reply, 'Sub-?decisiones');
-    if (!sub) missing.push('Sub-decisiones: <each decision taken during the task> → preguntada | del usuario ("<their words>") | no preguntada; … — or "ninguna"');
+    if (!sub) decision.push('Sub-decisiones: <each decision taken during the task> → preguntada | del usuario ("<their words>") | no preguntada; … — or "ninguna"');
     else if (!/^ninguna\b/i.test(sub)) {
       const items = splitTop(sub, ';');
       const alone = items.filter((s) => /→\s*no preguntada/i.test(s));
       const bad = items.filter((s) => !/→\s*(preguntada|del usuario \(|no preguntada)/i.test(s));
       const asked = items.length - alone.length - bad.length - items.filter((s) => /→\s*del usuario \(/i.test(s)).length + (/^elegida/i.test(d) ? 1 : 0);
-      if (bad.length) missing.push(`Sub-decisiones: each item needs "→ preguntada | del usuario (\\"…\\") | no preguntada" (${bad.slice(0, 2).join(' | ')})`);
-      if (alone.length) missing.push(`Sub-decisiones taken without asking (${alone.slice(0, 3).join(' | ')}): the user decides every real decision. Put them to the user now with the options (AskUserQuestion), apply the pick, then mark them preguntada`);
-      if (ctx.decisions && asked > ctx.decisions.length) missing.push(`Sub-decisiones and Decisión claim ${asked} decisions asked but the choice window answered ${ctx.decisions.length} in this task: ask the missing ones or mark them honestly`);
+      if (bad.length) decision.push(`Sub-decisiones: each item needs "→ preguntada | del usuario (\\"…\\") | no preguntada" (${bad.slice(0, 2).join(' | ')})`);
+      if (alone.length) decision.push(`Sub-decisiones taken without asking (${alone.slice(0, 3).join(' | ')}): the user decides every real decision. Put them to the user now with the options (AskUserQuestion), apply the pick, then mark them preguntada`);
+      if (ctx.decisions && asked > ctx.decisions.length) decision.push(`Sub-decisiones and Decisión claim ${asked} decisions asked but the choice window answered ${ctx.decisions.length} in this task: ask the missing ones or mark them honestly`);
     }
   }
-
-  // ---- Block 2: a gate after the last change ----
-  if (lastCode >= 0 && !turn.tools.slice(lastCode + 1).some((t) => shell(t) && GATE.test(cmdOf(t)))) missing.push('no typecheck, lint or build ran after the last code change: run the project\'s gate once now (the full one at the end, per repo)');
-  if (lastSpec >= 0 && !observed.tests.ranAfterLastSpec) missing.push('a spec changed after the last test run: run that spec again');
-
-  // ---- Block 3: the Cierre complete, its Aprendido written to the project memory ----
-  if (!/##\s*Cierre/.test(reply)) missing.push('the "## Cierre · <task ID>" block (Resultado · Decisión · Sub-decisiones · Evidencia · Aprendido)');
+  const gate = [];
+  if (lastCode >= 0 && !turn.tools.slice(lastCode + 1).some((t) => shell(t) && GATE.test(cmdOf(t)))) gate.push('no typecheck, lint or build ran after the last code change: run the project\'s gate once now (the full one at the end, per repo)');
+  if (lastSpec >= 0 && !observed.tests.ranAfterLastSpec) gate.push('a spec changed after the last test run: run that spec again');
+  const cierre = [];
+  if (!hasCierre) cierre.push('the "## Cierre · <task ID>" block (Resultado · Decisión · Sub-decisiones · Evidencia · Aprendido)');
   else {
-    if (!field(reply, 'Resultado')) missing.push('Resultado: hecho | parcial (<what is missing>) | bloqueado (<why>)');
-    if (!field(reply, 'Evidencia')) missing.push('Evidencia: observada <what you saw> | inferida de <source> (check: <one line for the user>)');
-    if (!field(reply, 'Aprendido') || /^ninguno/i.test(field(reply, 'Aprendido'))) missing.push('Aprendido: <your rewritten Work in progress line> (never "ninguno")');
-    else if (!observed.memory.written) missing.push('Aprendido is not in the project memory: write it as the task\'s Work in progress line (~/.waymark/projects/<slug>.md) — the next session, or another agent, resumes from there');
+    if (!field(reply, 'Resultado')) cierre.push('Resultado: hecho | parcial (<what is missing>) | bloqueado (<why>)');
+    if (!field(reply, 'Evidencia')) cierre.push('Evidencia: observada <what you saw> | inferida de <source> (check: <one line for the user>)');
+    if (!field(reply, 'Aprendido') || /^ninguno/i.test(field(reply, 'Aprendido'))) cierre.push('Aprendido: <your rewritten Work in progress line> (never "ninguno")');
     if (ctx.ids) {
       const id = reply.match(/##\s*Cierre\s*·\s*(.+)/)?.[1]?.match(ID)?.[0];
       const offer = `${ctx.ids.next} for a new task${ctx.ids.followUp ? `, ${ctx.ids.followUp} for a follow-up of ${ctx.ids.last}` : ''}`;
-      if (!id) missing.push(`the task ID in the heading: "## Cierre · <id>" (${offer})`);
-      else if (!validId(id, ctx.ids)) missing.push(`the heading's task ID ${id} is already recorded or was never offered: use ${offer}`);
+      if (!id) cierre.push(`the task ID in the heading: "## Cierre · <id>" (${offer})`);
+      else if (!validId(id, ctx.ids)) cierre.push(`the heading's task ID ${id} is already recorded or was never offered: use ${offer}`);
     }
   }
-
-  // ---- Findings: recorded and scored, never blocked ----
-  const skip = {};
-  for (const f of ['Tests', 'Navegador', 'Review']) {
-    const s = userSkip(reply, f, prompts);
-    if (s === 'ok') skip[f] = true;
-    else if (s) findings.push(`${f}: skip quoted as the user's ("${s}") but those words are not in the user's messages`);
-  }
-  if (routed === 'Q') findings.push('routed as a question (Q) but changed project files');
-  if (!dept.declared) findings.push('the routing line names no owner department');
-  else if (!dept.invoked.includes(dept.declared)) findings.push(`${dept.declared} named in the routing line but never invoked`);
-  else if (!observed.procedure.read.some((p) => procRe.test(p))) findings.push(`${dept.declared}/procedures.md never read (a search with no match does not count)`);
-  if (level >= 2 && !observed.memory.searched) findings.push('L2+ with no mem_search before the first change');
-  if (level >= 2 && !skip.Navegador && ui && !observed.browser.tried.length) findings.push('UI changed with no browser attempt (browser-verify or run; curl does not count)');
-  if (level >= 2 && !skip.Review && code.length && !observed.review) findings.push('code changed and code-review did not run');
-  const near = code.length ? specsNear(code) : null;
-  if (near && !skip.Tests && !observed.tests.specsChanged.length && !/Tests:\s*no \(/i.test(reply)) findings.push(`${near} sits next to the changed code and no spec was added or changed`);
   const ev = field(reply, 'Evidencia');
-  if (/inferida/i.test(ev) && /(doc|documentaci|documentation|oficial|official)/i.test(ev) && !observed.docs) findings.push('Evidencia inferred from docs with no docs consulted');
-  if (PRE.test(reply) && !observed.worktree && !/no comprobado/i.test(reply)) findings.push('a failure called pre-existing without a clean-copy check');
+  const near = code.length ? specsNear(code) : null;
+  const committed = turn.tools.some((t) => shell(t) && /\bgit\b[^|;&\n]*\scommit\b/.test(cmdOf(t)));
+  const buildAfter = lastCode >= 0 && turn.tools.slice(lastCode + 1).some((t) => shell(t) && BUILD.test(cmdOf(t)));
+  const when = {
+    engram: !!ctx.engram, code: code.length > 0, ui, specNear: !!near && !skip.Tests, commit: committed && !!ctx.commits,
+    inferredFromDocs: /inferida/i.test(ev) && /(doc|documentaci|documentation|oficial|official|specification|especificaci|spec de)/i.test(ev), preClaim: PRE.test(reply),
+  };
+  const procedure = [];
+  if (routed === 'Q') procedure.push('routed as a question (Q) but changed project files');
+  if (!dept.declared) procedure.push('the routing line names no owner department');
+  else if (!dept.invoked.includes(dept.declared)) procedure.push(`${dept.declared} named in the routing line but never invoked`);
+  else if (!observed.procedure.read.some((p) => procRe.test(p))) procedure.push(`${dept.declared}/procedures.md never read (a search with no match does not count)`);
+  const fails = {
+    decision, gate, cierre,
+    learned: hasCierre && field(reply, 'Aprendido') && !observed.memory.written ? ['Aprendido is not in the project memory: write it as the task\'s Work in progress line (~/.waymark/projects/<slug>.md) — the next session, or another agent, resumes from there'] : [],
+    memory: observed.memory.searched ? [] : ['L2+: no mem_search before the first change: search engram for past decisions and rejected paths of this area now'],
+    review: skip.Review || observed.review ? [] : [`code changed and code-review did not run: run it on the task's files (${code.slice(0, 4).map((f) => path.basename(f)).join(', ')}${code.length > 4 ? '…' : ''})`],
+    build: buildAfter || /Build:\s*no \(.{3,}\)/i.test(reply) ? [] : ['L2+ with code: run the build once now, after the last change (or write Build: no (<why>) if the project has none)'],
+    docs: observed.docs ? [] : ['Evidencia is inferred from docs but no docs were consulted: consult them (library-docs, or the installed package\'s types/source) and confirm or correct the change'],
+    procedure,
+    browser: skip.Navegador || observed.browser.tried.length ? [] : ['UI changed with no browser attempt (browser-verify or run; curl does not count)'],
+    spec: observed.tests.specsChanged.length || /Tests:\s*no \(/i.test(reply) ? [] : [`${near} sits next to the changed code and no spec was added or changed`],
+    preexisting: observed.worktree || /no comprobado/i.test(reply) ? [] : ['a failure called pre-existing without a clean-copy check'],
+    trailer: ctx.commits?.length ? [] : ['a commit made this turn without the trailer "Waymark-Task: <task ID>"'],
+  };
+  const steps = ROUTINE.steps.map((s) => {
+    const applies = s.levels.includes(level) && (!s.when || when[s.when]);
+    const why = applies ? fails[s.id] || [] : [];
+    return { id: s.id, label: s.label, enforce: s.enforce, applies, pass: applies ? !why.length : null, why };
+  });
+  const missing = steps.filter((s) => s.applies && s.enforce === 'block').flatMap((s) => s.why);
+  const findings = [...steps.filter((s) => s.applies && s.enforce !== 'block').flatMap((s) => s.why), ...extras];
+  if (ROUTINE.fallback) findings.push('waymark/routine.json missing or invalid: checked with the minimal contract (decision, gate, Cierre)');
   if (observed.gates.some((g) => g.error)) findings.push(`a gate after the last change failed: ${observed.gates.filter((g) => g.error).map((g) => g.cmd.slice(0, 60)).join(' | ')}`);
-  if (ctx.commits && !ctx.commits.length && turn.tools.some((t) => shell(t) && /\bgit\b[^|;&\n]*\scommit\b/.test(cmdOf(t)))) findings.push('a commit made this turn without the trailer "Waymark-Task: <task ID>"');
-  return { level, changed, reply, missing, findings, dept, observed };
+  return { level, changed, reply, missing, findings, steps, dept, observed };
 }
 
-// Automatic evaluation of the task from what was observed: one ✔/✘ per routine step, a score, tokens and estimated quota.
+// Automatic evaluation from the routine contract: ✔/✘ per step that applied (a label with several steps passes only if
+// all pass), the score over the applicable steps, tokens and the estimated quota.
 export function evaluate(gaps, usage) {
-  const o = gaps.observed, has = (re) => gaps.findings.some((f) => re.test(f)) || gaps.missing.some((m) => re.test(m));
-  const steps = {
-    Decision: !has(/Decisi|Sub-decisiones/),
-    Recordar: gaps.level < 2 || o.memory.searched,
-    Enrutar: !has(/routing line|never invoked|procedures\.md|routed as a question/),
-    Verificar: !has(/gate|spec changed|pre-existing/),
-    Skills: !has(/browser|code-review|docs consulted|sits next to/),
-    Aprender: o.memory.written,
-    Cierre: !gaps.missing.length,
-  };
+  const steps = {};
+  for (const s of gaps.steps.filter((x) => x.applies)) steps[s.label] = (steps[s.label] ?? true) && s.pass;
   const ok = Object.values(steps).filter(Boolean).length;
-  return { steps, score: `${ok}/${Object.keys(steps).length}`, tokens: usage?.total || 0, quotaPct: usage?.total ? Math.round((usage.total / TOKENS_PER_PCT) * 10) / 10 : null };
+  const perPct = Number(process.env.WAYMARK_TOKENS_PER_PCT) || ROUTINE.tokensPerQuotaPct || 1350000;
+  return { steps, score: `${ok}/${Object.keys(steps).length}`, tokens: usage?.total || 0, quotaPct: usage?.total ? Math.round((usage.total / perPct) * 10) / 10 : null };
 }
 
 // Branch of the repo that holds each changed file (null when not a repo), so the record shows where the work went.
@@ -276,6 +291,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       ctx.commits = commitsFor(cwd, claimed);
       ctx.inputs = turnInputs(taskLines(lines, 1), cwd);
       ctx.gitChanged = snapshotDiff(loadSnapshot(h.session_id), gitSnapshot(cwd)); // taken by the per-prompt hook
+      ctx.engram = lines.some((d) => JSON.stringify(d.attachment || '').includes('mcp__engram__') || (d.message?.content || []).some?.((c) => c.type === 'tool_use' && String(c.name).startsWith('mcp__engram__')));
       const all = sessionTools(lines);
       const gaps = cierreGaps(turn, h.last_assistant_message, all, prompts, ctx);
       if (!gaps) return;

@@ -1,0 +1,19 @@
+{
+  "about": "Waymark's routine contract: the single source of what each task must do (block) and what is recorded and scored (record). stop-hook.mjs enforces and scores from this file; the instructions block quotes every block step's `doc`; tests/hooks.test.mjs fails if they drift. Change a step here, nowhere else. Decided by the user on 2026-10-03 (docs/adr/0006).",
+  "tokensPerQuotaPct": 1350000,
+  "steps": [
+    { "id": "decision", "label": "Decision", "levels": [1, 2, 3], "enforce": "block", "doc": "the decision backed by the choice window or the user's words, no sub-decision taken alone" },
+    { "id": "gate", "label": "Verificar", "levels": [1, 2, 3], "enforce": "block", "doc": "a gate after the last change" },
+    { "id": "cierre", "label": "Cierre", "levels": [1, 2, 3], "enforce": "block", "doc": "the Cierre complete" },
+    { "id": "learned", "label": "Aprender", "levels": [1, 2, 3], "enforce": "block", "doc": "its Aprendido written to the project memory" },
+    { "id": "memory", "label": "Recordar", "levels": [2, 3], "when": "engram", "enforce": "block", "doc": "L2+: mem_search before the first change" },
+    { "id": "review", "label": "Review", "levels": [2, 3], "when": "code", "enforce": "block", "doc": "L2+ with code: code-review on the task's files" },
+    { "id": "build", "label": "Build", "levels": [2, 3], "when": "code", "enforce": "block", "doc": "L2+ with code: the build once at the end (or Build: no (<why>) when the project has none)" },
+    { "id": "docs", "label": "Docs", "levels": [1, 2, 3], "when": "inferredFromDocs", "enforce": "block", "doc": "an inference from docs backed by consulting them" },
+    { "id": "procedure", "label": "Enrutar", "levels": [1, 2, 3], "enforce": "record", "doc": "the owner's procedures.md section read" },
+    { "id": "browser", "label": "Navegador", "levels": [2, 3], "when": "ui", "enforce": "record", "doc": "L2+ with UI: browser-verify or run" },
+    { "id": "spec", "label": "Tests", "levels": [1, 2, 3], "when": "specNear", "enforce": "record", "doc": "a spec next to the changed code added or changed (or Tests: no (<why>))" },
+    { "id": "preexisting", "label": "Previos", "levels": [1, 2, 3], "when": "preClaim", "enforce": "record", "doc": "a pre-existing failure checked in a clean copy" },
+    { "id": "trailer", "label": "Commit", "levels": [1, 2, 3], "when": "commit", "enforce": "record", "doc": "commits with Waymark-Task: <task ID>" }
+  ]
+}

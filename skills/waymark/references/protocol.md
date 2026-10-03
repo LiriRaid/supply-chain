@@ -54,7 +54,7 @@ The receiving department checks the evidence it relies on (memory and hand-offs 
 3. **Review** (L2+) — `code-review` skill on the diff. L3 — also `simplify` and, if security-relevant, `security-review`.
 4. **Department DoD** — tick the department's Definition of Done.
 5. **Learn** — `references/learning.md`; rewrite project memory → *Work in progress* (or mark it idle).
-6. **Closing report** — the Cierre of the instructions block, headed by the task ID the per-prompt hook offered. It holds only what the agent alone knows; the end-of-turn hook computes the rest from the tool calls (memory, procedure, gates and their order, tests, browser, review, docs, branches, time, tokens), blocks once only for the decision, a gate after the last change or an incomplete Cierre (with its Aprendido written to the project memory), scores the task automatically and appends its record to the hash-chained `~/.waymark/provenance/<slug>.jsonl`, the supply chain of the agent's work (docs/adr/0002, 0004):
+6. **Closing report** — the Cierre of the instructions block, headed by the task ID the per-prompt hook offered. It holds only what the agent alone knows; the end-of-turn hook computes the rest from the tool calls (memory, procedure, gates and their order, tests, browser, review, docs, branches, time, tokens), blocks once for the steps the routine contract `waymark/routine.json` marks as `block`, scores every step that applied and appends its record to the hash-chained `~/.waymark/provenance/<slug>.jsonl`, the supply chain of the agent's work (docs/adr/0002, 0004):
 
 ```
 ## Cierre · 2026-10-02 · T3

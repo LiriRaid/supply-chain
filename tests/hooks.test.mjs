@@ -190,7 +190,7 @@ test('git snapshot: files changed between the prompt and the end of the turn, by
 const l2 = (extra = []) => currentTurn([
   prompt('agrega reintentos al servicio de pedidos'), say('Waymark → L2 · dept-backend · skills: code-review'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'),
   call('AskUserQuestion', { questions: [] }), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'),
-  call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs' }), call('Skill', { skill: 'code-review' }), MEM(), ...extra,
+  call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs && npm run build' }), call('Skill', { skill: 'code-review' }), MEM(), ...extra,
 ]);
 const cierre = (id, decision = 'elegida Backoff · descartadas Cola', resultado = 'Resultado: hecho · ', sub = 'ninguna') =>
   `## Cierre · ${id}\n${resultado}Decisión: ${decision}\nSub-decisiones: ${sub}\nEvidencia: observada timeouts en el log de pedidos\nAprendido: "backoff ← timeouts"`;
@@ -238,8 +238,8 @@ test('Cierre: a turn routed Q that changed files is checked as L2 and the routin
   const tail = [call('Edit', { file_path: FILE }), call('Bash', { command: 'npx eslint src' }), MEM()];
   const g = cierreGaps(currentTurn([...head, ...tail]), close);
   assert.equal(g.level, 2);
-  assert.deepEqual(g.missing, []);
-  assert.ok(g.findings.some((f) => /routed as a question/.test(f)) && g.findings.some((f) => /code-review did not run/.test(f)));
+  assert.ok(g.findings.some((f) => /routed as a question/.test(f)));
+  assert.ok(g.missing.some((m) => /code-review did not run/.test(m)) && g.missing.some((m) => /run the build once/.test(m)), 'L2 with code: review and build block');
   assert.equal(cierreGaps(currentTurn([...head, call('Skill', { skill: 'dept-frontend', args: 'L1' }), ...tail]), close).level, 1, 're-routed to L1 by tool call');
 });
 
@@ -272,13 +272,13 @@ test('Cierre: the routing line\'s department must have been invoked; the record 
 test('observed: memory, procedure and review are computed from the tool calls, not declared', () => {
   const { cwd } = fresh();
   const id = taskIds(cwd).next, ctx = ctxFor(cwd);
-  const opened = currentTurn([prompt('x'), say('Waymark → L2 · dept-backend'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'), call('mcp__engram__mem_search', { query: 'retries' }), call('Read', { file_path: path.join(os.homedir(), '.waymark', 'projects', 'shop.md') }), call('AskUserQuestion'), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs' }), call('Skill', { skill: 'code-review' }), MEM()]);
-  const g = cierreGaps(opened, cierre(id), undefined, undefined, ctx);
+  const opened = currentTurn([prompt('x'), say('Waymark → L2 · dept-backend'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'), call('mcp__engram__mem_search', { query: 'retries' }), call('Read', { file_path: path.join(os.homedir(), '.waymark', 'projects', 'shop.md') }), call('AskUserQuestion'), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs && npm run build' }), call('Skill', { skill: 'code-review' }), MEM()]);
+  const g = cierreGaps(opened, cierre(id), undefined, undefined, { ...ctx, engram: true });
   assert.deepEqual(g.missing, []);
   assert.deepEqual(g.observed.memory, { searched: true, opened: true, written: true, saved: false });
   assert.deepEqual(g.observed.procedure, { owner: 'dept-backend', read: ['dept-backend/procedures.md'], readBeforeChange: true });
   assert.equal(g.observed.review, true);
-  assert.equal(g.observed.gates[0].cmd, 'node --check src/orders.service.mjs');
+  assert.equal(g.observed.gates[0].cmd, 'node --check src/orders.service.mjs && npm run build');
   const noProc = currentTurn([prompt('x'), say('Waymark → L2 · dept-backend'), call('Skill', { skill: 'dept-backend' }), call('AskUserQuestion'), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check x' }), call('Skill', { skill: 'code-review' })]);
   assert.ok(cierreGaps(noProc, cierre(id), undefined, undefined, ctx).findings.some((f) => /dept-backend\/procedures\.md never read/.test(f)));
 });
@@ -309,8 +309,8 @@ test('findings: an inference from docs without docs, a pre-existing failure with
   const id = taskIds(cwd).next, ctx = ctxFor(cwd);
   const has = (turn, reply, re) => cierreGaps(turn, reply, undefined, undefined, ctx).findings.some((f) => re.test(f));
   const fromDocs = cierre(id).replace('observada timeouts en el log de pedidos', 'inferida de la doc de Meta Cloud API (check: enviar una respuesta citada)');
-  assert.ok(has(l2(), fromDocs, /inferred from docs/));
-  assert.ok(!has(l2([call('Skill', { skill: 'library-docs' })]), fromDocs, /inferred from docs/));
+  assert.match(checkCierre(l2(), fromDocs, undefined, undefined, ctx) || '', /inferred from docs but no docs were consulted/, 'an inference from docs blocks');
+  assert.equal(checkCierre(l2([call('Skill', { skill: 'library-docs' })]), fromDocs, undefined, undefined, ctx), null);
   const pre = `${cierre(id)}\nNota: contact-center.spec.ts ya fallaba antes`;
   assert.ok(has(l2(), pre, /pre-existing/));
   assert.ok(!has(l2([call('Bash', { command: 'git worktree add ../clean HEAD && cd ../clean && npx vitest run x' })]), pre, /pre-existing/));
@@ -372,7 +372,7 @@ test('Cierre: files changed through the shell are checked and recorded', () => {
   const turn = currentTurn([prompt('x'), say('Waymark → L2 · dept-frontend'), call('Skill', { skill: 'dept-frontend' }), call('Bash', { command: 'git checkout HEAD -- src/modal.html src/modal.ts' })]);
   const gaps = cierreGaps(turn, '## Cierre\nResultado: hecho', undefined, undefined, ctx);
   assert.deepEqual(gaps.changed, ['/work/proj/src/modal.html', '/work/proj/src/modal.ts']);
-  assert.ok(gaps.findings.some((f) => /code-review/.test(f)), 'shell-changed code without review is a finding');
+  assert.ok(gaps.missing.some((m) => /code-review/.test(m)), 'shell-changed code still needs review');
   assert.ok(gaps.missing.some((m) => /after the last code change/.test(m)), 'and still needs a gate after it');
 });
 
@@ -416,11 +416,12 @@ test('bugs of test 2.0-4: an empty search is not a read; the chosen option count
 test('evaluation: one ✔/✘ per routine step, a score, tokens and the estimated quota', () => {
   const { cwd } = fresh();
   const id = taskIds(cwd).next, ctx = ctxFor(cwd);
-  const ev = evaluate(cierreGaps(l2(), cierre(id), undefined, undefined, ctx), { total: 2700000 });
-  assert.deepEqual(ev.steps, { Decision: true, Recordar: false, Enrutar: true, Verificar: true, Skills: true, Aprender: true, Cierre: true });
-  assert.equal(ev.score, '6/7');
+  const ev = evaluate(cierreGaps(l2(), cierre(id), undefined, undefined, { ...ctx, engram: true }), { total: 2700000 });
+  assert.deepEqual(ev.steps, { Decision: true, Verificar: true, Cierre: true, Aprender: true, Recordar: false, Review: true, Build: true, Enrutar: true });
+  assert.equal(ev.score, '7/8');
   assert.equal(ev.quotaPct, 2);
-  assert.match(summaryLine(id, ev), /Recordar ✘ .* 6\/7 · 2\.70M tokens ≈ 2% de la cuota/);
+  assert.match(summaryLine(id, ev), /Recordar ✘ .* 7\/8 · 2\.70M tokens ≈ 2% de la cuota/);
+  assert.match(checkCierre(l2(), cierre(id), undefined, undefined, { ...ctx, engram: true }), /no mem_search before the first change/, 'mem_search blocks at L2+ when engram is there');
 });
 
 test('turn usage: each streamed message counted once', () => {
@@ -441,6 +442,15 @@ test('provenance record: what the transcript proves, the hook assigns an ID when
   assert.ok(rec.unresolved.length > 0);
 });
 
+test('routine contract: the instructions block quotes every step that blocks, and the guide points to the contract', () => {
+  const routine = JSON.parse(fs.readFileSync(path.join(SCRIPTS, '..', 'routine.json'), 'utf8'));
+  const block = fs.readFileSync(path.join(SCRIPTS, '..', 'templates', 'instructions.md'), 'utf8');
+  for (const st of routine.steps.filter((x) => x.enforce === 'block')) assert.ok(block.includes(st.doc), `instructions.md must quote: "${st.doc}"`);
+  const guide = fs.readFileSync(path.join(SCRIPTS, '..', 'references', 'evaluation.md'), 'utf8');
+  assert.ok(guide.includes('routine.json'), 'evaluation.md must defer to routine.json');
+  assert.ok(!/^\| Check \| ✔ when/m.test(guide), 'evaluation.md must not define its own rubric table');
+});
+
 test('per-prompt line: new task and follow-up IDs', () => {
   const { cwd } = fresh();
   assert.match(taskLine(cwd, NOW), new RegExp(`new task → ${DAY} · T1\\.$`));
@@ -456,16 +466,16 @@ function runStop(lines, last, extra = {}) {
   const r = spawnSync(process.execPath, [path.join(SCRIPTS, 'stop-hook.mjs')], { input: JSON.stringify({ transcript_path: transcript, cwd, session_id: 's9', last_assistant_message: last, ...extra }), env: { ...process.env, WAYMARK_HOME: home }, encoding: 'utf8' });
   return { out: r.stdout, records: fs.existsSync(log) ? readLog(cwd) : [], ids: taskIds(cwd) };
 }
-const l2Lines = [prompt('agrega reintentos al servicio de pedidos'), say('Waymark → L2 · dept-backend · skills: code-review'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'), call('AskUserQuestion', { questions: [] }), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs' }), call('Skill', { skill: 'code-review' }), MEM()];
+const l2Lines = [prompt('agrega reintentos al servicio de pedidos'), say('Waymark → L2 · dept-backend · skills: code-review'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'), call('AskUserQuestion', { questions: [] }), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs && npm run build' }), call('Skill', { skill: 'code-review' }), MEM()];
 
 test('stop hook: a backed Cierre is recorded and not blocked', () => {
   const id = `${new Date().toLocaleDateString('sv')} · T1`;
   const { out, records } = runStop(l2Lines, cierre(id));
-  assert.match(JSON.parse(out).systemMessage, /^Waymark .* · \d\/7/);
+  assert.match(JSON.parse(out).systemMessage, /^Waymark .* · 7\/7 · /);
   assert.equal(records.length, 1);
   assert.equal(records[0].id, id);
   assert.deepEqual(records[0].unresolved, []);
-  assert.equal(records[0].evaluation.score, '6/7', 'Recordar ✘: L2 with no mem_search');
+  assert.equal(records[0].evaluation.score, '7/7');
   assert.match(records[0].cierre, /^## Cierre · /);
 });
 
