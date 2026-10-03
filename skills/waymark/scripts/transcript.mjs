@@ -35,17 +35,21 @@ export const isPrompt = (d) => {
 export function currentTurn(lines) {
   let i = lines.length - 1;
   while (i >= 0 && !isPrompt(lines[i])) i--;
-  const texts = [], tools = [];
+  const texts = [], tools = [], results = {};
   for (const d of lines.slice(i + 1)) {
     const cmd = d.type === 'user' && promptText(d).match(/<command-name>\/?([^<\s]+)<\/command-name>/)?.[1];
     if (cmd) tools.push({ name: 'Skill', input: { skill: cmd, slash: true } }); // a slash command typed in the turn
+    const at = Date.parse(d.timestamp || '') || 0;
+    if (d.type === 'user' && !d.isSidechain && Array.isArray(d.message?.content)) {
+      for (const c of d.message.content) if (c.type === 'tool_result') results[c.tool_use_id] = { at, error: !!c.is_error, text: (typeof c.content === 'string' ? c.content : JSON.stringify(c.content || '')).slice(0, 400) };
+    }
     if (d.type !== 'assistant' || d.isSidechain) continue;
     for (const c of d.message?.content || []) {
       if (c.type === 'text' && c.text.trim()) texts.push(c.text);
-      if (c.type === 'tool_use') tools.push({ name: c.name, input: c.input || {} });
+      if (c.type === 'tool_use') tools.push({ name: c.name, input: c.input || {}, id: c.id, at });
     }
   }
-  return { found: i >= 0, prompt: i >= 0 ? promptText(lines[i]) : '', uuid: i >= 0 ? lines[i].uuid || '' : '', texts, tools };
+  return { found: i >= 0, prompt: i >= 0 ? promptText(lines[i]) : '', uuid: i >= 0 ? lines[i].uuid || '' : '', startedAt: i >= 0 ? Date.parse(lines[i].timestamp || '') || 0 : 0, texts, tools, results };
 }
 
 // Every tool call of the main agent in the readable part of the session (for reads done in an earlier turn).

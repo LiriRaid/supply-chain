@@ -15,7 +15,7 @@ const temps = [home];
 after(() => { for (const d of temps) fs.rmSync(d, { recursive: true, force: true }); });
 const { taskIds, validId, decisionsIn, projectSlug, readLog, appendRecord, taskLines, verifyChain, turnInputs, commitsFor, gitSnapshot, snapshotDiff, mutatesFiles, changesProject } = await import(`file://${SCRIPTS}/provenance.mjs`);
 const { checkDecision } = await import(`file://${SCRIPTS}/tool-hook.mjs`);
-const { checkCierre, cierreGaps, provenanceRecord } = await import(`file://${SCRIPTS}/stop-hook.mjs`);
+const { checkCierre, cierreGaps, provenanceRecord, splitTop, branchesOf } = await import(`file://${SCRIPTS}/stop-hook.mjs`);
 const { taskLine } = await import(`file://${SCRIPTS}/rule0-hook.mjs`);
 const { currentTurn, routedLevel, routedDept } = await import(`file://${SCRIPTS}/transcript.mjs`);
 
@@ -144,6 +144,23 @@ test('decision gate: the owner department procedure is read before the first cha
   assert.equal(checkDecision(FILE, [...asked, PROC('dept-backend')], 's4', path.join(home, `gate-${n++}.json`)), null);
 });
 
+test('decision gate: L2+ with engram and no mem_search is denied once before the first change', () => {
+  const state = path.join(home, `gate-${n++}.json`);
+  const lines = [prompt('agrega reintentos', 'um'), say('Waymark → L2 · dept-backend'), call('mcp__engram__mem_save', {}), PROC('dept-backend'), call('AskUserQuestion'), answered('Q', ['A', 'B'], 'A')];
+  assert.match(checkDecision(FILE, lines, 's6', state) || '', /mem_search/);
+  assert.equal(checkDecision(FILE, lines, 's6', state), null, 'once');
+  assert.equal(checkDecision(FILE, [...lines, call('mcp__engram__mem_search', { query: 'x' })], 's6', path.join(home, `gate-${n++}.json`)), null);
+});
+
+test('decision gate: the message names the repo branch and asks for the foreseeable sub-decisions', () => {
+  const repo = fs.mkdtempSync(path.join(os.homedir(), '.wm-branch-')); // outside temp, which the gate exempts
+  temps.push(repo);
+  spawnSync('git', ['init', '-q', '-b', 'feat/other-work'], { cwd: repo });
+  const deny = checkDecision(path.join(repo, 'a.ts'), [prompt('x', 'ubr'), say('Waymark → L2 · dept-backend')], 's7', path.join(home, `gate-${n++}.json`));
+  assert.match(deny, /branch "feat\/other-work"/);
+  assert.match(deny, /sub-decisions/);
+});
+
 test('decision gate: shell commands that change project files are gated like edits', () => {
   const state = path.join(home, `gate-${n++}.json`);
   const lines = [prompt('quita el toggle', 'ub'), say('Waymark → L1 · dept-frontend')];
@@ -186,7 +203,7 @@ const l2 = (extra = []) => currentTurn([
   call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs' }), call('Skill', { skill: 'code-review' }), ...extra,
 ]);
 const cierre = (id, decision = 'elegida Backoff · descartadas Cola', resultado = 'Resultado: hecho · ', sub = 'ninguna') =>
-  `## Cierre · ${id}\n${resultado}Decisión: ${decision}\nSub-decisiones: ${sub}\nMemoria: digest · Procedimiento: Retries (procedures.md:12)\nGates: node --check ✔ · Aprendido: "backoff ← timeouts" · engram: no disponible\nL2+: Tests: sin infra (no hay specs en src) · Navegador: no (sin UI; check: ninguno) · Review: code-review orders.service.mjs sin hallazgos`;
+  `## Cierre · ${id}\n${resultado}Decisión: ${decision}\nSub-decisiones: ${sub}\nEvidencia: observada timeouts en el log de pedidos\nAprendido: "backoff ← timeouts"`;
 const ctxFor = (cwd, decisions = [{ question: '¿Cómo?', chosen: 'Backoff', discarded: ['Cola'] }]) => ({ ids: taskIds(cwd), decisions });
 
 test('Cierre: a complete L2 record passes', () => {
@@ -220,19 +237,19 @@ test('Cierre: Decisión must be backed', () => {
 
 test('Cierre: L1 needs Decisión too; older callers without ctx skip the ID check', () => {
   const turn = currentTurn([prompt('typo en el título'), say('Waymark → L1 · dept-frontend'), call('Skill', { skill: 'dept-frontend' }), PROC('dept-frontend'), call('Edit', { file_path: FILE }), call('Bash', { command: 'npx eslint src/orders.service.mjs' })]);
-  const base = '## Cierre\nResultado: hecho · Gates: eslint ✔ · Aprendido: "x ← y" · engram: no disponible\nSub-decisiones: ninguna\nMemoria: digest · Procedimiento: Styling (procedures.md:30)';
+  const base = '## Cierre\nResultado: hecho\nSub-decisiones: ninguna\nEvidencia: observada el typo en el título\nAprendido: "x ← y"';
   assert.match(checkCierre(turn, base), /Decisión:/);
   assert.equal(checkCierre(turn, `${base}\nDecisión: única (un solo texto que corregir)`), null);
 });
 
 test('Cierre: a turn routed Q that changed files is checked as L2 and must re-route', () => {
-  const close = '## Cierre\nResultado: hecho · Decisión: única (x y z) · Sub-decisiones: ninguna · Memoria: digest · Procedimiento: Styling (procedures.md:30) · Gates: ✔ · Aprendido: "a ← b" · engram: no disponible';
+  const close = '## Cierre\nResultado: hecho · Decisión: única (x y z)\nSub-decisiones: ninguna\nEvidencia: observada el modal en /chat\nAprendido: "a ← b"';
   const head = [prompt('¿se puede mover el modal?'), say('Waymark → Q · dept-frontend · skills: dept-frontend'), call('Skill', { skill: 'dept-frontend' }), PROC('dept-frontend')];
   const tail = [call('Edit', { file_path: FILE }), call('Bash', { command: 'npx eslint src' })];
   const r = checkCierre(currentTurn([...head, ...tail]), close);
   assert.match(r, /this L2 turn/);
   assert.match(r, /routed as a question/);
-  assert.match(r, /Review:/, 'L2 fields are required');
+  assert.match(r, /code-review did not run/, 'L2 actions are required');
   assert.equal(checkCierre(currentTurn([...head, say('Waymark → L1 · dept-frontend · skills: dept-frontend'), ...tail]), close), null, 're-routed to L1 mid-turn (text)');
   assert.equal(checkCierre(currentTurn([...head, call('Skill', { skill: 'dept-frontend', args: 'L1' }), ...tail]), close), null, 're-routed to L1 by tool call');
 });
@@ -263,24 +280,90 @@ test('Cierre: the routing line\'s department must have been invoked; the record 
   assert.deepEqual(provenanceRecord(l2(), gaps, ctx, {}).department, { declared: 'dept-backend', invoked: ['dept-backend'] });
 });
 
-test('Cierre: Memoria and Procedimiento are backed by real reads', () => {
+test('observed: memory, procedure and review are computed from the tool calls, not declared', () => {
   const { cwd } = fresh();
   const id = taskIds(cwd).next, ctx = ctxFor(cwd);
-  assert.match(checkCierre(l2(), cierre(id).replace(/Memoria: digest · Procedimiento: [^\n]*\n/, ''), undefined, undefined, ctx), /Procedimiento: <section>[\s\S]*Memoria: digest/);
-  assert.match(checkCierre(l2(), cierre(id).replace('procedures.md:12', 'procedures.md'), undefined, undefined, ctx), /needs the file and line/);
-  const leida = cierre(id).replace('Memoria: digest', 'Memoria: leída');
-  assert.match(checkCierre(l2(), leida, undefined, undefined, ctx), /not opened before the first change/);
-  const opened = currentTurn([prompt('x'), say('Waymark → L2 · dept-backend'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'), call('Read', { file_path: path.join(os.homedir(), '.waymark', 'projects', 'shop.md') }), call('AskUserQuestion'), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs' }), call('Skill', { skill: 'code-review' })]);
-  assert.equal(checkCierre(opened, leida, undefined, undefined, ctx), null);
+  const opened = currentTurn([prompt('x'), say('Waymark → L2 · dept-backend'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'), call('mcp__engram__mem_search', { query: 'retries' }), call('Read', { file_path: path.join(os.homedir(), '.waymark', 'projects', 'shop.md') }), call('AskUserQuestion'), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs' }), call('Skill', { skill: 'code-review' })]);
+  const g = cierreGaps(opened, cierre(id), undefined, undefined, ctx);
+  assert.deepEqual(g.missing, []);
+  assert.deepEqual(g.observed.memory, { searched: true, opened: true, saved: false });
+  assert.deepEqual(g.observed.procedure, { owner: 'dept-backend', read: ['dept-backend/procedures.md'], readBeforeChange: true });
+  assert.equal(g.observed.review, true);
+  assert.equal(g.observed.gates[0].cmd, 'node --check src/orders.service.mjs');
   const noProc = currentTurn([prompt('x'), say('Waymark → L2 · dept-backend'), call('Skill', { skill: 'dept-backend' }), call('AskUserQuestion'), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check x' }), call('Skill', { skill: 'code-review' })]);
-  assert.match(checkCierre(noProc, cierre(id), undefined, undefined, ctx), /never read in this session \(dept-backend\/procedures\.md\)/);
+  assert.match(checkCierre(noProc, cierre(id), undefined, undefined, ctx), /dept-backend\/procedures\.md was never read/);
+});
+
+test('observed: gate time and failures come from the tool results; the slowest command is kept', () => {
+  const { cwd } = fresh();
+  const t0 = Date.parse('2026-10-02T12:00:00Z');
+  const at = (sec, line) => ({ ...line, timestamp: new Date(t0 + sec * 1000).toISOString() });
+  const use = (id, name, input, sec) => at(sec, { type: 'assistant', message: { content: [{ type: 'tool_use', id, name, input }] } });
+  const res = (id, sec, isError = false) => at(sec, { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: id, content: isError ? 'error TS2322' : 'ok', is_error: isError }] } });
+  const turn = currentTurn([at(0, prompt('x')), say('Waymark → L1 · dept-backend'), use('a', 'Skill', { skill: 'dept-backend' }, 1), res('a', 1), use('b', 'Read', { file_path: '/skills/dept-backend/procedures.md' }, 2), res('b', 2),
+    use('c', 'Edit', { file_path: FILE }, 3), res('c', 4), use('d', 'Bash', { command: 'npx tsc --noEmit' }, 5), res('d', 545, true), use('e', 'Bash', { command: 'npx eslint src' }, 546), res('e', 552)]);
+  const g = cierreGaps(turn, '## Cierre\nResultado: hecho · Decisión: única (un solo cambio)\nSub-decisiones: ninguna\nEvidencia: observada x\nAprendido: "a ← b"', undefined, undefined, ctxFor(cwd, []));
+  assert.deepEqual(g.observed.gates.map((x) => [x.cmd, x.s, x.error]), [['npx tsc --noEmit', 540, true], ['npx eslint src', 6, false]]);
+  assert.equal(g.observed.time.slowest.s, 540);
+  assert.equal(g.observed.time.toolMinutes, 9.1);
+});
+
+test('Cierre: bold field names are read like plain ones', () => {
+  const { cwd } = fresh();
+  const id = taskIds(cwd).next;
+  const bold = cierre(id).replace(/^(Resultado|Decisión|Sub-decisiones|Evidencia|Aprendido):/gm, '**$1:**').replace('Resultado:', '**Resultado:**');
+  assert.equal(checkCierre(l2(), bold, undefined, undefined, ctxFor(cwd)), null);
+});
+
+test('Cierre: an inference from docs needs a docs call; a pre-existing failure needs a clean-copy check', () => {
+  const { cwd } = fresh();
+  const id = taskIds(cwd).next, ctx = ctxFor(cwd);
+  const fromDocs = cierre(id).replace('observada timeouts en el log de pedidos', 'inferida de la doc de Meta Cloud API (check: enviar una respuesta citada)');
+  assert.match(checkCierre(l2(), fromDocs, undefined, undefined, ctx), /no docs were consulted/);
+  assert.equal(checkCierre(l2([call('Skill', { skill: 'library-docs' })]), fromDocs, undefined, undefined, ctx), null);
+  const pre = `${cierre(id)}\nNota: contact-center.spec.ts ya fallaba antes`;
+  assert.match(checkCierre(l2(), pre, undefined, undefined, ctx), /pre-existing without proof/);
+  assert.equal(checkCierre(l2([call('Bash', { command: 'git worktree add ../clean HEAD && cd ../clean && npx vitest run x' })]), pre, undefined, undefined, ctx), null);
+  assert.equal(checkCierre(l2(), pre.replace('ya fallaba antes', 'ya fallaba antes (previo: no comprobado, sin permiso)'), undefined, undefined, ctx), null);
+});
+
+test('Cierre: a spec next to the changed code must be added or changed, or Tests: no (<why>)', () => {
+  const { cwd } = fresh();
+  const dir = fs.mkdtempSync(path.join(os.homedir(), '.wm-spec-near-')); // outside temp so it is not exempt
+  temps.push(dir);
+  fs.writeFileSync(path.join(dir, 'orders.spec.ts'), '');
+  const code = path.join(dir, 'orders.ts');
+  const lines = (extra = []) => currentTurn([prompt('x'), say('Waymark → L1 · dept-backend'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'), call('Edit', { file_path: code }), ...extra, call('Bash', { command: 'npx eslint src' })]);
+  const close = '## Cierre\nResultado: hecho · Decisión: única (un solo cambio)\nSub-decisiones: ninguna\nEvidencia: observada x\nAprendido: "a ← b"';
+  assert.match(checkCierre(lines(), close) || '', /sits next to the changed code/);
+  assert.equal(checkCierre(lines(), `${close}\nTests: no (solo cambia un texto de log)`), null);
+  assert.equal(checkCierre(lines([call('Edit', { file_path: path.join(dir, 'orders.spec.ts') }), call('Bash', { command: 'npx vitest related orders.ts --run' })]), close), null);
+});
+
+test('Cierre: an empty field does not take the next line as its value', () => {
+  const { cwd } = fresh();
+  const id = taskIds(cwd).next;
+  assert.match(checkCierre(l2(), cierre(id, undefined, 'Resultado:\n'), undefined, undefined, ctxFor(cwd)), /Resultado: hecho \| parcial/);
+});
+
+test('Sub-decisiones: a ";" inside parentheses or quotes does not split an item', () => {
+  assert.deepEqual(splitTop('esquema (relación; wamid) → preguntada; estilo → del usuario ("gris; sin borde")'), ['esquema (relación; wamid) → preguntada', 'estilo → del usuario ("gris; sin borde")']);
+});
+
+test('branches: the branch of each repo that holds a changed file', () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'waymark-git-'));
+  temps.push(repo);
+  const git = (...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: repo, encoding: 'utf8' });
+  git('init', '-q', '-b', 'feat/replies'); fs.writeFileSync(path.join(repo, 'a.ts'), 'a'); git('add', '.'); git('commit', '-q', '-m', 'i');
+  const b = branchesOf([path.join(repo, 'a.ts')]);
+  assert.deepEqual(Object.values(b), ['feat/replies']);
 });
 
 test('Cierre: gates run after the last change (typecheck after code, tests after a spec)', () => {
   const { cwd } = fresh();
   const id = taskIds(cwd).next, ctx = ctxFor(cwd);
   assert.match(checkCierre(l2([call('Edit', { file_path: '/work/proj/src/late.ts' })]), cierre(id), undefined, undefined, ctx), /no typecheck, lint or build ran after the last code change/);
-  assert.match(checkCierre(l2([call('Bash', { command: 'npx vitest run src' }), call('Write', { file_path: '/work/proj/src/a.spec.ts' }), call('Bash', { command: 'npx tsc --noEmit' })]), cierre(id).replace('Tests: sin infra (no hay specs en src)', 'Tests: verde'), undefined, undefined, ctx), /spec changed after the last test run/);
+  assert.match(checkCierre(l2([call('Bash', { command: 'npx vitest run src' }), call('Write', { file_path: '/work/proj/src/a.spec.ts' }), call('Bash', { command: 'npx tsc --noEmit' })]), cierre(id), undefined, undefined, ctx), /spec changed after the last test run/);
   assert.match(checkCierre(l2([call('Bash', { command: 'git checkout HEAD -- src/a.ts' })]), cierre(id), undefined, undefined, { ...ctx, gitChanged: ['/work/proj/src/a.ts'] }), /after the last code change/, 'a shell change counts as a change');
 });
 

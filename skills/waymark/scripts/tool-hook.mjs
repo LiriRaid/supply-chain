@@ -14,11 +14,14 @@
 //   files: git checkout --, sed -i, rm, redirects) is denied until the task has a choice-window question
 //   (AskUserQuestion) — strict since test 2.0-2, where a retry let the agent apply two decisions before asking. A turn
 //   routed Q is told once to re-route (by tool call: the owner dept-* with args "L<n>"); the owner's procedures.md must
-//   have been read before the first change (once per prompt).
+//   have been read before the first change (once per prompt); L2+ with engram and no mem_search yet is denied once too
+//   (test 2.0-3: the old note was ignored for 3 edits). The gate's message names the repo's branch and asks for the
+//   foreseeable sub-decisions in the same choice-window call.
 // Remove the hook from the agent's settings to disable it.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { readTail, currentTurn, routedLevel, routedDept, sessionTools } from './transcript.mjs';
 import { taskLines, askedChoice, changesProject } from './provenance.mjs';
@@ -66,6 +69,7 @@ export function checkEdit(file, lines) {
   const engram = lines.some((d) => JSON.stringify(d.attachment || '').includes('mcp__engram__') || (d.message?.content || []).some?.((c) => c.type === 'tool_use' && c.name.startsWith('mcp__engram__')));
   const searched = lines.some((d) => (d.message?.content || []).some?.((c) => c.type === 'tool_use' && /mcp__engram__mem_(search|context)/.test(c.name)));
   const firstEdit = !turn.tools.some((t) => /^(Edit|Write|MultiEdit|NotebookEdit)$/.test(t.name) && !exempt(t.input.file_path || t.input.notebook_path));
+  // Since 2.0 the decision gate denies this once (checkDecision); the note stays for a gate that could not keep state.
   if (level >= 2 && engram && !searched && firstEdit) notes.push('L2+ and no mem_search yet in this session: run mem_search with the task\'s key terms before this edit (past decisions, rejected paths)');
   return notes.length ? `Waymark: ${notes.join('; ')}.` : null;
 }
@@ -73,7 +77,7 @@ export function checkEdit(file, lines) {
 // Decision gate: deny once per prompt (state keyed by session + prompt uuid), never for L0 or exempt files. A turn routed
 // Q that edits a project file is denied once too: a question that became a change must re-route (test 2.0-1: routed Q,
 // 8 edits, so every check and the record were skipped).
-export function checkDecision(target, lines, session = 'unknown', stateFile = path.join(process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark'), '.decision-gate.json')) {
+export function checkDecision(target, lines, session = 'unknown', stateFile = path.join(process.env.WAYMARK_HOME || path.join(os.homedir(), '.waymark'), '.decision-gate.json'), cwd = process.cwd()) {
   // target: a file path (Edit/Write) or { command } (a shell command that changes files: git checkout --, sed -i, rm, >).
   if (target && typeof target === 'object') { if (!changesProject(target.command)) return null; }
   else if (!target || exempt(target)) return null;
@@ -92,15 +96,31 @@ export function checkDecision(target, lines, session = 'unknown', stateFile = pa
   if (q && once('q')) return 'Waymark: this turn was routed as a question (Q) but is about to change project files. A question that becomes a change is a task: re-route with a tool call — invoke the owner dept-* skill with args "L<n>" (e.g. Skill dept-frontend, args "L2"); a routing line written mid-turn is not persisted — then the opener, and put the decision to the user with the optimal options before changing anything.';
   // Strict gate (user's decision 2026-10-02): no change until the user was asked in the choice window in this task.
   if (!askedChoice(taskLines(lines))) {
-    return `Waymark: L${level} decision gate — the user decides every real decision, you never decide alone. Before changing files, list the optimal options in your choice window (AskUserQuestion): for each one the files it touches, the risk and the cost; mark the recommended one (it may not be what the user needs). Then do what the user picks. ` +
-      'If there is only one real way, or the user already chose in their message, confirm it in the choice window (that option + "otra cosa"). This gate stays until the user has been asked in this task.';
+    const branch = branchAt(typeof target === 'object' ? cwd : path.dirname(target));
+    return `Waymark: L${level} decision gate — the user decides every real decision, you never decide alone. Before changing files, ask in your choice window (AskUserQuestion): the approach with its optimal options (files, risk, cost; recommended marked, it may not be what the user needs) AND, as more questions in the same call (up to 4), the sub-decisions you can foresee — data/schema design, visual style, behavior details, defaults. ` +
+      `${branch ? `This repo is on branch "${branch}": if that branch is not for this task, include where the work goes as an option. ` : ''}` +
+      'If there is only one real way, or the user already chose in their message, confirm it there (that option + "otra cosa"). This gate stays until the user has been asked in this task.';
   }
+  const all = sessionTools(lines);
   // The owner department's procedure is read before the first change (test 2.0-2: declared, never read).
   const dept = routedDept(turn.texts, turn.tools);
-  if (dept && !sessionTools(lines).some((t) => new RegExp(`${dept}[\\\\/]procedures\\.md`).test(`${t.input.file_path || ''} ${t.input.path || ''} ${t.input.pattern || ''} ${t.input.command || ''}`))) {
-    return once('proc') ? `Waymark: ${dept} is the owner of this task but its procedures.md was not read in this session. Read the section you will follow (search its heading in <skills-dir>/${dept}/procedures.md) before changing files, and name it in the Cierre as Procedimiento: <section> (procedures.md:<line>).` : null;
+  if (dept && !all.some((t) => new RegExp(`${dept}[\\\\/]procedures\\.md`).test(`${t.input.file_path || ''} ${t.input.path || ''} ${t.input.pattern || ''} ${t.input.command || ''}`))) {
+    if (once('proc')) return `Waymark: ${dept} is the owner of this task but its procedures.md was not read in this session. Read the section you will follow (search its heading in <skills-dir>/${dept}/procedures.md) before changing files.`;
+  }
+  // L2+: recall past decisions before the first change (test 2.0-3: a note was ignored for 3 edits).
+  const engram = lines.some((d) => JSON.stringify(d.attachment || '').includes('mcp__engram__')) || all.some((t) => t.name.startsWith('mcp__engram__'));
+  if (level >= 2 && engram && !all.some((t) => /mcp__engram__mem_(search|context)/.test(t.name)) && once('mem')) {
+    return 'Waymark: L2+ and no mem_search yet in this session: run mem_search with the task\'s key terms (past decisions, rejected paths) before changing files.';
   }
   return null;
+}
+
+// Current branch of the repo at dir, or null (no git, not a repo, detached).
+function branchAt(dir) {
+  try {
+    const r = spawnSync('git', ['symbolic-ref', '--short', 'HEAD'], { cwd: dir, encoding: 'utf8', timeout: 1000 }); // also on a branch with no commits; fails when detached
+    return r.status === 0 ? r.stdout.trim() || null : null;
+  } catch { return null; }
 }
 
 // → { deny: reason } for commands and the decision gate, { note: text } for edits, or null.
@@ -109,15 +129,13 @@ async function main(input) {
   const tool = h.tool_name || '';
   if (/^(Bash|PowerShell)$/.test(tool)) {
     const deny = checkCommand(h.tool_input?.command, h.cwd || process.cwd())
-      || (changesProject(h.tool_input?.command) ? checkDecision({ command: h.tool_input?.command }, readTail(h.transcript_path, 2 * 1024 * 1024), h.session_id) : null);
+      || (changesProject(h.tool_input?.command) ? checkDecision({ command: h.tool_input?.command }, readTail(h.transcript_path, 2 * 1024 * 1024), h.session_id, undefined, h.cwd || process.cwd()) : null);
     return deny ? { deny } : null;
   }
   if (/^(Edit|Write|MultiEdit|NotebookEdit)$/.test(tool)) {
     const file = h.tool_input?.file_path || h.tool_input?.notebook_path, lines = readTail(h.transcript_path, 2 * 1024 * 1024);
-    const deny = checkDecision(file, lines, h.session_id);
-    if (deny) return { deny };
-    const note = checkEdit(file, lines);
-    return note ? { note } : null;
+    const deny = checkDecision(file, lines, h.session_id, undefined, h.cwd || process.cwd());
+    return deny ? { deny } : null; // the mem_search note (checkEdit) became a once-per-prompt denial in checkDecision
   }
   return null;
 }
