@@ -7,8 +7,8 @@
 //   FileChange → one Edit per changed path; McpToolCall → mcp__<server>__<tool>; WebSearch → WebSearch.
 // - A read of <dir>/<skill>/SKILL.md counts as invoking that skill (Codex has no Skill tool).
 // - request_user_input (Codex's choice window: Plan mode, or the default_mode_request_user_input flag) → AskUserQuestion
-//   with the user's answers. Without it, a turn that ended with a question in the chat and the user's next message count
-//   as one decision asked in chat (user's choice, 2026-10-03 · T2i; docs/adr/0009).
+//   with the user's answers. Without it, a turn that ended asking in the chat and the user's next message count as the
+//   decisions asked in chat, one per question line (user's choice, 2026-10-03 · T2i, T2j; docs/adr/0009, 0010).
 // - token_count → usage per response (cached input apart); turn_context → model; session_meta → Codex version.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -72,11 +72,12 @@ export function toLines(rows) {
       const text = (it.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('\n');
       const prompt = { type: 'user', uuid: `${p.turn_id || ''}:${it.id || n}`, timestamp: ts, version, message: { role: 'user', content: text } };
       if (!isPrompt(prompt)) { lines.push(prompt); continue; } // a hook's block reason fed back is not the user answering
-      const question = !choiceInTurn && lastText ? [...lastText.matchAll(QUESTION)].pop()?.[0]?.trim() : null;
-      if (question) { // the previous turn ended asking in the chat: this message answers it
-        const id = `chat-${n}`;
-        assistant(ts, [{ type: 'tool_use', name: 'AskUserQuestion', id, input: { source: 'chat', questions: [{ question }] } }]);
-        lines.push({ type: 'user', timestamp: ts, version, message: { content: [{ type: 'tool_result', tool_use_id: id, content: 'answered in chat' }] }, toolUseResult: { source: 'chat', questions: [{ question, options: [] }], answers: { [question]: text.replace(/\s+/g, ' ').trim().slice(0, 300) } } });
+      // every question line of the last message (3c: only the last one counted, so two questions answered = one decision)
+      const questions = !choiceInTurn && lastText ? [...new Set([...lastText.matchAll(QUESTION)].map((m) => m[0].trim()))] : [];
+      if (questions.length) { // the previous turn ended asking in the chat: this message answers it
+        const id = `chat-${n}`, reply = text.replace(/\s+/g, ' ').trim().slice(0, 300);
+        assistant(ts, [{ type: 'tool_use', name: 'AskUserQuestion', id, input: { source: 'chat', questions: questions.map((question) => ({ question })) } }]);
+        lines.push({ type: 'user', timestamp: ts, version, message: { content: [{ type: 'tool_result', tool_use_id: id, content: 'answered in chat' }] }, toolUseResult: { source: 'chat', questions: questions.map((question) => ({ question, options: [] })), answers: Object.fromEntries(questions.map((q) => [q, reply])) } });
       }
       lines.push(prompt);
       lastText = null; choiceInTurn = false;

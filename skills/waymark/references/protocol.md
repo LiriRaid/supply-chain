@@ -63,7 +63,7 @@ Sub-decisiones: texto del botón → del usuario ("que diga Eliminar"); foco ini
 Evidencia: observada borrado sin confirmar en /contacts (browser-verify, antes del cambio)
 Aprendido: "confirmación con app-modal ← observado: borrado sin confirmar en /contacts"
 ```
-**Decision gate (any level):** the user decides, never the agent. Before changing anything, ask in the choice window: the approach with its optimal options (files, risk, cost; mark the recommended one, which may not be what the user needs) and, in the same call, the sub-decisions you can foresee (data design, visual style, behavior, defaults, the branch). The Cierre names the chosen and the discarded ones. A choice the user already wrote, or a single real way, is confirmed there too. Commits of the task carry the trailer `Waymark-Task: <task ID>`.
+**Decision gate (any level):** the user decides, never the agent. Before changing anything, ask in the choice window: the approach with its optimal options (files, risk, cost; mark the recommended one, which may not be what the user needs) and, in the same call, every decision that shapes the work you can foresee (data design, visual style, behavior, defaults; with UI, whether to verify it in the browser, with a test user + Playwright when there is a login or OTP). The branch is the user's, never a sub-decision. Later questions only confirm (`→ confirmada`, passes); a work decision asked after applying it is `→ preguntada tarde` (passes the block, Decision ✘). The Cierre names the chosen and the discarded ones. A choice the user already wrote, or a single real way, is confirmed there too. Commits of the task carry the trailer `Waymark-Task: <task ID>`.
 
 ## When stuck (two-strike rule)
 

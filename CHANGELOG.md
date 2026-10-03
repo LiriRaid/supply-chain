@@ -84,6 +84,15 @@ Waymark is now a supply chain of the agent's work: every task goes through defin
   - **Skills in Codex:** reading a skill's `SKILL.md` counts as invoking it. The reminder and the gate tell Codex the absolute skills path.
   - **Decisions without a choice window:** `request_user_input` counts when Codex has it (Plan mode). Otherwise, a turn that ended with a question in the chat plus the user's reply count as one decision (`source: "chat"`).
   - **Steps an agent lacks do not apply:** each adapter lists them (`lacks`; Codex: code-review). They are recorded as `na`, never block and do not count in the score.
+- **Step 3c: fixes from the real Codex → Claude test** (`docs/adr/0010`, all the user's rules and picks):
+  - **Every routine step that applies must pass:** procedure, engram index, browser, spec next to the code, red claims and pre-existing claims now block once like the decision and the gate. Only the commit trailer stays recorded, because fixing it means rewriting a commit.
+  - **The user owns the branch and the browser.** The gate no longer pushes the branch, and the end-of-turn hook ignores a branch listed as a sub-decision. The browser check is offered in the first choice window, with a test user + Playwright when there is a login or OTP. Navegador fails only if it was never offered, or accepted and not done; `Navegador: omitido (usuario: "<option picked>")` passes.
+  - **Decisions:** every decision that shapes the work goes in the first choice window. A later question that only confirms is `→ confirmada` and passes. `preguntada tarde` is kept for a work decision asked after applying it.
+  - **Pre-existing failures are checked at that moment** (`git worktree` or `no comprobado (<why>)`). The reminder says so, and the block says how.
+  - **Quota:** while a model has fewer than 3 calibration pairs, the end-of-turn line asks for the real % with the exact `calibrate.mjs` command.
+  - **Routing:** `Waymark → L0|Q` counts as a question. A reply with no routing line inside a task that has not written its Cierre keeps the task's routing. Before, a Codex reply in the chat opened an L0 turn and skipped the gate.
+  - **Codex:** every question line of the last message counts as a decision asked in chat, not only the last one.
+  - **tasks.md:** `próximo` keeps every pending part in order (the last `Pendiente:` used to win, and "paso 2" was lost). A marker inside quotes is text. `open.json` records the agent, so a turn shows "started in codex".
 - **Hook tests in the repo:** `node --test tests/*.test.mjs` (no dependencies, temporary `WAYMARK_HOME`).
 - **Fix:** `protocol.md` → *Closing report* was an empty, unclosed code block that turned *When stuck* into code; it now shows a full Cierre and the decision gate.
 - **Fix:** a multi-select answer in the choice window joins labels with "," (no space); the record no longer lists chosen options as discarded.

@@ -106,7 +106,8 @@ export function sessionState(lines) {
 // Text written after a thinking block is not persisted (checked again 2026-10-02: a mid-turn re-route line was lost), so
 // a re-route is also a tool call: the owner dept-* skill invoked with args "L<n>", which always comes after the
 // turn's first text and therefore wins.
-const ROUTE = /^[ \t]*Waymark →\s*(L([0-3])|Q)\b(?:\s*·\s*(dept-[a-z-]+))?/gm;
+// "Waymark → L0|Q" (the template's "L<n>|Q" with L0 kept) is a question (3c).
+const ROUTE = /^[ \t]*Waymark →\s*(L([0-3])(?:\s*\|\s*Q)?|Q)\b(?:\s*·\s*(dept-[a-z-]+))?/gm;
 const routes = (texts) => [...texts.join('\n').matchAll(ROUTE)];
 const reroute = (tools = []) => {
   const r = tools.filter((t) => t.name === 'Skill' && /^dept-/.test(String(t.input.skill || '')) && /^\s*(L[0-3])\b/i.test(String(t.input.args || '')));
@@ -116,7 +117,28 @@ export function routedLevel(texts, tools) {
   const t = reroute(tools);
   if (t) return t.level;
   const all = routes(texts), m = all[all.length - 1];
-  return !m ? 0 : m[1] === 'Q' ? 'Q' : Number(m[2]);
+  return !m ? 0 : m[1] === 'Q' || /^L0\s*\|\s*Q$/.test(m[1]) ? 'Q' : Number(m[2]);
+}
+
+// A turn with no routing at all inherits the routing of the task's last routed turn (L1–L3) while that turn has not
+// written its Cierre (user's choice, 2026-10-03 · T2j): a reply to a question asked in the chat (Codex) opened a new
+// unrouted turn, read as L0, and skipped the gate. Looks back within the task (the two prompts before this one); an
+// explicit "Waymark → L0" or a Q turn never passes its routing on. → { level, dept } or null.
+export function inheritedRoute(lines, prompts = 2) {
+  const starts = [];
+  for (let i = lines.length - 1; i >= 0 && starts.length <= prompts; i--) if (isPrompt(lines[i])) starts.push(i);
+  if (!starts.length) return null;
+  const turnAt = (k) => currentTurn(lines.slice(0, k === 0 ? lines.length : starts[k - 1]));
+  const now = turnAt(0);
+  if (routes(now.texts).length || reroute(now.tools)) return null;
+  for (let k = 1; k < starts.length; k++) {
+    const t = turnAt(k);
+    if (t.texts.some((x) => /##\s*Cierre/.test(x.replace(/\*\*|__/g, '')))) return null; // the task closed
+    if (!routes(t.texts).length && !reroute(t.tools)) continue; // another unrouted reply: keep looking back
+    const level = routedLevel(t.texts, t.tools);
+    return typeof level === 'number' && level > 0 ? { level, dept: routedDept(t.texts, t.tools) } : null;
+  }
+  return null;
 }
 
 // Department named in the last routing line ("Waymark → L2 · dept-frontend (+dept-ux-ui) · …") or re-route call, or null.

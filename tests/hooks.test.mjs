@@ -145,13 +145,15 @@ test('decision gate: procedure and mem_search are not denied any more (recorded 
   assert.equal(checkDecision(FILE, asked, 's4', path.join(home, `gate-${n++}.json`)), null);
 });
 
-test('decision gate: the message names the repo branch and asks for the foreseeable sub-decisions', () => {
+test('3c: the gate asks every work-shaping decision first and offers the browser; the branch is the user\'s, never pushed', () => {
   const repo = fs.mkdtempSync(path.join(os.homedir(), '.wm-branch-')); // outside temp, which the gate exempts
   temps.push(repo);
   spawnSync('git', ['init', '-q', '-b', 'feat/other-work'], { cwd: repo });
   const deny = checkDecision(path.join(repo, 'a.ts'), [prompt('x', 'ubr'), say('Waymark → L2 · dept-backend')], 's7', path.join(home, `gate-${n++}.json`));
-  assert.match(deny, /branch "feat\/other-work"/);
-  assert.match(deny, /sub-decisions/);
+  assert.ok(!/feat\/other-work|include where the work goes/.test(deny), 'no branch option pushed');
+  assert.match(deny, /every decision that shapes the work/);
+  assert.match(deny, /verify it in the browser[^.]*Playwright/);
+  assert.match(deny, /→ confirmada/);
 });
 
 test('decision gate: shell commands that change project files are gated like edits', () => {
@@ -273,13 +275,13 @@ test('Cierre: L1 needs Decisión too; older callers without ctx skip the ID chec
   assert.equal(checkCierre(turn, `${base}\nDecisión: única (un solo texto que corregir)`), null);
 });
 
-test('Cierre: a turn routed Q that changed files is checked as L2 and the routing is a finding', () => {
+test('Cierre: a turn routed Q that changed files is checked as L2 and the routing blocks (Enrutar)', () => {
   const close = '## Cierre\nResultado: hecho · Decisión: única (x y z)\nSub-decisiones: ninguna\nEvidencia: observada el modal en /chat\nAprendido: "a ← b"';
   const head = [prompt('¿se puede mover el modal?'), say('Waymark → Q · dept-frontend · skills: dept-frontend'), call('Skill', { skill: 'dept-frontend' }), PROC('dept-frontend')];
   const tail = [call('Edit', { file_path: FILE }), call('Bash', { command: 'npx eslint src' }), MEM()];
   const g = cierreGaps(currentTurn([...head, ...tail]), close);
   assert.equal(g.level, 2);
-  assert.ok(g.findings.some((f) => /routed as a question/.test(f)));
+  assert.ok(g.missing.some((f) => /routed as a question/.test(f)));
   assert.ok(g.missing.some((m) => /code-review did not run/.test(m)) && g.missing.some((m) => /run the build once/.test(m)), 'L2 with code: review and build block');
   assert.equal(cierreGaps(currentTurn([...head, call('Skill', { skill: 'dept-frontend', args: 'L1' }), ...tail]), close).level, 1, 're-routed to L1 by tool call');
 });
@@ -305,7 +307,7 @@ test('Cierre: the routing line\'s department must have been invoked; the record 
   const { cwd } = fresh();
   const id = taskIds(cwd).next, ctx = ctxFor(cwd);
   const noDept = currentTurn([prompt('x'), say('Waymark → L2 · dept-frontend · skills: ui-build'), call('AskUserQuestion'), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Skill', { skill: 'code-review' })]);
-  assert.ok(cierreGaps(noDept, cierre(id), undefined, undefined, ctx).findings.some((f) => /dept-frontend named in the routing line but never invoked/.test(f)));
+  assert.ok(cierreGaps(noDept, cierre(id), undefined, undefined, ctx).missing.some((f) => /dept-frontend named in the routing line but never invoked/.test(f)));
   const gaps = cierreGaps(l2(), cierre(id), undefined, undefined, ctx);
   assert.deepEqual(provenanceRecord(l2(), gaps, ctx, {}).department, { declared: 'dept-backend', invoked: ['dept-backend'] });
 });
@@ -313,15 +315,17 @@ test('Cierre: the routing line\'s department must have been invoked; the record 
 test('observed: memory, procedure and review are computed from the tool calls, not declared', () => {
   const { cwd } = fresh();
   const id = taskIds(cwd).next, ctx = ctxFor(cwd);
-  const opened = currentTurn([prompt('x'), say('Waymark → L2 · dept-backend'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'), call('mcp__engram__mem_search', { query: 'retries' }), call('Read', { file_path: path.join(os.homedir(), '.waymark', 'projects', 'shop.md') }), call('AskUserQuestion'), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs && npm run build' }), call('Skill', { skill: 'code-review' }), MEM()]);
+  const opened = currentTurn([prompt('x'), say('Waymark → L2 · dept-backend'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'), call('mcp__engram__mem_search', { query: 'retries' }), call('Read', { file_path: path.join(os.homedir(), '.waymark', 'projects', 'shop.md') }), call('AskUserQuestion'), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check src/orders.service.mjs && npm run build' }), call('Skill', { skill: 'code-review' }), MEM(), call('mcp__engram__mem_save', { topic_key: 'waymark/tasks/proj' })]);
   const g = cierreGaps(opened, cierre(id), undefined, undefined, { ...ctx, engram: true });
   assert.deepEqual(g.missing, []);
-  assert.deepEqual(g.observed.memory, { searched: true, opened: true, written: true, saved: false, indexed: false });
+  assert.deepEqual(g.observed.memory, { searched: true, opened: true, written: true, saved: true, indexed: true });
+  const noIndex = { ...opened, tools: opened.tools.filter((t) => t.name !== 'mcp__engram__mem_save') };
+  assert.match(checkCierre(noIndex, cierre(id), undefined, undefined, { ...ctx, engram: true }) || '', /engram task index not saved/, '3c: the index blocks once');
   assert.deepEqual(g.observed.procedure, { owner: 'dept-backend', read: ['dept-backend/procedures.md'], readBeforeChange: true });
   assert.equal(g.observed.review, true);
   assert.equal(g.observed.gates[0].cmd, 'node --check src/orders.service.mjs && npm run build');
   const noProc = currentTurn([prompt('x'), say('Waymark → L2 · dept-backend'), call('Skill', { skill: 'dept-backend' }), call('AskUserQuestion'), answered('¿Cómo?', ['Backoff', 'Cola'], 'Backoff'), call('Edit', { file_path: FILE }), call('Bash', { command: 'node --check x' }), call('Skill', { skill: 'code-review' })]);
-  assert.ok(cierreGaps(noProc, cierre(id), undefined, undefined, ctx).findings.some((f) => /dept-backend\/procedures\.md never read/.test(f)));
+  assert.ok(cierreGaps(noProc, cierre(id), undefined, undefined, ctx).missing.some((f) => /dept-backend\/procedures\.md never read/.test(f)));
 });
 
 test('observed: gate time and failures come from the tool results; the slowest command is kept', () => {
@@ -345,27 +349,28 @@ test('Cierre: bold field names are read like plain ones', () => {
   assert.equal(checkCierre(l2(), bold, undefined, undefined, ctxFor(cwd)), null);
 });
 
-test('findings: an inference from docs without docs, a pre-existing failure without a clean copy', () => {
+test('blocks: an inference from docs without docs, a pre-existing failure without a clean copy (3c: blocks once)', () => {
   const { cwd } = fresh();
   const id = taskIds(cwd).next, ctx = ctxFor(cwd);
-  const has = (turn, reply, re) => cierreGaps(turn, reply, undefined, undefined, ctx).findings.some((f) => re.test(f));
+  const has = (turn, reply, re) => cierreGaps(turn, reply, undefined, undefined, ctx).missing.some((f) => re.test(f));
   const fromDocs = cierre(id).replace('observada timeouts en el log de pedidos', 'inferida de la doc de Meta Cloud API (check: enviar una respuesta citada)');
   assert.match(checkCierre(l2(), fromDocs, undefined, undefined, ctx) || '', /inferred from docs but no docs were consulted/, 'an inference from docs blocks');
   assert.equal(checkCierre(l2([call('Skill', { skill: 'library-docs' })]), fromDocs, undefined, undefined, ctx), null);
   const pre = `${cierre(id)}\nNota: contact-center.spec.ts ya fallaba antes`;
   assert.ok(has(l2(), pre, /pre-existing/));
   assert.ok(!has(l2([call('Bash', { command: 'git worktree add ../clean HEAD && cd ../clean && npx vitest run x' })]), pre, /pre-existing/));
-  assert.equal(checkCierre(l2(), pre, undefined, undefined, ctx), null, 'findings never block');
+  assert.match(checkCierre(l2(), pre, undefined, undefined, ctx) || '', /git worktree add <tmp> HEAD/, 'the block says how to check it now');
+  assert.equal(checkCierre(l2(), `${pre} (no comprobado (sin permiso para correr la suite))`, undefined, undefined, ctx), null, 'or says it was not checked');
 });
 
-test('findings: a spec next to the changed code untouched, unless Tests: no (<why>)', () => {
+test('blocks: a spec next to the changed code untouched, unless Tests: no (<why>)', () => {
   const dir = fs.mkdtempSync(path.join(os.homedir(), '.wm-spec-near-')); // outside temp so it is not exempt
   temps.push(dir);
   fs.writeFileSync(path.join(dir, 'orders.spec.ts'), '');
   const code = path.join(dir, 'orders.ts');
   const lines = (extra = []) => currentTurn([prompt('x'), say('Waymark → L1 · dept-backend'), call('Skill', { skill: 'dept-backend' }), PROC('dept-backend'), call('Edit', { file_path: code }), ...extra, call('Bash', { command: 'npx eslint src' }), MEM()]);
   const close = '## Cierre\nResultado: hecho · Decisión: única (un solo cambio)\nSub-decisiones: ninguna\nEvidencia: observada x\nAprendido: "a ← b"';
-  const near = (turn, reply) => cierreGaps(turn, reply).findings.some((f) => /sits next to the changed code/.test(f));
+  const near = (turn, reply) => cierreGaps(turn, reply).missing.some((f) => /sits next to the changed code/.test(f));
   assert.ok(near(lines(), close));
   assert.ok(!near(lines(), `${close}\nTests: no (solo cambia un texto de log)`));
   assert.ok(!near(lines([call('Edit', { file_path: path.join(dir, 'orders.spec.ts') }), call('Bash', { command: 'npx vitest related orders.ts --run' })]), close));
@@ -441,7 +446,7 @@ test('bugs of test 2.0-4: an empty search is not a read; the chosen option count
   const emptyGrep = currentTurn([prompt('x'), say('Waymark → L1 · dept-frontend'), call('Skill', { skill: 'dept-frontend' }), call('Edit', { file_path: FILE }), call('Bash', { command: 'npx eslint x' }), MEM()]);
   const all = [...emptyGrep.tools.slice(0, 1), { name: 'Grep', input: { pattern: '^## Bug fix', path: '/skills/dept-frontend/procedures.md' }, out: 'No matches found' }, ...emptyGrep.tools.slice(1)];
   const g = cierreGaps(emptyGrep, '## Cierre\nResultado: hecho · Decisión: única (uno)\nSub-decisiones: ninguna\nEvidencia: observada x\nAprendido: "a"', all, undefined, ctxFor(cwd, []));
-  assert.ok(g.findings.some((f) => /procedures\.md never read/.test(f)));
+  assert.ok(g.missing.some((f) => /procedures\.md never read/.test(f)));
   assert.equal(checkCierre(l2(), cierre(id, 'del usuario ("Autollenar Puesto (Recomendado)")'), undefined, ['podemos aplicar el fix'], ctxFor(cwd, [{ question: 'q', chosen: 'Autollenar Puesto (Recomendado)', discarded: ['Quitar'] }])), null);
   assert.match(checkCierre(l2(), cierre(id, 'del usuario ("no tocar el esquema")'), undefined, ['dale'], ctxFor(cwd, [{ question: 'q', chosen: 'No', discarded: ['Sí'] }])) || '', /own words/, 'a short label does not validate any quote');
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'waymark-git-'));
@@ -669,7 +674,9 @@ test('tasks.md: generated from memory and the log, never for the bridge', () => 
   assert.match(md, /- \(3 more notes in memory\.md, not tasks\)[\s\S]*## Done \(last 0/);
   assert.ok(!/STEP SPEC|T2b|Last request/.test(md), 'notes stay in memory.md, also one that quotes a task ID');
   assert.equal(taskSummary('- [2026-10-03 · T1] Next.js upgrade: router done. Pendiente: deploy'), '- 2026-10-03 · T1 · pendiente · próximo: deploy');
-  assert.equal(taskSummary('- ▶ X (2026-10-03 · T4): rendered as NEXT/Pendiente: fragment. NEXT ship it'), '- 2026-10-03 · T4 · en curso · próximo: ship it', 'the last marker wins');
+  assert.equal(taskSummary('- ▶ X (2026-10-03 · T4): rendered as NEXT/Pendiente: fragment. NEXT ship it'), '- 2026-10-03 · T4 · en curso · próximo: fragment · ship it', '3c: every pending part is kept, in order');
+  assert.equal(taskSummary('- ▶ Y (2026-10-03 · T5): Pendiente: paso 2 (spec) · Pendiente: paso 3'), '- 2026-10-03 · T5 · en curso · próximo: paso 2 (spec) · paso 3', '3c: "paso 2" is no longer lost');
+  assert.equal(taskSummary('- ▶ Z (2026-10-03 · T6): bug: the last "Pendiente:" won, fixed. NEXT ✔ push'), '- 2026-10-03 · T6 · en curso · próximo: ✔ push', 'a marker inside quotes is text');
   assert.equal(refreshTasks(h), true);
   assert.equal(refreshTasks(h), false, 'up to date: not rewritten');
   fs.writeFileSync(h.log, JSON.stringify({ id: '2026-10-03 · T3', at: '2026-10-03T15:00:00Z', prompt: 'p',
@@ -1006,4 +1013,86 @@ test('codex adapter: sessions(cwd) finds the rollouts opened in that folder', ()
     fs.writeFileSync(path.join(dir, 'rollout-b.jsonl'), JSON.stringify(row('session_meta', { cwd: 'C:\\work\\other' })) + '\n');
     assert.deepEqual(cx.sessions('c:/work/proj').map((f) => path.basename(f)), ['rollout-a.jsonl']);
   } finally { if (before === undefined) delete process.env.CODEX_HOME; else process.env.CODEX_HOME = before; }
+});
+
+// ---- 3c fixes (user's rules and picks, 2026-10-03 · T2j; docs/adr/0010) ----
+const { inheritedRoute } = await import(`file://${SCRIPTS}/transcript.mjs`);
+
+test('3c: "Waymark → L0|Q" is a question', () => {
+  assert.equal(routedLevel(['Waymark → L0|Q · dept-devex · skills: ninguna']), 'Q');
+  assert.equal(routedLevel(['Waymark → L0 | Q · dept-devex']), 'Q');
+  assert.equal(routedDept(['Waymark → L0|Q · dept-devex · skills: ninguna']), 'dept-devex');
+  assert.equal(routedLevel(['Waymark → L0 · dept-devex']), 0, 'a plain L0 stays L0');
+});
+
+test('3c: an unrouted reply inside an open task inherits its routing (gate and Cierre); a closed task or Q does not', () => {
+  const asked = [prompt('agrega reintentos'), say('Waymark → L2 · dept-backend · skills: ninguna'), call('Skill', { skill: 'dept-backend' }), say('Opciones: 1) Backoff 2) Cola. ¿Cuál?')];
+  const reply = [prompt('backoff'), call('Edit', { file_path: FILE })];
+  assert.deepEqual(inheritedRoute([...asked, ...reply]), { level: 2, dept: 'dept-backend' });
+  assert.equal(inheritedRoute([...asked, prompt('ok'), say('¿Y el límite?'), prompt('3')]).level, 2, 'through another unrouted reply');
+  assert.equal(inheritedRoute([...asked, say('## Cierre · x\nResultado: hecho'), ...reply]), null, 'the task closed');
+  assert.equal(inheritedRoute([prompt('¿qué hace?'), say('Waymark → Q · dept-qa'), ...reply]), null, 'a Q turn opens no task');
+  assert.equal(inheritedRoute([...asked, prompt('cambia el color'), say('Waymark → L0 · dept-frontend')]), null, 'an explicit L0 does not inherit');
+  const deny = checkDecision(FILE, [...asked, ...reply], `s-inh-${n}`, path.join(home, `gate-${n++}.json`));
+  assert.match(deny || '', /L2 decision gate/, 'the reply no longer skips the gate as L0');
+  const { cwd } = fresh();
+  const g = cierreGaps(currentTurn([...asked, ...reply, call('Bash', { command: 'npm run build' })]), cierre(taskIds(cwd).next), undefined, undefined, { ...ctxFor(cwd), inherited: { level: 2, dept: 'dept-backend' } });
+  assert.equal(g.level, 2);
+  assert.equal(g.dept.declared, 'dept-backend');
+});
+
+test('3c: "→ confirmada" passes; the branch is never counted as a sub-decision', () => {
+  const { cwd } = fresh();
+  const ids = taskIds(cwd), ctx = ctxFor(cwd);
+  const turn = l2([call('AskUserQuestion', { questions: [] }), answered('¿Confirmo 3 reintentos?', ['Sí', 'Otra cosa'], 'Sí')]);
+  const decisions = [...ctx.decisions, { question: '¿Confirmo 3 reintentos?', chosen: 'Sí', discarded: ['Otra cosa'] }];
+  const g = cierreGaps(turn, cierre(ids.next, undefined, undefined, '3 reintentos → confirmada'), undefined, undefined, { ids, decisions });
+  assert.deepEqual(g.missing, []);
+  assert.equal(g.steps.find((s) => s.id === 'decision').pass, true);
+  assert.ok(!g.findings.some((f) => /came after the first change/.test(f)), 'a confirmation is not a late decision');
+  assert.equal(checkCierre(l2(), cierre(ids.next, undefined, undefined, 'rama develop → no preguntada'), undefined, undefined, ctx), null, 'the branch is the user\'s: ignored');
+  assert.equal(checkCierre(l2(), cierre(ids.next, undefined, undefined, 'work on branch develop → no preguntada; textos → del usuario ("ok")'), undefined, ['ok'], ctx), null);
+  assert.match(checkCierre(l2(), cierre(ids.next, undefined, undefined, 'error branch del formulario → no preguntada'), undefined, undefined, ctx) || '', /taken without asking/, 'a code branch is still a decision');
+});
+
+test('3c: the browser is the user\'s call: never offered ✘, declined in the choice window ✔, accepted and not done ✘', () => {
+  const dir = fs.mkdtempSync(path.join(os.homedir(), '.wm-ui-')); // outside temp so it is not exempt
+  temps.push(dir);
+  const ui = path.join(dir, 'modal.component.html');
+  const { cwd } = fresh();
+  const ids = taskIds(cwd);
+  const turn = (extra = []) => currentTurn([prompt('mueve el modal'), say('Waymark → L2 · dept-frontend'), call('Skill', { skill: 'dept-frontend' }), PROC('dept-frontend'), call('AskUserQuestion'), answered('¿Cómo?', ['A', 'B'], 'A'),
+    call('Edit', { file_path: ui }), call('Bash', { command: 'npx ng build' }), call('Skill', { skill: 'code-review' }), MEM(), ...extra]);
+  const close = (extra = '') => `## Cierre · ${ids.next}\nResultado: hecho · Decisión: elegida A · descartadas B\nSub-decisiones: ninguna\nEvidencia: observada x\nAprendido: "a ← b"${extra}`;
+  const offered = [{ question: '¿Cómo?', chosen: 'A', discarded: ['B'] }, { question: '¿Verifico en el navegador?', chosen: 'Sin navegador', discarded: ['Sí, con browser-verify'] }];
+  assert.match(checkCierre(turn(), close(), undefined, undefined, { ids, decisions: offered.slice(0, 1) }) || '', /browser check was never offered/);
+  assert.equal(checkCierre(turn(), close('\nNavegador: omitido (usuario: "Sin navegador")'), undefined, undefined, { ids, decisions: offered }), null, 'declined: the picked option counts as the user\'s words');
+  assert.match(checkCierre(turn(), close(), undefined, undefined, { ids, decisions: offered }) || '', /was offered the browser check/);
+  const accepted = [offered[0], { question: '¿Verifico en el navegador?', chosen: 'Sí, con browser-verify', discarded: ['Sin navegador'] }];
+  assert.match(checkCierre(turn(), close('\nNavegador: omitido (usuario: "browser-verify")'), undefined, undefined, { ids, decisions: accepted }) || '', /was offered the browser check/, 'a fragment of the accepted option is not a skip');
+  assert.equal(checkCierre(turn([call('Skill', { skill: 'browser-verify' })]), close(), undefined, undefined, { ids, decisions: offered.slice(0, 1) }), null, 'done');
+});
+
+test('3c: the end-of-turn line asks the real quota % while the model has fewer than 3 pairs', () => {
+  const base = { steps: { Decision: true }, score: '1/1', tokens: 1e6, quotaPct: 0.7 };
+  assert.match(summaryLine('2026-10-03 · T9', { ...base, quotaBy: 'default' }), /¿qué % marcó tu cuota en esta tarea\? node ".*calibrate\.mjs" "2026-10-03 · T9" <pct>/);
+  assert.match(summaryLine('x', { ...base, quotaBy: 'pairs:2' }), /marcó tu cuota/);
+  assert.ok(!/marcó tu cuota/.test(summaryLine('x', { ...base, quotaBy: 'pairs:3' })));
+  assert.ok(!/marcó tu cuota/.test(summaryLine('x', { ...base, quotaBy: 'fit:4' })));
+  assert.ok(!/marcó tu cuota/.test(summaryLine('x', { ...base, quotaPct: null, quotaBy: null })));
+});
+
+test('3c: open.json records the agent, and tasks.md shows where the turn started', () => {
+  const repo = tmpRepo('open-agent');
+  fs.mkdirSync(path.join(repo, '.waymark'));
+  fs.writeFileSync(path.join(repo, '.waymark', 'memory.md'), '# P\n\n## Work in progress\n- ▶ A (2026-10-01 · T1): NEXT b\n');
+  spawnSync(process.execPath, [path.join(SCRIPTS, 'rule0-hook.mjs'), '--agent', 'codex'], { input: JSON.stringify({ cwd: repo, session_id: 's-cx', prompt: 'haz el paso 2' }), env: { ...process.env, WAYMARK_HOME: home, WAYMARK_REPO: 'invalid/none' }, encoding: 'utf8' });
+  assert.equal(JSON.parse(fs.readFileSync(path.join(repo, '.waymark', 'open.json'), 'utf8'))['s-cx'].agent, 'codex');
+  assert.match(fs.readFileSync(path.join(repo, '.waymark', 'tasks.md'), 'utf8'), /· started in codex \d{4}-\d\d-\d\d [^\n]* · "haz el paso 2"/);
+});
+
+test('3c codex: every question line of the last message counts as a decision asked in chat', () => {
+  const rows = [cxUser('t1', 'i1', 'agrega reintentos'), cxSay('t1', 'Waymark → L2 · dept-backend · skills: ninguna'), cxSay('t1', '1) ¿Backoff o cola?\n2) ¿Cuántos reintentos?'), cxUser('t2', 'i2', 'backoff, 3')];
+  const got = decisionsIn(taskLines(cx.toLines(rows)));
+  assert.deepEqual(got.map((d) => [d.question, d.chosen]), [['1) ¿Backoff o cola?', 'backoff, 3'], ['2) ¿Cuántos reintentos?', 'backoff, 3']]);
 });

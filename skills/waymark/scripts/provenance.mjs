@@ -99,11 +99,11 @@ Excluded from git through \`.git/info/exclude\`.
 const openFile = (home) => (home?.dir && !home.legacy ? path.join(home.dir, 'open.json') : null);
 const readOpen = (home) => { try { return JSON.parse(fs.readFileSync(openFile(home), 'utf8')) || {}; } catch { return {}; } };
 
-export function markOpen(cwd, session, prompt, now = new Date()) {
+export function markOpen(cwd, session, prompt, now = new Date(), agent = null) {
   const home = projectHome(cwd), file = openFile(home);
   if (!file || !fs.existsSync(home.memory)) return false; // tasks.md exists only with memory in the project
   const ids = taskIds(cwd, now), open = readOpen(home);
-  open[session || 'unknown'] = { at: now.toISOString(), next: ids.next, followUp: ids.followUp || null, prompt: String(prompt || '').replace(/\s+/g, ' ').trim().slice(0, 120) };
+  open[session || 'unknown'] = { at: now.toISOString(), next: ids.next, followUp: ids.followUp || null, ...(agent ? { agent } : {}), prompt: String(prompt || '').replace(/\s+/g, ' ').trim().slice(0, 120) }; // the agent: "started in codex" (3c)
   ensureLocal(home);
   fs.writeFileSync(file, JSON.stringify(open, null, 1));
   refreshTasks(home, true);
@@ -130,8 +130,12 @@ export function taskSummary(line) {
   const id = text.match(ID)[0];
   const status = /^▶/.test(text) ? 'en curso' : 'pendiente';
   const step = text.match(/▶(\S+)/)?.[1];
-  // the last marker wins (the Aprendido ends with it); not "Next.js"
-  const next = text.match(/^.*\b(?:NEXT\b:?|(?:Next|Pendiente|Pending):)\s*(.*)$/)?.[1] || text.slice(text.indexOf(':') + 1).trim();
+  // Every pending part is kept, in order (3c: the last "Pendiente:" used to win and "paso 2" was lost). A marker inside
+  // quotes is text, not a marker; "Next.js" is not one.
+  const masked = text.replace(/"[^"]*"|“[^”]*”/g, (q) => ' '.repeat(q.length));
+  const marks = [...masked.matchAll(/\b(?:NEXT(?=[\s:]):?|(?:Next|Pendiente|Pending):)\s*/g)];
+  const next = marks.map((m, i) => text.slice(m.index + m[0].length, marks[i + 1]?.index ?? text.length).trim().replace(/[\s·;.,]+$/, '')).filter(Boolean).join(' · ')
+    || text.slice(text.indexOf(':') + 1).trim();
   return clip(['- ' + id, status, step && `paso ${step}`, next && `próximo: ${next}`].filter(Boolean).join(' · '), TASK_CHARS);
 }
 
@@ -148,7 +152,7 @@ export function tasksMarkdown(home, now = new Date()) {
   const cell = (s) => String(s || '').replace(/\s+/g, ' ').replace(/\|/g, '/').trim();
   const result = (r) => cell((r.cierre || '').match(/Resultado:[ \t]*([^·\n]*)/i)?.[1] || '?') + (r.unresolved?.length ? ` · ${r.unresolved.length} sin resolver` : '');
   const started = Object.values(readOpen(home)).sort((a, b) => String(a.at).localeCompare(String(b.at)))
-    .map((o) => clip(`- ${o.next}${o.followUp ? ` (or follow-up ${o.followUp})` : ''} · started ${new Date(o.at).toLocaleString('sv').slice(0, 16)} · "${o.prompt}"`, TASK_CHARS));
+    .map((o) => clip(`- ${o.next}${o.followUp ? ` (or follow-up ${o.followUp})` : ''} · started${o.agent ? ` in ${cell(o.agent)}` : ''} ${new Date(o.at).toLocaleString('sv').slice(0, 16)} · "${o.prompt}"`, TASK_CHARS));
   const all = readRecords(home.log), records = all.filter((r) => r.id), lastRec = records[records.length - 1];
   const questions = all.slice(all.lastIndexOf(lastRec) + 1).filter((r) => r.kind === 'Q').length; // since the last close
   const who = (r) => (r.agent ? ` · ${cell(r.agent)}` : ''); // the agent that closed it (docs/adr/0008)

@@ -19,7 +19,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { currentTurn, routedLevel, routedDept, isPrompt, promptText, sessionTools, readSomething, turnUsage } from './transcript.mjs';
+import { currentTurn, routedLevel, routedDept, inheritedRoute, isPrompt, promptText, sessionTools, readSomething, turnUsage } from './transcript.mjs';
 import { estimate } from './calibrate.mjs';
 import { agentFrom } from './agents/index.mjs';
 import { ID, taskIds, validId, taskLines, decisionsIn, appendRecord, turnInputs, commitsFor, changesProject, gitSnapshot, snapshotDiff, loadSnapshot, projectHome, refreshTasks, ensureLocal, closeOpen } from './provenance.mjs';
@@ -66,11 +66,18 @@ function specsNear(files) {
 }
 
 const plain = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-function userSkip(reply, field, prompts) {
+// "<Field>: omitido (usuario: "<words>")": the words are in the user's messages or are a whole option they picked (a
+// fragment of the option that accepted the check, e.g. "navegador", does not count).
+function userSkip(reply, field, prompts, labels = []) {
   const m = reply.match(new RegExp(`${field}:\\s*omitido \\(usuario:\\s*[“"«]([^”"»]{3,200})[”"»]`, 'i'));
   if (!m) return null;
-  return prompts.some((p) => plain(p).includes(plain(m[1]))) ? 'ok' : m[1];
+  const q = plain(m[1]);
+  return prompts.some((p) => plain(p).includes(q)) || labels.some((l) => l === q || l.replace(/\s*\(recomendad[oa]\)$/, '') === q) ? 'ok' : m[1];
 }
+// The git branch is the user's, never an agent sub-decision (3c): an item that starts with it is ignored ("rama develop",
+// "work on branch x"); a code branch ("error branch del formulario") is still a decision.
+const BRANCH = /^\W*(?:(?:la|en la|work on|on|the)\s+)?(?:rama|branch)\b/i;
+const BROWSER = /navegador|browser|playwright|browser-verify/i;
 
 // Splits on `sep` outside parentheses and quotes ("a (x; y) → preguntada; b → no preguntada" is two items).
 export function splitTop(s, sep = ';') {
@@ -107,7 +114,7 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
   // Fields and claims are read from the Cierre block only: the prose above it ("la decisión: tuya…", "fallos previos")
   // is not a field (found when the hook read a bullet of the reply as Decisión).
   const reply = full.match(/##\s*Cierre[\s\S]*/)?.[0] || full;
-  const routed = routedLevel([...turn.texts, full], turn.tools);
+  const routed = routedLevel([...turn.texts, full], turn.tools) || ctx.inherited?.level || 0; // an unrouted reply inside an open task (3c)
   const level = routed === 'Q' ? 2 : routed || (/##\s*Cierre/.test(reply) ? 1 : 0);
   if (!level) return null;
 
@@ -119,7 +126,7 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
   const isChange = (t) => (EDITS.test(t.name) && !exempt(fileOf(t))) || shellChange(t);
   const firstChange = allTools.findIndex((t, i) => i >= base && isChange(t));
   const before = (pred) => allTools.some((t, i) => pred(t) && (firstChange < 0 || i < firstChange));
-  const dept = { declared: routedDept([...turn.texts, full], turn.tools), invoked: [...new Set(allTools.filter((t) => t.name === 'Skill' && /^dept-/.test(String(t.input.skill || ''))).map((t) => String(t.input.skill)))] };
+  const dept = { declared: routedDept([...turn.texts, full], turn.tools) || ctx.inherited?.dept || null, invoked: [...new Set(allTools.filter((t) => t.name === 'Skill' && /^dept-/.test(String(t.input.skill || ''))).map((t) => String(t.input.skill)))] };
   const procRe = dept.declared ? new RegExp(`${dept.declared}[\\\\/]procedures\\.md`) : /procedures\.md/;
   const procReads = allTools.filter((t) => /procedures\.md/.test(where(t)) && readSomething(t));
   const lastIdx = (pred) => { for (let i = turn.tools.length - 1; i >= 0; i--) if (pred(turn.tools[i])) return i; return -1; };
@@ -159,15 +166,15 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
   };
 
   // ---- Each step of the routine contract (waymark/routine.json): does it apply, did it pass, why not ----
+  const chosenLabels = (ctx.decisions || []).flatMap((x) => String(x.chosen).split(',')).map(plain).filter(Boolean);
   const skip = {}, extras = [];
   for (const f of ['Tests', 'Navegador', 'Review']) {
-    const s = userSkip(reply, f, prompts);
+    const s = userSkip(reply, f, prompts, chosenLabels);
     if (s === 'ok') skip[f] = true;
-    else if (s) extras.push(`${f}: skip quoted as the user's ("${s}") but those words are not in the user's messages`);
+    else if (s) extras.push(`${f}: skip quoted as the user's ("${s}") but those words are not in the user's messages nor an option they picked`);
   }
   const hasCierre = /##\s*Cierre/.test(reply);
   const d = field(reply, 'Decisi[oó]n');
-  const chosenLabels = (ctx.decisions || []).flatMap((x) => String(x.chosen).split(',')).map(plain).filter(Boolean);
   const quoted = d.match(/^del usuario \(\s*[“"«]([^”"»]{3,200})[”"»]/i)?.[1];
   const usersWords = (q) => q && (prompts.some((p) => plain(p).includes(plain(q))) || chosenLabels.some((l) => l.includes(plain(q)))); // the quote is (part of) the picked label
   const decision = [], late = [];
@@ -180,12 +187,13 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
     const sub = field(reply, 'Sub-?decisiones');
     if (!sub) decision.push('Sub-decisiones: <each decision taken during the task> → preguntada | del usuario ("<their words>") | no preguntada; … — or "ninguna"');
     else if (!/^ninguna\b/i.test(sub)) {
-      const items = splitTop(sub, ';');
+      const items = splitTop(sub, ';').filter((s) => !BRANCH.test(s.split('→')[0])); // the branch is the user's: not counted (3c)
       const alone = items.filter((s) => /→\s*no preguntada/i.test(s));
-      late.push(...items.filter((s) => /→\s*preguntada tarde/i.test(s))); // asked after the change it decides: passes, Decision ✘
-      const bad = items.filter((s) => !/→\s*(preguntada|del usuario \(|no preguntada)/i.test(s));
+      // asked after the change it decides: passes, Decision ✘. A later question that only confirms is "confirmada" and passes (3c).
+      late.push(...items.filter((s) => /→\s*preguntada tarde/i.test(s)));
+      const bad = items.filter((s) => !/→\s*(preguntada|confirmada|del usuario \(|no preguntada)/i.test(s));
       const asked = items.length - alone.length - bad.length - items.filter((s) => /→\s*del usuario \(/i.test(s)).length + (/^elegida/i.test(d) ? 1 : 0);
-      if (bad.length) decision.push(`Sub-decisiones: each item needs "→ preguntada | del usuario (\\"…\\") | no preguntada" (${bad.slice(0, 2).join(' | ')})`);
+      if (bad.length) decision.push(`Sub-decisiones: each item needs "→ preguntada | confirmada | del usuario (\\"…\\") | no preguntada" (${bad.slice(0, 2).join(' | ')})`);
       if (alone.length) decision.push(`Sub-decisiones taken without asking (${alone.slice(0, 3).join(' | ')}): the user decides every real decision. Put them to the user now with the options (AskUserQuestion), apply the pick, then mark them preguntada`);
       if (ctx.decisions && asked > ctx.decisions.length) decision.push(`Sub-decisiones and Decisión claim ${asked} decisions asked but the choice window answered ${ctx.decisions.length} in this task: ask the missing ones or mark them honestly`);
     }
@@ -231,10 +239,13 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
     build: buildAfter || /Build:\s*no \(.{3,}\)/i.test(reply) ? [] : ['L2+ with code: run the build once now, after the last change (or write Build: no (<why>) if the project has none)'],
     docs: observed.docs ? [] : ['Evidencia is inferred from docs but no docs were consulted: consult them (library-docs, or the installed package\'s types/source) and confirm or correct the change'],
     procedure,
-    browser: skip.Navegador || observed.browser.tried.length ? [] : ['UI changed with no browser attempt (browser-verify or run; curl does not count)'],
-    spec: observed.tests.specsChanged.length || /Tests:\s*no \(/i.test(reply) ? [] : [`${near} sits next to the changed code and no spec was added or changed`],
+    // the user's call (3c): ✔ when tried or declined by the user; ✘ when never offered, or accepted and not done
+    browser: skip.Navegador || observed.browser.tried.length ? [] : (ctx.decisions || []).some((x) => BROWSER.test(`${x.question} ${x.chosen} ${(x.discarded || []).join(' ')}`))
+      ? ['the user was offered the browser check: do what they picked (browser-verify or run; curl does not count), or, if they declined it, write Navegador: omitido (usuario: "<the option they picked>")']
+      : ['UI changed and the browser check was never offered: ask the user in the choice window (browser-verify or run; a test user + Playwright when there is a login or OTP), then do it or write Navegador: omitido (usuario: "<their pick>")'],
+    spec: observed.tests.specsChanged.length || /Tests:\s*no \(/i.test(reply) ? [] : [`${near} sits next to the changed code and no spec was added or changed: add or update it and run it, or write Tests: no (<why no spec can cover it>)`],
     red: observed.tests.red ? [] : ['a red claim (rojo / habría fallado) with no test run before the first code change or in a clean worktree: run it there, or write it as inferida'],
-    preexisting: observed.worktree || /no comprobado/i.test(reply) ? [] : ['a failure called pre-existing without a clean-copy check'],
+    preexisting: observed.worktree || /no comprobado/i.test(reply) ? [] : ['a failure called pre-existing without a clean-copy check: check it now (git worktree add <tmp> HEAD → rerun the failing command there → git worktree remove <tmp>), or write "no comprobado (<why>)"'],
     trailer: ctx.commits?.length ? [] : ['a commit made this turn without the trailer "Waymark-Task: <task ID>"'],
   };
   const steps = ROUTINE.steps.map((s) => {
@@ -249,7 +260,7 @@ export function cierreGaps(turn, last, allTools = turn.tools, prompts = [turn.pr
   if (late.length && dec?.applies) { // cannot be undone, so it does not block; the evaluation keeps it
     const why = `preguntada tarde (asked after the change it decides): ${late.slice(0, 3).join(' | ')}`;
     dec.pass = false; dec.why = [...dec.why, why]; findings.push(why);
-  } else if (observed.asked.afterFirstChange && hasCierre) findings.push('a choice-window question came after the first change and no sub-decision says "preguntada tarde": check it was asked before applying what it decided');
+  } else if (observed.asked.afterFirstChange && hasCierre && !/→\s*confirmada/i.test(field(reply, 'Sub-?decisiones'))) findings.push('a choice-window question came after the first change and no sub-decision says "confirmada" or "preguntada tarde": check it was asked before applying what it decided');
   if (ROUTINE.fallback) findings.push('waymark/routine.json missing or invalid: checked with the minimal contract (decision, gate, Cierre)');
   if (observed.gates.some((g) => g.error)) findings.push(`a gate after the last change failed: ${observed.gates.filter((g) => g.error).map((g) => g.cmd.slice(0, 60)).join(' | ')}`);
   return { level, changed, reply, missing, findings, steps, dept, observed };
@@ -304,9 +315,12 @@ export function questionRecord(turn, meta = {}) {
 }
 
 // One line for the user (systemMessage: shown in the UI, not added to the model's context).
+// While the model has fewer than 3 calibration pairs (no fit yet), it asks the user for the real % (user's choice, 3c).
 export function summaryLine(id, ev) {
   const s = Object.entries(ev.steps).map(([k, v]) => `${k} ${v ? '✔' : '✘'}`).join(' · ');
-  return `Waymark ${id} · ${s} · ${ev.score} · ${(ev.tokens / 1e6).toFixed(2)}M tokens${ev.quotaPct !== null ? ` ≈ ${ev.quotaPct}% de la cuota de 5 h (estimado)` : ''}`;
+  const ask = ev.quotaPct !== null && /^(default|pairs:[12])$/.test(String(ev.quotaBy || ''))
+    ? ` · ¿qué % marcó tu cuota en esta tarea? node "${path.join(path.dirname(fileURLToPath(import.meta.url)), 'calibrate.mjs').replace(/\\/g, '/')}" "${id}" <pct>` : '';
+  return `Waymark ${id} · ${s} · ${ev.score} · ${(ev.tokens / 1e6).toFixed(2)}M tokens${ev.quotaPct !== null ? ` ≈ ${ev.quotaPct}% de la cuota de 5 h (estimado)` : ''}${ask}`;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -325,6 +339,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       ctx.commits = commitsFor(cwd, claimed);
       ctx.inputs = turnInputs(taskLines(lines, 1), cwd, agent.instructions);
       ctx.gitChanged = snapshotDiff(loadSnapshot(h.session_id), gitSnapshot(cwd)); // taken by the per-prompt hook
+      ctx.inherited = inheritedRoute(lines); // an unrouted reply inside an open task keeps its routing (3c)
       ctx.engram = lines.some((d) => JSON.stringify(d.attachment || '').includes('mcp__engram__') || (d.message?.content || []).some?.((c) => c.type === 'tool_use' && String(c.name).startsWith('mcp__engram__')));
       const all = sessionTools(lines);
       const gaps = cierreGaps(turn, h.last_assistant_message, all, prompts, ctx);

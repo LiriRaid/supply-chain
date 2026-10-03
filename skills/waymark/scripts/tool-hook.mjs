@@ -5,15 +5,15 @@
 // and shell commands that change files: git checkout --, sed -i, rm, redirects) is denied until the task has a
 // choice-window question (AskUserQuestion) — strict since test 2.0-2, where a retry let the agent apply two decisions
 // before asking. A turn routed Q is told once to re-route (by tool call: the owner dept-* with args "L<n>"). The
-// message names the repo's branch and asks for the foreseeable sub-decisions in the same call. Memory and scratch
-// files are exempt; L0 skipped. Procedure and mem_search are recorded and scored by the end-of-turn hook, not denied.
+// message asks for the foreseeable sub-decisions in the same call and, for UI, offers the browser check; the branch is
+// the user's, never pushed as a sub-decision (3c). An unrouted reply inside an open task inherits its routing (3c).
+// Memory and scratch files are exempt; L0 skipped. Procedure and mem_search are recorded and scored by the end-of-turn hook, not denied.
 // Remove the hook from the agent's settings to disable it.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { currentTurn, routedLevel } from './transcript.mjs';
+import { currentTurn, routedLevel, inheritedRoute } from './transcript.mjs';
 import { taskLines, askedChoice, changesProject } from './provenance.mjs';
 import { agentFrom } from './agents/index.mjs';
 
@@ -33,7 +33,7 @@ export function checkDecision(target, lines, session = 'unknown', stateFile = pa
   if (target && typeof target === 'object') { if (!changesProject(target.command)) return null; }
   else if (!target || exempt(target)) return null;
   const turn = currentTurn(lines);
-  const level = routedLevel(turn.texts, turn.tools), q = level === 'Q';
+  const level = routedLevel(turn.texts, turn.tools) || inheritedRoute(lines)?.level || 0, q = level === 'Q';
   if (!turn.found || !level) return null;
   let seen = {};
   try { seen = JSON.parse(fs.readFileSync(stateFile, 'utf8')); } catch {}
@@ -47,20 +47,10 @@ export function checkDecision(target, lines, session = 'unknown', stateFile = pa
   if (q && once('q')) return 'Waymark: this turn was routed as a question (Q) but is about to change project files. A question that becomes a change is a task: re-route with a tool call — invoke the owner dept-* skill with args "L<n>" (e.g. Skill dept-frontend, args "L2"); a routing line written mid-turn is not persisted — then the opener, and put the decision to the user with the optimal options before changing anything.';
   // Strict gate (user's decision 2026-10-02): no change until the user was asked in the choice window in this task.
   if (!askedChoice(taskLines(lines))) {
-    const branch = branchAt(typeof target === 'object' ? cwd : path.dirname(target));
-    return `Waymark: L${level} decision gate — the user decides every real decision, you never decide alone. Before changing files, ask in your choice window (AskUserQuestion): the approach with its optimal options (files, risk, cost; recommended marked, it may not be what the user needs) AND, as more questions in the same call (up to 4), the sub-decisions you can foresee — data/schema design, visual style, behavior details, defaults. ` +
-      `${branch ? `This repo is on branch "${branch}": if that branch is not for this task, include where the work goes as an option. ` : ''}` +
-      'If there is only one real way, or the user already chose in their message, confirm it there (that option + "otra cosa"). This gate stays until the user has been asked in this task.';
+    return `Waymark: L${level} decision gate — the user decides every real decision, you never decide alone. Before changing files, ask in your choice window (AskUserQuestion): the approach with its optimal options (files, risk, cost; recommended marked, it may not be what the user needs) AND, as more questions in the same call (up to 4), every decision that shapes the work you can foresee — data/schema design, visual style, behavior details, defaults; if the change touches UI, whether to verify it in the browser (browser-verify or run; a test user + Playwright when there is a login or OTP). ` +
+      'Later questions only confirm (→ confirmada). The branch is the user\'s: never a sub-decision. If there is only one real way, or the user already chose in their message, confirm it there (that option + "otra cosa"). This gate stays until the user has been asked in this task.';
   }
   return null;
-}
-
-// Current branch of the repo at dir, or null (no git, not a repo, detached).
-function branchAt(dir) {
-  try {
-    const r = spawnSync('git', ['symbolic-ref', '--short', 'HEAD'], { cwd: dir, encoding: 'utf8', timeout: 1000 }); // also on a branch with no commits; fails when detached
-    return r.status === 0 ? r.stdout.trim() || null : null;
-  } catch { return null; }
 }
 
 // → the denial reason, or null.
